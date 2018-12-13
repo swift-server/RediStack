@@ -54,6 +54,54 @@ extension RedisDataDecoderTests {
     }
 }
 
+// MARK: Message Parsing
+
+extension RedisDataDecoderTests {
+    func testParsing_with_simpleString() throws {
+        let testString = "+OK\r"
+        var buffer = allocator.buffer(capacity: testString.count + 1)
+        buffer.write(string: testString)
+
+        var position = 0
+
+        XCTAssertEqual(try parseTestSample(startPosition: &position, from: buffer), .notYetParsed)
+
+        buffer.write(string: "\n")
+        position = 0 // reset
+
+        XCTAssertEqual(try parseTestSample(startPosition: &position, from: buffer), .parsed)
+    }
+
+    func testParsing_with_simpleString_recursively() throws {
+        let messageChunks = ["+OK\r", "\n+OTHER STRING\r", "\n+&t®in§³¾\r", "\n"]
+        var buffer = allocator.buffer(capacity: messageChunks.joined().count)
+        buffer.write(string: "+OK\r")
+
+        var position = 0
+
+        XCTAssertEqual(try parseTestSample(startPosition: &position, from: buffer), .notYetParsed)
+
+        for index in 1..<messageChunks.count {
+            position = 0
+
+            buffer.write(string: messageChunks[index])
+
+            XCTAssertEqual(try parseTestSample(startPosition: &position, from: buffer), .parsed)
+
+            _ = buffer.readBytes(length: position)
+            
+            XCTAssertEqual(try parseTestSample(startPosition: &position, from: buffer), .notYetParsed)
+        }
+    }
+
+    private func parseTestSample(
+        startPosition position: inout Int,
+        from buffer: ByteBuffer
+    ) throws -> RedisDataDecoder._PartialRedisData {
+        return try RedisDataDecoder()._parse(at: &position, from: buffer)
+    }
+}
+
 extension RedisDataDecoderTests {
     static var allTests = [
         ("testParsing_simpleString_missingEndings_returnsNil", testParsing_simpleString_missingEndings_returnsNil),
