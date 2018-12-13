@@ -39,13 +39,13 @@ extension UInt8 {
 }
 
 extension RedisDataDecoder {
-    indirect enum _PartialRedisData {
+    indirect enum _RedisDataDecodingState {
         case notYetParsed
         #warning("parsed needs to be implemented to include RedisData!")
         case parsed
     }
 
-    func _parse(at position: inout Int, from buffer: ByteBuffer) throws -> _PartialRedisData {
+    func _parse(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
         guard let token = buffer.copyByte(at: position) else { return .notYetParsed }
 
         position += 1
@@ -61,6 +61,7 @@ extension RedisDataDecoder {
         }
     }
 
+    /// See https://redis.io/topics/protocol#resp-simple-strings
     func _parseSimpleString(at position: inout Int, from buffer: ByteBuffer) throws -> String? {
         let byteCount = buffer.readableBytes - position
         guard
@@ -91,6 +92,7 @@ extension RedisDataDecoder {
         return String(bytes: bytes[ ..<(expectedNewlinePosition - 1) ], encoding: encoding)
     }
 
+    /// See https://redis.io/topics/protocol#resp-integers
     func _parseInteger(at position: inout Int, from buffer: ByteBuffer) throws -> Int? {
         guard let string = try _parseSimpleString(at: &position, from: buffer) else { return nil }
 
