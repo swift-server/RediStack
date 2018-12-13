@@ -54,6 +54,9 @@ extension RedisDataDecoder {
         case .plus:
             guard let string = try _parseSimpleString(at: &position, from: buffer) else { return .notYetParsed }
             return .parsed
+        case .colon:
+            guard let number = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+            return .parsed
         default: return .notYetParsed
         }
     }
@@ -82,14 +85,21 @@ extension RedisDataDecoder {
             bytes[expectedNewlinePosition] == .newline
         else { return nil }
 
-        // If the end of the simple string isn't more than the size of the line ending, we can shortcut
-        // and return an empty string
-        guard expectedNewlinePosition > 2 else { return "" }
-
         // Move the tip of the message position for recursive parsing to just after the newline
         position += expectedNewlinePosition + 1
 
         return String(bytes: bytes[ ..<(expectedNewlinePosition - 1) ], encoding: encoding)
+    }
+
+    func _parseInteger(at position: inout Int, from buffer: ByteBuffer) throws -> Int? {
+        guard let string = try _parseSimpleString(at: &position, from: buffer) else { return nil }
+
+        guard let number = Int(string) else {
+            #warning("TODO: Throw errors")
+            return nil
+        }
+
+        return number
     }
 }
 
