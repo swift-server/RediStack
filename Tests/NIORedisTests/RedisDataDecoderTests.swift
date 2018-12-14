@@ -99,6 +99,53 @@ extension RedisDataDecoderTests {
     }
 }
 
+// MARK: BulkString Parsing
+
+extension RedisDataDecoderTests {
+    func testParsing_bulkString_handlesMissingEndings() throws {
+        XCTAssertEqual(try parseTestBulkString("$6"), .notYetParsed)
+        XCTAssertEqual(try parseTestBulkString("$6\r\n"), .notYetParsed)
+        XCTAssertEqual(try parseTestBulkString("$6\r\nabcdef"), .notYetParsed)
+    }
+
+    func testParsing_bulkString_withNoSize_returnsEmpty() throws {
+        XCTAssertEqual(try parseTestBulkString("$0\r\n"), .parsed)
+    }
+
+    func testParsing_bulkString_withSize_returnsContent() throws {
+        XCTAssertEqual(try parseTestBulkString("$1\r\n1\r\n"), .parsed)
+    }
+
+    func testParsing_bulkString_withNull_returnsNil() throws {
+        XCTAssertEqual(try parseTestBulkString("$-1\r\n"), .parsed)
+    }
+
+    func testParsing_bulkString_handlesRawBytes() throws {
+        let bytes: [UInt8] = [0x00, 0x01, 0x02, 0x03, 0x0A, 0xFF]
+        let data = "$\(bytes.count)\r\n".convertedToData() + Data(bytes: bytes) + "\r\n".convertedToData()
+        XCTAssertEqual(try parseTestBulkString(data), .parsed)
+    }
+
+    func testParsing_bulkString_handlesLargeSizes() throws {
+        let bytes = [UInt8].init(repeating: .dollar, count: 10_000_000)
+        let data = "$\(bytes.count)\r\n".convertedToData() + Data(bytes: bytes) + "\r\n".convertedToData()
+        XCTAssertEqual(try parseTestBulkString(data), .parsed)
+    }
+
+    private func parseTestBulkString(_ input: String) throws -> RedisDataDecoder._RedisDataDecodingState {
+        return try parseTestBulkString(input.convertedToData())
+    }
+
+    private func parseTestBulkString(_ input: Data) throws -> RedisDataDecoder._RedisDataDecodingState {
+        var buffer = allocator.buffer(capacity: input.count)
+        buffer.write(bytes: input)
+
+        var position = 1 // "trim" token
+
+        return try RedisDataDecoder()._parseBulkString(at: &position, from: buffer)
+    }
+}
+
 // MARK: Message Parsing
 
 extension RedisDataDecoderTests {
@@ -118,10 +165,28 @@ extension RedisDataDecoderTests {
         try parseTest_recursive(withChunks: [":300\r", "\n:-10135135\r", "\n:1\r", "\n"])
     }
 
+    func testParsing_with_bulkString() throws {
+        try parseTest_singleValue(input: "$-1\r")
+        try parseTest_singleValue(input: "$0\r")
+        try parseTest_singleValue(input: "$1\r\n!\r")
+        try parseTest_singleValue(input: "$1\r\n".convertedToData() + Data(bytes: [0xff] + "\r".convertedToData()))
+    }
+
+    func testParsing_with_bulkString_recursively() throws {
+        try parseTest_recursive(withChunks: ["$3\r", "\naaa\r\n$", "4\r\nnio!\r\n"])
+    }
+
+    /// See parse_Test_singleValue(input:) String
     private func parseTest_singleValue(input: String) throws {
+        try parseTest_singleValue(input: input.convertedToData())
+    }
+
+    /// Takes a collection of bytes representing an incomplete message to assert decoding states
+    /// This method will add the appropriate \n terminator to the end of the byte stream
+    private func parseTest_singleValue(input: Data) throws {
         let decoder = RedisDataDecoder()
         var buffer = allocator.buffer(capacity: input.count + 1)
-        buffer.write(string: input)
+        buffer.write(bytes: input)
 
         var position = 0
 
@@ -133,10 +198,18 @@ extension RedisDataDecoderTests {
         XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
     }
 
+    /// See parseTest_recursive(withCunks:) [Data]
     private func parseTest_recursive(withChunks messageChunks: [String]) throws {
+        try parseTest_recursive(withChunks: messageChunks.map({ $0.convertedToData() }))
+    }
+
+    /// Takes a collection of byte streams to write to a buffer and assert decoding states in between
+    /// buffer writes.
+    /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
+    private func parseTest_recursive(withChunks messageChunks: [Data]) throws {
         let decoder = RedisDataDecoder()
         var buffer = allocator.buffer(capacity: messageChunks.joined().count)
-        buffer.write(string: messageChunks[0])
+        buffer.write(bytes: messageChunks[0])
 
         var position = 0
 
@@ -145,7 +218,7 @@ extension RedisDataDecoderTests {
         for index in 1..<messageChunks.count {
             position = 0
 
-            buffer.write(string: messageChunks[index])
+            buffer.write(bytes: messageChunks[index])
 
             XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
 

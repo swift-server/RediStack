@@ -57,6 +57,8 @@ extension RedisDataDecoder {
         case .colon:
             guard let number = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
             return .parsed
+        case .dollar:
+            return try _parseBulkString(at: &position, from: buffer)
         default: return .notYetParsed
         }
     }
@@ -102,6 +104,40 @@ extension RedisDataDecoder {
         }
 
         return number
+    }
+
+    /// See https://redis.io/topics/protocol#resp-bulk-strings
+    func _parseBulkString(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
+        guard let size = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+
+        #warning("TODO: Return null data if null is sent from Redis")
+        // Redis sends '-1' to represent a null string
+        guard size > -1 else { return .parsed }
+
+        // Redis can hold empty bulk strings, and represents it with a 0 size
+        // so return an empty string
+        #warning("TODO: Return an empty bulk string")
+        guard size > 0 else {
+            // Move the tip of the message position
+            // since size = 0, and we successfully parsed the size
+            // the beginning of the next message should be 2 further (the final \r\n - $0\r\n\r\n)
+            position += 2
+            return .parsed
+        }
+
+        // verify that we have at least our expected bulk string message
+        // by adding the expected CRLF bytes to the parsed size
+        let readableByteCount = buffer.readableBytes - position
+        let expectedRemainingMessageSize = size + 2
+        guard readableByteCount >= expectedRemainingMessageSize else { return .notYetParsed }
+
+        guard let bytes = buffer.copyBytes(at: position, length: expectedRemainingMessageSize) else { return .notYetParsed }
+
+        // Move the tip of the message position for recursive parsing to just after the newline
+        // of the bulk string content
+        position += expectedRemainingMessageSize
+
+        return .parsed // bulkString(Data(bytes[ ..<(size - 1) ]))
     }
 }
 
