@@ -39,7 +39,7 @@ extension UInt8 {
 }
 
 extension RedisDataDecoder {
-    indirect enum _RedisDataDecodingState {
+    enum _RedisDataDecodingState {
         case notYetParsed
         #warning("parsed needs to be implemented to include RedisData!")
         case parsed
