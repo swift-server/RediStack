@@ -3,13 +3,94 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RedisDataDecoderTests: XCTestCase {
+final class RedisDataDecoderParsingTests: XCTestCase {
     private let allocator = ByteBufferAllocator()
+
+    func testParsing_with_simpleString() throws {
+        try parseTest_singleValue(input: "+OK\r\n")
+    }
+
+    func testParsing_with_simpleString_recursively() throws {
+        try parseTest_recursive(withChunks: ["+OK\r", "\n+OTHER STRING\r", "\n+&t®in§³¾\r", "\n"])
+    }
+
+    func testParsing_with_integer() throws {
+        try parseTest_singleValue(input: ":300\r\n")
+    }
+
+    func testParsing_with_integer_recursively() throws {
+        try parseTest_recursive(withChunks: [":300\r", "\n:-10135135\r", "\n:1\r", "\n"])
+    }
+
+    func testParsing_with_bulkString() throws {
+        try parseTest_singleValue(input: "$-1\r\n")
+        try parseTest_singleValue(input: "$0\r\n\r\n")
+        try parseTest_singleValue(input: "$1\r\n!\r\n")
+        try parseTest_singleValue(input: "$1\r\n".convertedToData() + Data(bytes: [0xff] + "\r\n".convertedToData()))
+
+        let data = "$1\r\n".convertedToData() + Data(bytes: [0xba]) + "\r\n".convertedToData()
+        try parseTest_singleValue(input: data)
+    }
+
+    func testParsing_with_bulkString_recursively() throws {
+        try parseTest_recursive(withChunks: ["$3\r", "\naaa\r\n$", "4\r\nnio!\r\n"])
+        try parseTest_recursive(withChunks: [
+            "$3\r".convertedToData(),
+            "\n".convertedToData() + Data(bytes: [0xAA, 0xA3, 0xFF]) + "\r\n$".convertedToData(),
+            "4\r\n".convertedToData() + Data(bytes: [0xbb, 0x3a, 0xba, 0xFF]) + "\r\n".convertedToData()
+        ])
+    }
+
+    /// See parse_Test_singleValue(input:) String
+    private func parseTest_singleValue(input: String) throws {
+        try parseTest_singleValue(input: input.convertedToData())
+    }
+
+    /// Takes a collection of bytes representing a complete message
+    private func parseTest_singleValue(input: Data) throws {
+        let decoder = RedisDataDecoder()
+        var buffer = allocator.buffer(capacity: input.count + 1)
+        buffer.write(bytes: input)
+
+        var position = 0
+
+        XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
+    }
+
+    /// See parseTest_recursive(withCunks:) [Data]
+    private func parseTest_recursive(withChunks messageChunks: [String]) throws {
+        try parseTest_recursive(withChunks: messageChunks.map({ $0.convertedToData() }))
+    }
+
+    /// Takes a collection of byte streams to write to a buffer and assert decoding states in between
+    /// buffer writes.
+    /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
+    private func parseTest_recursive(withChunks messageChunks: [Data]) throws {
+        let decoder = RedisDataDecoder()
+        var buffer = allocator.buffer(capacity: messageChunks.joined().count)
+        buffer.write(bytes: messageChunks[0])
+
+        var position = 0
+
+        XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .notYetParsed)
+
+        for index in 1..<messageChunks.count {
+            position = 0
+
+            buffer.write(bytes: messageChunks[index])
+
+            XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
+
+            _ = buffer.readBytes(length: position)
+
+            XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .notYetParsed)
+        }
+    }
 }
 
 // MARK: Simple String Parsing
 
-extension RedisDataDecoderTests {
+extension RedisDataDecoderParsingTests {
     func testParsing_simpleString_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestSimpleString("+OK"))
         XCTAssertNil(try parseTestSimpleString("+OK\r"))
@@ -56,7 +137,7 @@ extension RedisDataDecoderTests {
 
 // MARK: Integer Parsing
 
-extension RedisDataDecoderTests {
+extension RedisDataDecoderParsingTests {
     func testParsing_integer_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestInteger("+OK"))
         XCTAssertNil(try parseTestInteger(":\r"))
@@ -101,7 +182,7 @@ extension RedisDataDecoderTests {
 
 // MARK: BulkString Parsing
 
-extension RedisDataDecoderTests {
+extension RedisDataDecoderParsingTests {
     func testParsing_bulkString_handlesMissingEndings() throws {
         XCTAssertEqual(try parseTestBulkString("$6"), .notYetParsed)
         XCTAssertEqual(try parseTestBulkString("$6\r\n"), .notYetParsed)
@@ -146,101 +227,25 @@ extension RedisDataDecoderTests {
     }
 }
 
-// MARK: Message Parsing
-
-extension RedisDataDecoderTests {
-    func testParsing_with_simpleString() throws {
-        try parseTest_singleValue(input: "+OK\r")
-    }
-
-    func testParsing_with_simpleString_recursively() throws {
-        try parseTest_recursive(withChunks: ["+OK\r", "\n+OTHER STRING\r", "\n+&t®in§³¾\r", "\n"])
-    }
-
-    func testParsing_with_integer() throws {
-        try parseTest_singleValue(input: ":300\r")
-    }
-
-    func testParsing_with_integer_recursively() throws {
-        try parseTest_recursive(withChunks: [":300\r", "\n:-10135135\r", "\n:1\r", "\n"])
-    }
-
-    func testParsing_with_bulkString() throws {
-        try parseTest_singleValue(input: "$-1\r")
-        try parseTest_singleValue(input: "$0\r")
-        try parseTest_singleValue(input: "$1\r\n!\r")
-        try parseTest_singleValue(input: "$1\r\n".convertedToData() + Data(bytes: [0xff] + "\r".convertedToData()))
-    }
-
-    func testParsing_with_bulkString_recursively() throws {
-        try parseTest_recursive(withChunks: ["$3\r", "\naaa\r\n$", "4\r\nnio!\r\n"])
-    }
-
-    /// See parse_Test_singleValue(input:) String
-    private func parseTest_singleValue(input: String) throws {
-        try parseTest_singleValue(input: input.convertedToData())
-    }
-
-    /// Takes a collection of bytes representing an incomplete message to assert decoding states
-    /// This method will add the appropriate \n terminator to the end of the byte stream
-    private func parseTest_singleValue(input: Data) throws {
-        let decoder = RedisDataDecoder()
-        var buffer = allocator.buffer(capacity: input.count + 1)
-        buffer.write(bytes: input)
-
-        var position = 0
-
-        XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .notYetParsed)
-
-        buffer.write(string: "\n")
-        position = 0 // reset
-
-        XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
-    }
-
-    /// See parseTest_recursive(withCunks:) [Data]
-    private func parseTest_recursive(withChunks messageChunks: [String]) throws {
-        try parseTest_recursive(withChunks: messageChunks.map({ $0.convertedToData() }))
-    }
-
-    /// Takes a collection of byte streams to write to a buffer and assert decoding states in between
-    /// buffer writes.
-    /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
-    private func parseTest_recursive(withChunks messageChunks: [Data]) throws {
-        let decoder = RedisDataDecoder()
-        var buffer = allocator.buffer(capacity: messageChunks.joined().count)
-        buffer.write(bytes: messageChunks[0])
-
-        var position = 0
-
-        XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .notYetParsed)
-
-        for index in 1..<messageChunks.count {
-            position = 0
-
-            buffer.write(bytes: messageChunks[index])
-
-            XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .parsed)
-
-            _ = buffer.readBytes(length: position)
-
-            XCTAssertEqual(try decoder._parse(at: &position, from: buffer), .notYetParsed)
-        }
-    }
-}
-
-extension RedisDataDecoderTests {
+extension RedisDataDecoderParsingTests {
     static var allTests = [
-        ("testParsing_simpleString_missingEndings_returnsNil", testParsing_simpleString_missingEndings_returnsNil),
-        ("testParsing_simpleString_withNoContent_returnsEmpty", testParsing_simpleString_withNoContent_returnsEmpty),
-        ("testParsing_simpleString_withContent_returnsExpectedContent", testParsing_simpleString_withContent_returnsExpectedContent),
-        ("testParsing_simpleString_handlesRecursion", testParsing_simpleString_handlesRecursion),
-        ("testParsing_integer_missingEndings_returnsNil", testParsing_integer_missingEndings_returnsNil),
-        ("testParsing_integer_withContent_returnsExpectedContent", testParsing_integer_withContent_returnsExpectedContent),
-        ("testParsing_integer_handlesRecursion", testParsing_integer_handlesRecursion),
         ("testParsing_with_simpleString", testParsing_with_simpleString),
         ("testParsing_with_simpleString_recursively", testParsing_with_simpleString_recursively),
         ("testParsing_with_integer", testParsing_with_integer),
         ("testParsing_with_integer_recursively", testParsing_with_integer_recursively),
+        ("testParsing_with_bulkString", testParsing_with_bulkString),
+        ("testParsing_with_bulkString_recursively", testParsing_with_bulkString_recursively),
+        ("testParsing_simpleString_missingEndings_returnsNil", testParsing_simpleString_missingEndings_returnsNil),
+        ("testParsing_simpleString_withNoContent_returnsEmpty", testParsing_simpleString_withNoContent_returnsEmpty),
+        ("testParsing_simpleString_withContent_returnsExpectedContent", testParsing_simpleString_withContent_returnsExpectedContent),
+        ("testParsing_integer_missingEndings_returnsNil", testParsing_integer_missingEndings_returnsNil),
+        ("testParsing_integer_withContent_returnsExpectedContent", testParsing_integer_withContent_returnsExpectedContent),
+        ("testParsing_integer_handlesRecursion", testParsing_integer_handlesRecursion),
+        ("testParsing_bulkString_handlesMissingEndings", testParsing_bulkString_handlesMissingEndings),
+        ("testParsing_bulkString_withNoSize_returnsEmpty", testParsing_bulkString_withNoSize_returnsEmpty),
+        ("testParsing_bulkString_withSize_returnsContent", testParsing_bulkString_withSize_returnsContent),
+        ("testParsing_bulkString_withNull_returnsNil", testParsing_bulkString_withNull_returnsNil),
+        ("testParsing_bulkString_handlesRawBytes", testParsing_bulkString_handlesRawBytes),
+        ("testParsing_bulkString_handlesLargeSizes", testParsing_bulkString_handlesLargeSizes),
     ]
 }

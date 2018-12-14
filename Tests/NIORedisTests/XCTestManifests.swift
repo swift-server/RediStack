@@ -4,6 +4,7 @@ import XCTest
 public func allTests() -> [XCTestCaseEntry] {
     return [
         testCase(NIORedisTests.allTests),
+        testCase(RedisDataDecoderParsingTests.allTests)
     ]
 }
 #endif
