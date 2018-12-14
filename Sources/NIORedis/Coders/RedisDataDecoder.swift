@@ -59,6 +59,8 @@ extension RedisDataDecoder {
             return .parsed
         case .dollar:
             return try _parseBulkString(at: &position, from: buffer)
+        case .asterisk:
+            return try _parseArray(at: &position, from: buffer)
         default: return .notYetParsed
         }
     }
@@ -138,6 +140,31 @@ extension RedisDataDecoder {
         position += expectedRemainingMessageSize
 
         return .parsed // bulkString(Data(bytes[ ..<(size - 1) ]))
+    }
+
+    /// See https://redis.io/topics/protocol#resp-arrays
+    func _parseArray(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
+        guard let arraySize = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+        #warning("TODO: return null array")
+        guard arraySize > -1 else { return .parsed }
+        #warning("TODO: return empty array")
+        guard arraySize > 0 else { return .parsed }
+
+        var array = [_RedisDataDecodingState](repeating: .notYetParsed, count: arraySize)
+        for index in 0..<arraySize {
+            guard buffer.readableBytes - position > 0 else { return .notYetParsed }
+
+            let parseResult = try _parse(at: &position, from: buffer)
+            switch parseResult {
+            case .parsed:
+                array[index] = parseResult
+            default:
+                return .notYetParsed
+            }
+        }
+
+        #warning("TODO: Mapping to data and return the array of values")
+        return .parsed
     }
 }
 
