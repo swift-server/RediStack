@@ -41,8 +41,7 @@ extension UInt8 {
 extension RedisDataDecoder {
     enum _RedisDataDecodingState {
         case notYetParsed
-        #warning("parsed needs to be implemented to include RedisData!")
-        case parsed
+        case parsed(RedisData)
     }
 
     func _parse(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
@@ -53,18 +52,22 @@ extension RedisDataDecoder {
         switch token {
         case .plus:
             guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return .notYetParsed }
-            return .parsed
+            return .parsed(.basicString(string))
+
         case .colon:
             guard let number = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
-            return .parsed
+            return .parsed(.integer(number))
+
         case .dollar:
             return try _parseBulkString(at: &position, from: &buffer)
+
         case .asterisk:
             return try _parseArray(at: &position, from: &buffer)
+
         case .hyphen:
             guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return .notYetParsed }
-            let error = RedisError(identifier: "serverSide", reason: string)
-            return .parsed
+            return .parsed(.error(RedisError(identifier: "serverSide", reason: string)))
+
         default:
             throw RedisError(
                 identifier: "invalidTokenType",
@@ -122,19 +125,17 @@ extension RedisDataDecoder {
     func _parseBulkString(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
         guard let size = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
 
-        #warning("TODO: Return null data if null is sent from Redis")
         // Redis sends '-1' to represent a null string
-        guard size > -1 else { return .parsed }
+        guard size > -1 else { return .parsed(.null) }
 
         // Redis can hold empty bulk strings, and represents it with a 0 size
         // so return an empty string
-        #warning("TODO: Return an empty bulk string")
         guard size > 0 else {
             // Move the tip of the message position
             // since size = 0, and we successfully parsed the size
             // the beginning of the next message should be 2 further (the final \r\n - $0\r\n\r\n)
             position += 2
-            return .parsed
+            return .parsed(.bulkString("".convertedToData()))
         }
 
         // verify that we have at least our expected bulk string message
@@ -149,16 +150,16 @@ extension RedisDataDecoder {
         // of the bulk string content
         position += expectedRemainingMessageSize
 
-        return .parsed // bulkString(Data(bytes[ ..<(size - 1) ]))
+        return .parsed(
+            .bulkString(Data(bytes[ ..<size ]))
+        )
     }
 
     /// See https://redis.io/topics/protocol#resp-arrays
     func _parseArray(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
         guard let arraySize = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
-        #warning("TODO: return null array")
-        guard arraySize > -1 else { return .parsed }
-        #warning("TODO: return empty array")
-        guard arraySize > 0 else { return .parsed }
+        guard arraySize > -1 else { return .parsed(.null) }
+        guard arraySize > 0 else { return .parsed(.array([])) }
 
         var array = [_RedisDataDecodingState](repeating: .notYetParsed, count: arraySize)
         for index in 0..<arraySize {
@@ -173,8 +174,16 @@ extension RedisDataDecoder {
             }
         }
 
-        #warning("TODO: Mapping to data and return the array of values")
-        return .parsed
+        let values = try array.map { state -> RedisData in
+            guard case .parsed(let value) = state else {
+                throw RedisError(
+                    identifier: "parseArray",
+                    reason: "Unexpected error while parsing Redis RESP."
+                )
+            }
+            return value
+        }
+        return .parsed(.array(values))
     }
 }
 
