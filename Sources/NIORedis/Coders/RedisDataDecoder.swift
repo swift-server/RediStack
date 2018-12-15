@@ -12,7 +12,7 @@ final class RedisDataDecoder: ByteToMessageDecoder {
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         var position = 0
 
-        switch try _parse(at: &position, from: buffer) {
+        switch try _parse(at: &position, from: &buffer) {
         case .notYetParsed:
             return .needMoreData
 
@@ -45,24 +45,24 @@ extension RedisDataDecoder {
         case parsed
     }
 
-    func _parse(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
+    func _parse(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
         guard let token = buffer.copyByte(at: position) else { return .notYetParsed }
 
         position += 1
 
         switch token {
         case .plus:
-            guard let string = try _parseSimpleString(at: &position, from: buffer) else { return .notYetParsed }
+            guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return .notYetParsed }
             return .parsed
         case .colon:
-            guard let number = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+            guard let number = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
             return .parsed
         case .dollar:
-            return try _parseBulkString(at: &position, from: buffer)
+            return try _parseBulkString(at: &position, from: &buffer)
         case .asterisk:
-            return try _parseArray(at: &position, from: buffer)
+            return try _parseArray(at: &position, from: &buffer)
         case .hyphen:
-            guard let string = try _parseSimpleString(at: &position, from: buffer) else { return .notYetParsed }
+            guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return .notYetParsed }
             let error = RedisError(identifier: "serverSide", reason: string)
             return .parsed
         default:
@@ -74,7 +74,7 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-simple-strings
-    func _parseSimpleString(at position: inout Int, from buffer: ByteBuffer) throws -> String? {
+    func _parseSimpleString(at position: inout Int, from buffer: inout ByteBuffer) throws -> String? {
         let byteCount = buffer.readableBytes - position
         guard
             byteCount >= 2, // strings should at least have a CRLF line ending
@@ -105,8 +105,8 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-integers
-    func _parseInteger(at position: inout Int, from buffer: ByteBuffer) throws -> Int? {
-        guard let string = try _parseSimpleString(at: &position, from: buffer) else { return nil }
+    func _parseInteger(at position: inout Int, from buffer: inout ByteBuffer) throws -> Int? {
+        guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return nil }
 
         guard let number = Int(string) else {
             throw RedisError(
@@ -119,8 +119,8 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-bulk-strings
-    func _parseBulkString(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
-        guard let size = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+    func _parseBulkString(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
+        guard let size = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
 
         #warning("TODO: Return null data if null is sent from Redis")
         // Redis sends '-1' to represent a null string
@@ -153,8 +153,8 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-arrays
-    func _parseArray(at position: inout Int, from buffer: ByteBuffer) throws -> _RedisDataDecodingState {
-        guard let arraySize = try _parseInteger(at: &position, from: buffer) else { return .notYetParsed }
+    func _parseArray(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
+        guard let arraySize = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
         #warning("TODO: return null array")
         guard arraySize > -1 else { return .parsed }
         #warning("TODO: return empty array")
@@ -164,7 +164,7 @@ extension RedisDataDecoder {
         for index in 0..<arraySize {
             guard buffer.readableBytes - position > 0 else { return .notYetParsed }
 
-            let parseResult = try _parse(at: &position, from: buffer)
+            let parseResult = try _parse(at: &position, from: &buffer)
             switch parseResult {
             case .parsed:
                 array[index] = parseResult
