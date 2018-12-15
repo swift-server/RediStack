@@ -52,7 +52,7 @@ extension RedisDataDecoder {
         switch token {
         case .plus:
             guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return .notYetParsed }
-            return .parsed(.basicString(string))
+            return .parsed(.simpleString(string))
 
         case .colon:
             guard let number = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
@@ -135,7 +135,7 @@ extension RedisDataDecoder {
             // since size = 0, and we successfully parsed the size
             // the beginning of the next message should be 2 further (the final \r\n - $0\r\n\r\n)
             position += 2
-            return .parsed(.bulkString("".convertedToData()))
+            return .parsed(.bulkString(Data()))
         }
 
         // verify that we have at least our expected bulk string message

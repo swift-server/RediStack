@@ -5,7 +5,7 @@ import Foundation
 /// See: https://redis.io/topics/protocol
 public enum RedisData {
     case null
-    case basicString(String)
+    case simpleString(String)
     case bulkString(Data)
     case error(RedisError)
     case integer(Int)
@@ -46,7 +46,7 @@ extension RedisData {
     /// Extracts the basic/bulk string as a `String`.
     var string: String? {
         switch self {
-        case .basicString(let string): return string
+        case .simpleString(let string): return string
         case .bulkString(let data): return String(bytes: data, encoding: .utf8)
         default: return nil
         }
