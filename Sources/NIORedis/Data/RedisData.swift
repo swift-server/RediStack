@@ -53,25 +53,25 @@ extension RedisData {
     }
 
     /// Extracts the binary data from a Redis BulkString
-    public var data: Data? {
+    var data: Data? {
         guard case .bulkString(let data) = self else { return nil }
         return data
     }
 
     /// Extracts an array type from this data
-    public var array: [RedisData]? {
+    var array: [RedisData]? {
         guard case .array(let array) = self else { return nil }
         return array
     }
 
     /// Extracts an array type from this data
-    public var int: Int? {
+    var int: Int? {
         guard case .integer(let int) = self else { return nil }
         return int
     }
 
     /// `true` if this data is null.
-    public var isNull: Bool {
+    var isNull: Bool {
         switch self {
         case .null: return true
         default: return false
