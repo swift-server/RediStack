@@ -255,13 +255,13 @@ extension RedisDataDecoderParsingTests {
 
 extension RedisDataDecoderParsingTests {
     func testParsing_bulkString_handlesMissingEndings() throws {
-        for message in ["$6", "$6\r\n", "$6\r\nabcdef"]  {
+        for message in ["$6", "$6\r\n", "$6\r\nabcdef", "$0\r\n"]  {
             XCTAssertNil(parseTestBulkString(message))
         }
     }
 
     func testParsing_bulkString_withNoSize_returnsEmpty() throws {
-        let result = parseTestBulkString("$0\r\n")
+        let result = parseTestBulkString("$0\r\n\r\n")
         XCTAssertEqual(result?.data?.count, 0)
     }
 

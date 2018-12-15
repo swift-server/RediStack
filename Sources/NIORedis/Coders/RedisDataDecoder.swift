@@ -128,23 +128,22 @@ extension RedisDataDecoder {
         // Redis sends '-1' to represent a null string
         guard size > -1 else { return .parsed(.null) }
 
-        // Redis can hold empty bulk strings, and represents it with a 0 size
-        // so return an empty string
-        guard size > 0 else {
-            // Move the tip of the message position
-            // since size = 0, and we successfully parsed the size
-            // the beginning of the next message should be 2 further (the final \r\n - $0\r\n\r\n)
-            position += 2
-            return .parsed(.bulkString(Data()))
-        }
-
-        // verify that we have at least our expected bulk string message
+        // verify that we have our expected bulk string message
         // by adding the expected CRLF bytes to the parsed size
+        // even if the size is 0, Redis provides line endings (i.e. $0\r\n\r\n)
         let readableByteCount = buffer.readableBytes - position
         let expectedRemainingMessageSize = size + 2
         guard readableByteCount >= expectedRemainingMessageSize else { return .notYetParsed }
 
-        guard let bytes = buffer.copyBytes(at: position, length: expectedRemainingMessageSize) else { return .notYetParsed }
+        guard size > 0 else {
+            // Move the tip of the message position
+            position += 2
+            return .parsed(.bulkString(Data()))
+        }
+
+        guard let bytes = buffer.copyBytes(at: position, length: expectedRemainingMessageSize) else {
+            return .notYetParsed
+        }
 
         // Move the tip of the message position for recursive parsing to just after the newline
         // of the bulk string content
