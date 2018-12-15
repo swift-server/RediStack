@@ -53,6 +53,13 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         try parseTest_recursive(withChunks: ["*-1\r".convertedToData(), "\n".convertedToData()])
     }
 
+    func testParsing_withInvalidSymbol_throws() {
+        var buffer = allocator.buffer(capacity: 1)
+        buffer.write(string: "&3\r\n")
+        var position = 0
+        XCTAssertNil(try? RedisDataDecoder()._parse(at: &position, from: buffer))
+    }
+
     /// See parse_Test_singleValue(input:) String
     private func parseTest_singleValue(input: String) throws {
         try parseTest_singleValue(input: input.convertedToData())
@@ -298,6 +305,7 @@ extension RedisDataDecoderParsingTests {
         ("testParsing_with_bulkString_recursively", testParsing_with_bulkString_recursively),
         ("testParsing_with_arrays", testParsing_with_arrays),
         ("testParsing_with_arrays_recursively", testParsing_with_arrays_recursively),
+        ("testParsing_withInvalidSymbol_throws", testParsing_withInvalidSymbol_throws),
         ("testParsing_simpleString_missingEndings_returnsNil", testParsing_simpleString_missingEndings_returnsNil),
         ("testParsing_simpleString_withNoContent_returnsEmpty", testParsing_simpleString_withNoContent_returnsEmpty),
         ("testParsing_simpleString_withContent_returnsExpectedContent", testParsing_simpleString_withContent_returnsExpectedContent),

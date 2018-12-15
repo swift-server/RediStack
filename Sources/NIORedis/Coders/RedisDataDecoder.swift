@@ -61,7 +61,15 @@ extension RedisDataDecoder {
             return try _parseBulkString(at: &position, from: buffer)
         case .asterisk:
             return try _parseArray(at: &position, from: buffer)
-        default: return .notYetParsed
+        case .hyphen:
+            guard let string = try _parseSimpleString(at: &position, from: buffer) else { return .notYetParsed }
+            let error = RedisError(identifier: "serverSide", reason: string)
+            return .parsed
+        default:
+            throw RedisError(
+                identifier: "invalidTokenType",
+                reason: "Unexpected error while parsing Redis RESP."
+            )
         }
     }
 
@@ -101,8 +109,10 @@ extension RedisDataDecoder {
         guard let string = try _parseSimpleString(at: &position, from: buffer) else { return nil }
 
         guard let number = Int(string) else {
-            #warning("TODO: Throw errors")
-            return nil
+            throw RedisError(
+                identifier: "parseInteger",
+                reason: "Unexpected error while parsing Redis RESP."
+            )
         }
 
         return number
