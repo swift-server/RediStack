@@ -5,6 +5,9 @@ import NIO
 ///
 /// See: https://redis.io/topics/protocol
 final class RedisDataDecoder: ByteToMessageDecoder {
+    /// `ByteToMessageDecoder`
+    public typealias InboundOut = RedisData
+
     /// See `ByteToMessageDecoder.cumulationBuffer`
     var cumulationBuffer: ByteBuffer?
 
@@ -16,14 +19,12 @@ final class RedisDataDecoder: ByteToMessageDecoder {
         case .notYetParsed:
             return .needMoreData
 
-        case .parsed:
+        case .parsed(let redisData):
+            ctx.fireChannelRead(wrapInboundOut(redisData))
+            buffer.moveReaderIndex(forwardBy: position)
             return .continue
         }
     }
-
-    private let encoding = String.Encoding.utf8
-
-    public typealias InboundOut = Int
 }
 
 // MARK: RESP Parsing
@@ -104,7 +105,7 @@ extension RedisDataDecoder {
         // Move the tip of the message position for recursive parsing to just after the newline
         position += expectedNewlinePosition + 1
 
-        return String(bytes: bytes[ ..<(expectedNewlinePosition - 1) ], encoding: encoding)
+        return String(bytes: bytes[ ..<(expectedNewlinePosition - 1) ], encoding: .utf8)
     }
 
     /// See https://redis.io/topics/protocol#resp-integers
