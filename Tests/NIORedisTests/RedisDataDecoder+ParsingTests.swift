@@ -101,6 +101,22 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         }
     }
 
+    func testParsing_error() {
+        let expectedContent = "ERR unknown command 'foobar'"
+        let testString = "-\(expectedContent)\r\n"
+        let result = runParse(offset: 0) { decoder, position, buffer in
+            buffer.write(string: testString)
+            guard
+                case .parsed(let data) = try decoder._parse(at: &position, from: &buffer),
+                case .error = data
+            else { return nil }
+
+            return data
+        }
+        XCTAssertNotNil(result)
+        XCTAssertEqual(result?.error?.description.contains(expectedContent), true)
+    }
+
     /// See parse_Test_singleValue(input:) String
     private func parseTest_singleValue(input: String) -> RedisData? {
         return parseTest_singleValue(input: input.convertedToData())

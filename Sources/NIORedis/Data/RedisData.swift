@@ -77,4 +77,12 @@ extension RedisData {
         default: return false
         }
     }
+
+    /// Extracts an error from this data
+    var error: RedisError? {
+        switch self {
+        case .error(let error): return error
+        default: return nil
+        }
+    }
 }
