@@ -46,7 +46,7 @@ extension RedisDataDecoder {
     }
 
     func _parse(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
-        guard let token = buffer.copyByte(at: position) else { return .notYetParsed }
+        guard let token = buffer.copyBytes(at: position, length: 1)?.first else { return .notYetParsed }
 
         position += 1
 
@@ -188,19 +188,6 @@ extension RedisDataDecoder {
 }
 
 private extension ByteBuffer {
-    /// Copies the `ByteBuffer` from the current `readerIndex`.
-    ///
-    ///     buffer.copyBytes(count: 5)
-    ///     // Optional(5 bytes)
-    ///
-    /// - Parameters:
-    ///     - count: The number of bytes to copy
-    ///     - skipping: The amount of bytes to skip, defaulting to `0`.
-    func copyBytes(count: Int, skipping: Int = 0) -> [UInt8]? {
-        guard readableBytes >= count + skipping else { return nil }
-        return getBytes(at: readerIndex + skipping, length: count)
-    }
-
     /// Copies bytes from the `ByteBuffer` from at the provided position, up to the length desired.
     ///
     ///     buffer.copyBytes(at: 3, length: 2)
@@ -212,16 +199,5 @@ private extension ByteBuffer {
     func copyBytes(at offset: Int = 0, length: Int) -> [UInt8]? {
         guard readableBytes >= offset + length else { return nil }
         return getBytes(at: offset + readerIndex, length: length)
-    }
-
-    /// Copies the first byte from the `ByteBuffer` at the desired position.
-    ///
-    ///     buffer.copyByte(at: 3)
-    ///     // Optional(1 byte), assuming buffer contains 3 or more bytes
-    ///
-    /// - Parameter at: The position offset of the byte to be copied from the buffer.
-    func copyByte(at position: Int) -> UInt8? {
-        guard readableBytes >= 1 else { return nil }
-        return getBytes(at: position, length: 1)?.first
     }
 }
