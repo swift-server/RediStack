@@ -3,7 +3,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "nio-redis",
+    name: "Redis",
     products: [
         .library(name: "NIORedis", targets: ["NIORedis"]),
         //.library(name: "Redis", targets: [""])
