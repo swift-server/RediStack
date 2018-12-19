@@ -109,7 +109,8 @@ final class RedisDataDecoderTests: XCTestCase {
     private func runTest(_ input: Data) throws -> (RedisData?, RedisData?) {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
-        try embeddedChannel.pipeline.add(handler: decoder).wait()
+        let handler = ByteToMessageHandler(decoder)
+        try embeddedChannel.pipeline.add(handler: handler).wait()
         var buffer = allocator.buffer(capacity: 256)
         buffer.write(bytes: input)
         try embeddedChannel.writeInbound(buffer)
@@ -170,7 +171,8 @@ extension RedisDataDecoderTests {
     func test_all() throws {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
-        try embeddedChannel.pipeline.add(handler: decoder).wait()
+        let handler = ByteToMessageHandler(decoder)
+        try embeddedChannel.pipeline.add(handler: handler).wait()
 
         var buffer = allocator.buffer(capacity: 256)
         for message in AllData.messages {

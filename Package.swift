@@ -9,7 +9,7 @@ let package = Package(
         //.library(name: "Redis", targets: [""])
     ],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-nio.git", from: "1.0.0")
+        .package(url: "https://github.com/apple/swift-nio.git", .branch("master"))
     ],
     targets: [
         .target(name: "NIORedis", dependencies: ["NIO"]),

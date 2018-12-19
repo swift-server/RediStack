@@ -57,8 +57,9 @@ final class RedisDataDecoderByteToMessageDecoderTests: XCTestCase {
     private func decodeTest(_ input: String, buffer: inout ByteBuffer) throws -> DecodingState {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
-        try embeddedChannel.pipeline.add(handler: decoder).wait()
-        let context = try embeddedChannel.pipeline.context(handler: decoder).wait()
+        let handler = ByteToMessageHandler(decoder)
+        try embeddedChannel.pipeline.add(handler: handler).wait()
+        let context = try embeddedChannel.pipeline.context(handler: handler).wait()
 
         buffer.write(string: input)
 
