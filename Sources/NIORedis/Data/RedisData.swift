@@ -10,6 +10,11 @@ public enum RedisData {
     case error(RedisError)
     case integer(Int)
     case array([RedisData])
+
+    /// Initializes a `bulkString` by converting the provided string input.
+    public init(bulk: String) {
+        self = .bulkString(Data(bulk.utf8))
+    }
 }
 
 extension RedisData: ExpressibleByStringLiteral {
@@ -43,7 +48,8 @@ extension RedisData: ExpressibleByIntegerLiteral {
 // Internal convienence computed properties
 
 extension RedisData {
-    /// Extracts the basic/bulk string as a `String`.
+    /// Extracts the simple/bulk string as a `String`.
+    /// - Note: This attempts to convert a `bulkString` to a `String` using UTF-8 encoding and may return nil.
     var string: String? {
         switch self {
         case .simpleString(let string): return string
