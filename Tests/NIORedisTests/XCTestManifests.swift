@@ -9,6 +9,7 @@ public func allTests() -> [XCTestCaseEntry] {
         testCase(RedisDataDecoderByteToMessageDecoderTests.allTests),
         testCase(RedisDataEncoderTests.allTests),
         testCase(RedisDataEncoderParsingTests.allTests),
+        testCase(BasicCommandsTests.allTests),
     ]
 }
 #endif
