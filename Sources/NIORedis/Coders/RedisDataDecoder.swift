@@ -8,9 +8,6 @@ final class RedisDataDecoder: ByteToMessageDecoder {
     /// `ByteToMessageDecoder`
     public typealias InboundOut = RedisData
 
-    /// See `ByteToMessageDecoder.cumulationBuffer`
-    var cumulationBuffer: ByteBuffer?
-
     /// See `ByteToMessageDecoder.decode(ctx:buffer:)`
     func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
         var position = 0
