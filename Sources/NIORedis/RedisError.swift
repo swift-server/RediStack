@@ -18,3 +18,9 @@ public struct RedisError: CustomDebugStringConvertible, CustomStringConvertible,
         debugDescription = "⚠️ Redis Error: \(reason)\n- id: \(name).\(identifier)\n\n\(Thread.callStackSymbols)"
     }
 }
+
+extension RedisError {
+    internal static var connectionClosed: RedisError {
+        return RedisError(identifier: "connection", reason: "Connection was closed while trying to execute.")
+    }
+}
