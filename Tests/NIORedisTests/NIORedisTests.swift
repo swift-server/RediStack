@@ -6,7 +6,7 @@ final class NIORedisTests: XCTestCase {
         let redis = NIORedis(executionModel: .spawnThreads(1))
         defer { try? redis.terminate() }
 
-        XCTAssertNoThrow(try redis.makeConnection().wait())
+        XCTAssertNoThrow(try redis.makeConnection().wait().close())
     }
 
     func test_command() throws {
@@ -18,6 +18,7 @@ final class NIORedisTests: XCTestCase {
         XCTAssertNotNil(result.int)
         XCTAssertEqual(result.int, 1)
         try connection.command("DEL", [.bulkString("key".convertedToData())]).wait()
+        connection.close()
     }
 
     static var allTests = [
