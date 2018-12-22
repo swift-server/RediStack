@@ -12,7 +12,7 @@ public final class NIORedisConnection {
 
     private let channel: Channel
 
-    deinit { assert(!isClosed.load(), "Redis connection was not properly shut down!") }
+    deinit { assert(isClosed.load(), "Redis connection was not properly shut down!") }
 
     /// Creates a new connection on the provided channel, using the handler for executing commands.
     /// - Important: Call `close()` before deinitializing to properly cleanup resources!
