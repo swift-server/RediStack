@@ -50,6 +50,13 @@ public final class NIORedis {
 
         return bootstrap.connect(host: hostname, port: port)
             .map { return NIORedisConnection(channel: $0, handler: channelHandler) }
+            .then { connection in
+                guard let pw = password else {
+                    return self.elg.next().makeSucceededFuture(result: connection)
+                }
+
+                return connection.authorize(with: pw).map { _ in return connection }
+            }
     }
 
     /// Handles the proper shutdown of managed resources.

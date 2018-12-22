@@ -11,6 +11,13 @@ extension NIORedisConnection {
             .map { _ in return () }
     }
 
+    /// Request for authentication in a password-protected Redis server.
+    ///
+    /// https://redis.io/commands/auth
+    public func authorize(with password: String) -> EventLoopFuture<Void> {
+        return command("AUTH", [RedisData(bulk: password)]).map { _ in return () }
+    }
+
     /// Removes the specified keys. A key is ignored if it does not exist.
     ///
     /// https://redis.io/commands/del
