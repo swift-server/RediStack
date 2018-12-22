@@ -4,7 +4,7 @@ import NIO
 /// Handles incoming byte messages from Redis and decodes them according to the RESP protocol.
 ///
 /// See: https://redis.io/topics/protocol
-final class RedisDataDecoder: ByteToMessageDecoder {
+internal final class RedisDataDecoder: ByteToMessageDecoder {
     /// `ByteToMessageDecoder`
     public typealias InboundOut = RedisData
 

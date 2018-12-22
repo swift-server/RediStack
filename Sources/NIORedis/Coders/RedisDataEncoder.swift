@@ -4,7 +4,7 @@ import NIO
 /// Handles outgoing `RedisData` on the wire by encoding it to the Redis RESP protocol.
 ///
 /// See: https://redis.io/topics/protocol
-final class RedisDataEncoder: MessageToByteEncoder {
+internal final class RedisDataEncoder: MessageToByteEncoder {
     /// See `MessageToByteEncoder.OutboundIn`
     typealias OutboundIn = RedisData
 

@@ -2,8 +2,8 @@ import Foundation
 
 /// Errors thrown while working with Redis.
 public struct RedisError: CustomDebugStringConvertible, CustomStringConvertible, LocalizedError {
-    public private(set) var description: String
-    public private(set) var debugDescription: String
+    public let description: String
+    public let debugDescription: String
 
     public init(
         identifier: String,
