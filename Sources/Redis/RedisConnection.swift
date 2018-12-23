@@ -12,16 +12,15 @@ public final class RedisConnection {
 
     public func get(
         _ key: String,
-        queue: DispatchQueue = .main,
         _ callback: @escaping (Result<String?, Error>
     ) -> Void) {
         // TODO: Make this a generic method to avoid copy/paste
         driverConnection.get(key)
             .map { result in
-                queue.async { callback(.success(result)) }
+                self.queue.async { callback(.success(result)) }
             }
             .whenFailure { error in
-                queue.async { callback(.failure(error)) }
+                self.queue.async { callback(.failure(error)) }
             }
     }
 }
