@@ -5,6 +5,8 @@ public final class RedisConnection {
     private let driverConnection: NIORedisConnection
     private let queue: DispatchQueue
 
+    deinit { driverConnection.close() }
+
     init(driver: NIORedisConnection, callbackQueue: DispatchQueue) {
         self.driverConnection = driver
         self.queue = callbackQueue
