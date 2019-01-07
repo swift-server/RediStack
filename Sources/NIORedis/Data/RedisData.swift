@@ -45,12 +45,10 @@ extension RedisData: ExpressibleByIntegerLiteral {
     }
 }
 
-// Internal convienence computed properties
-
 extension RedisData {
-    /// Extracts the simple/bulk string as a `String`.
-    /// - Note: This attempts to convert a `bulkString` to a `String` using UTF-8 encoding and may return nil.
-    var string: String? {
+    /// Extracted value of `simpleString` and `bulkString` representations.
+    /// - Important: `bulkString` conversions to `String` assume UTF-8 encoding. Use the `data` property in other encodings.
+    public var string: String? {
         switch self {
         case .simpleString(let string): return string
         case .bulkString(let data): return String(bytes: data, encoding: .utf8)
@@ -58,25 +56,25 @@ extension RedisData {
         }
     }
 
-    /// Extracts the binary data from a Redis BulkString
-    var data: Data? {
+    /// Extracted binary data from `bulkString` representations.
+    public var data: Data? {
         guard case .bulkString(let data) = self else { return nil }
         return data
     }
 
-    /// Extracts an array type from this data
-    var array: [RedisData]? {
+    /// Extracted container of data elements from `array` representations.
+    public var array: [RedisData]? {
         guard case .array(let array) = self else { return nil }
         return array
     }
 
-    /// Extracts an array type from this data
+    /// Extracted value from `integer` representations.
     var int: Int? {
         guard case .integer(let int) = self else { return nil }
         return int
     }
 
-    /// `true` if this data is null.
+    /// Returns `true` if this data is a "null" value from Redis.
     var isNull: Bool {
         switch self {
         case .null: return true
@@ -84,7 +82,7 @@ extension RedisData {
         }
     }
 
-    /// Extracts an error from this data
+    /// Extracted value from `error` representations.
     var error: RedisError? {
         switch self {
         case .error(let error): return error
