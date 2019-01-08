@@ -8,7 +8,7 @@ public final class NIORedisConnection {
     /// Has the connection been closed?
     public private(set) var isClosed = Atomic<Bool>(value: false)
 
-    internal let redisPipeline: RedisMessenger
+    internal let messenger: RedisMessenger
 
     private let channel: Channel
 
@@ -18,7 +18,7 @@ public final class NIORedisConnection {
     /// - Important: Call `close()` before deinitializing to properly cleanup resources!
     init(channel: Channel, handler: RedisMessenger) {
         self.channel = channel
-        self.redisPipeline = handler
+        self.messenger = handler
     }
 
     /// Closes the connection to Redis.
@@ -48,7 +48,7 @@ public final class NIORedisConnection {
         let promise = eventLoop.makePromise(of: RedisData.self)
 
         // cascade this enqueue to the newly created promise
-        redisPipeline.enqueue(message).cascade(promise: promise)
+        messenger.enqueue(message).cascade(promise: promise)
 
         return promise.futureResult
     }
