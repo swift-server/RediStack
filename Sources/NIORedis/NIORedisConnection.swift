@@ -31,7 +31,7 @@ public final class NIORedisConnection {
     /// Executes the desired command with the specified arguments.
     /// - Important: All arguments should be in `.bulkString` format.
     public func command(_ command: String, _ arguments: [RedisData] = []) -> EventLoopFuture<RedisData> {
-        return send(.array([RedisData(bulk: command)] + arguments))
+        return _send(.array([RedisData(bulk: command)] + arguments))
             .thenThrowing { response in
                 switch response {
                 case let .error(error): throw error
@@ -40,7 +40,12 @@ public final class NIORedisConnection {
             }
     }
 
-    private func send(_ message: RedisData) -> EventLoopFuture<RedisData> {
+    /// Creates a `NIORedisPipeline` for executing a batch of commands.
+    public func makePipeline() -> NIORedisPipeline {
+        return .init(using: self)
+    }
+
+    func _send(_ message: RedisData) -> EventLoopFuture<RedisData> {
         // ensure the connection is still open
         guard !isClosed.load() else { return eventLoop.makeFailedFuture(error: RedisError.connectionClosed) }
 

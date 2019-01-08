@@ -2,14 +2,20 @@ import Foundation
 import NIORedis
 
 public final class RedisConnection {
-    private let driverConnection: NIORedisConnection
+    let _driverConnection: NIORedisConnection
+
     private let queue: DispatchQueue
 
-    deinit { driverConnection.close() }
+    deinit { _driverConnection.close() }
 
     init(driver: NIORedisConnection, callbackQueue: DispatchQueue) {
-        self.driverConnection = driver
+        self._driverConnection = driver
         self.queue = callbackQueue
+    }
+
+    /// Creates a `RedisPipeline` for executing a batch of commands.
+    public func makePipeline(callbackQueue: DispatchQueue? = nil) -> RedisPipeline {
+        return .init(using: self, callbackQueue: callbackQueue ?? queue)
     }
 
     public func get(
@@ -17,7 +23,7 @@ public final class RedisConnection {
         _ callback: @escaping (Result<String?, Error>
     ) -> Void) {
         // TODO: Make this a generic method to avoid copy/paste
-        driverConnection.get(key)
+        _driverConnection.get(key)
             .map { result in
                 self.queue.async { callback(.success(result)) }
             }
