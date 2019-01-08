@@ -17,9 +17,9 @@ A barebones implementation is available at [mordil/nio-redis](https://github.com
 
 The following are already implemented, with unit tests:
 
-- Connection and Authorization
-- Raw commands
-- Convienence methods for:
+- [Connection and Authorization](https://github.com/Mordil/nio-redis/blob/master/Sources/NIORedis/NIORedis.swift#L35)
+- [Raw commands](https://github.com/Mordil/nio-redis/blob/master/Sources/NIORedis/NIORedisConnection.swift#L33)
+- [Convienence methods for:](https://github.com/Mordil/nio-redis/blob/master/Sources/NIORedis/Commands/BasicCommands.swift#L4)
   - GET
   - SET
   - AUTH
@@ -27,14 +27,16 @@ The following are already implemented, with unit tests:
   - SELECT
   - EXPIRE
 - NIO-wrapped abstractions for
-  - Client
-  - Connection
+  - [Client](https://github.com/Mordil/nio-redis/blob/master/Sources/Redis/Redis.swift)
+  - [Connection](https://github.com/Mordil/nio-redis/blob/master/Sources/Redis/RedisConnection.swift)
+  - [Pipelines](https://github.com/Mordil/nio-redis/blob/master/Sources/Redis/RedisPipeline.swift)
   - GET command
 - Unit tests for
   - Response decoding to native Swift
   - Message encoding to RESP
   - Connections
   - implemented commands
+  - pipelines
 
 This package is a re-implementation of [vapor/redis](https://github.com/vapor/redis) stripped down to only build on SwiftNIO to be framework agnostic.
 
@@ -105,9 +107,13 @@ A `ByteToMessageDecoder` and `MessageToByteEncoder` are used for the conversion 
 ### NIORedisConnection
 This class uses a `ChannelInboundHandler` that handles the actual process of sending and receiving commands.
 
-While it does handle a "pipeline" queue of messages, so as to not be blocking, it is _not_ the same as [Redis' Pipelining](https://redis.io/topics/pipelining).
+While it does handle a queue of messages, so as to not be blocking, pipelining is implemented with `NIORedisPipeline`.
 
-That is a feature for future development.
+### NIORedisPipeline
+A `NIORedisPipeline` is a quick abstraction that buffers an array of complete messages as `RedisData`, and executing them in sequence after a
+user has invoked `execute()`.
+
+It returns an `EventLoopFuture<[RedisData]>` with the results of all commands executed - unless one errors.
 
 ## Redis
 
