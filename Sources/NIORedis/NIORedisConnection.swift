@@ -8,7 +8,7 @@ public final class NIORedisConnection {
     /// Has the connection been closed?
     public private(set) var isClosed = Atomic<Bool>(value: false)
 
-    internal let redisPipeline: RedisMessenger
+    internal let messenger: RedisMessenger
 
     private let channel: Channel
 
@@ -18,7 +18,7 @@ public final class NIORedisConnection {
     /// - Important: Call `close()` before deinitializing to properly cleanup resources!
     init(channel: Channel, handler: RedisMessenger) {
         self.channel = channel
-        self.redisPipeline = handler
+        self.messenger = handler
     }
 
     /// Closes the connection to Redis.
@@ -31,7 +31,7 @@ public final class NIORedisConnection {
     /// Executes the desired command with the specified arguments.
     /// - Important: All arguments should be in `.bulkString` format.
     public func command(_ command: String, _ arguments: [RedisData] = []) -> EventLoopFuture<RedisData> {
-        return send(.array([RedisData(bulk: command)] + arguments))
+        return _send(.array([RedisData(bulk: command)] + arguments))
             .thenThrowing { response in
                 switch response {
                 case let .error(error): throw error
@@ -40,7 +40,12 @@ public final class NIORedisConnection {
             }
     }
 
-    private func send(_ message: RedisData) -> EventLoopFuture<RedisData> {
+    /// Creates a `NIORedisPipeline` for executing a batch of commands.
+    public func makePipeline() -> NIORedisPipeline {
+        return .init(using: self)
+    }
+
+    func _send(_ message: RedisData) -> EventLoopFuture<RedisData> {
         // ensure the connection is still open
         guard !isClosed.load() else { return eventLoop.makeFailedFuture(error: RedisError.connectionClosed) }
 
@@ -48,7 +53,7 @@ public final class NIORedisConnection {
         let promise = eventLoop.makePromise(of: RedisData.self)
 
         // cascade this enqueue to the newly created promise
-        redisPipeline.enqueue(message).cascade(promise: promise)
+        messenger.enqueue(message).cascade(promise: promise)
 
         return promise.futureResult
     }

@@ -10,6 +10,7 @@ public func allTests() -> [XCTestCaseEntry] {
         testCase(RedisDataEncoderTests.allTests),
         testCase(RedisDataEncoderParsingTests.allTests),
         testCase(BasicCommandsTests.allTests),
+        testCase(NIORedisPipelineTests.allTests)
     ]
 }
 #endif
