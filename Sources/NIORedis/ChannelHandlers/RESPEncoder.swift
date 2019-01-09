@@ -1,20 +1,17 @@
 import Foundation
 import NIO
 
-/// Handles outgoing `RESPValue` on the wire by encoding it to the Redis RESP protocol.
+/// Translates `RedisValue` into raw bytes, formatted according to the Redis Serialization Protocol (RESP).
 ///
 /// See: https://redis.io/topics/protocol
-internal final class RESPEncoder: MessageToByteEncoder {
-    /// See `MessageToByteEncoder.OutboundIn`
-    typealias OutboundIn = RESPValue
-
-    /// See `RESPEncoder.encode(ctx:data:out:)`
-    func encode(ctx: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
-        out.write(bytes: _encode(data: data))
-    }
-
-    func _encode(data: RESPValue) -> Data {
-        switch data {
+public final class RESPEncoder {
+    /// Encodes the `RedisValue` to bytes, following the RESP specification.
+    ///
+    /// See https://redis.io/topics/protocol
+    /// - Parameter value: The `RESPValue` to encode.
+    /// - Returns: The encoded value as a collection of bytes.
+    public func encode(_ value: RESPValue) -> Data {
+        switch value {
         case .simpleString(let string):
             return "+\(string)\r\n".convertedToData()
 
@@ -31,8 +28,20 @@ internal final class RESPEncoder: MessageToByteEncoder {
             return "-\(error.description)\r\n".convertedToData()
 
         case .array(let array):
-            let encodedArray = array.map { _encode(data: $0) }.joined()
+            let encodedArray = array.map(encode).joined()
             return "*\(array.count)\r\n".convertedToData() + encodedArray
         }
+    }
+}
+
+// MARK: MessageToByteEncoder
+
+extension RESPEncoder: MessageToByteEncoder {
+    /// See `MessageToByteEncoder.OutboundIn`
+    public typealias OutboundIn = RESPValue
+
+    /// See `RESPEncoder.encode(ctx:data:out:)`
+    public func encode(ctx: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
+        out.write(bytes: encode(data))
     }
 }
