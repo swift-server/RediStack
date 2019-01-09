@@ -1,6 +1,7 @@
 import NIO
 import NIOConcurrencyHelpers
 
+@available(*, deprecated)
 public final class NIORedisConnection {
     /// The `EventLoop` this connection uses to execute commands on.
     public var eventLoop: EventLoop { return channel.eventLoop }
