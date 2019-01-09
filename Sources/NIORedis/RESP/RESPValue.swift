@@ -1,15 +1,15 @@
 import Foundation
 
-/// A representation of a Redis primitive value
+/// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
 /// See: https://redis.io/topics/protocol
-public enum RedisData {
+public enum RESPValue {
     case null
     case simpleString(String)
     case bulkString(Data)
     case error(RedisError)
     case integer(Int)
-    case array([RedisData])
+    case array([RESPValue])
 
     /// Initializes a `bulkString` by converting the provided string input.
     public init(bulk: String) {
@@ -17,35 +17,35 @@ public enum RedisData {
     }
 }
 
-extension RedisData: ExpressibleByStringLiteral {
+extension RESPValue: ExpressibleByStringLiteral {
     /// Initializes a bulk string from a String literal
     public init(stringLiteral value: String) {
         self = .bulkString(Data(value.utf8))
     }
 }
 
-extension RedisData: ExpressibleByArrayLiteral {
+extension RESPValue: ExpressibleByArrayLiteral {
     /// Initializes an array from an Array literal
-    public init(arrayLiteral elements: RedisData...) {
+    public init(arrayLiteral elements: RESPValue...) {
         self = .array(elements)
     }
 }
 
-extension RedisData: ExpressibleByNilLiteral {
+extension RESPValue: ExpressibleByNilLiteral {
     /// Initializes null from a nil literal
     public init(nilLiteral: ()) {
         self = .null
     }
 }
 
-extension RedisData: ExpressibleByIntegerLiteral {
+extension RESPValue: ExpressibleByIntegerLiteral {
     /// Initializes an integer from an integer literal
     public init(integerLiteral value: Int) {
         self = .integer(value)
     }
 }
 
-extension RedisData {
+extension RESPValue {
     /// Extracted value of `simpleString` and `bulkString` representations.
     /// - Important: `bulkString` conversions to `String` assume UTF-8 encoding. Use the `data` property in other encodings.
     public var string: String? {
@@ -63,7 +63,7 @@ extension RedisData {
     }
 
     /// Extracted container of data elements from `array` representations.
-    public var array: [RedisData]? {
+    public var array: [RESPValue]? {
         guard case .array(let array) = self else { return nil }
         return array
     }

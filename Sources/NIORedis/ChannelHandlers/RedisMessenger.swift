@@ -9,9 +9,9 @@ internal final class RedisMessenger {
     private var channelContext: ChannelHandlerContext?
 
     /// Queue of promises waiting to receive an incoming response value from an outgoing message.
-    private var waitingResponseQueue: [EventLoopPromise<RedisData>]
+    private var waitingResponseQueue: [EventLoopPromise<RESPValue>]
     /// Queue of unset outgoing messages, with the oldest messages at the end of the array.
-    private var outgoingMessageQueue: [RedisData]
+    private var outgoingMessageQueue: [RESPValue]
 
     /// Creates a new handler that works on the specified `EventLoop`.
     init(on eventLoop: EventLoop) {
@@ -20,9 +20,9 @@ internal final class RedisMessenger {
         self.eventLoop = eventLoop
     }
     
-    /// Adds a complete message encoded as `RedisData` to the queue and returns an `EventLoopFuture` that resolves
+    /// Adds a complete message encoded as `RESPValue` to the queue and returns an `EventLoopFuture` that resolves
     /// the response from Redis.
-    func enqueue(_ output: RedisData) -> EventLoopFuture<RedisData> {
+    func enqueue(_ output: RESPValue) -> EventLoopFuture<RESPValue> {
         // ensure that we are on the event loop before modifying our data
         guard eventLoop.inEventLoop else {
             return eventLoop.submit({}).then { return self.enqueue(output) }
@@ -33,7 +33,7 @@ internal final class RedisMessenger {
 
         // every outgoing message is expected to receive some form of response, so create a promise that we'll resolve
         // with the response
-        let promise = eventLoop.makePromise(of: RedisData.self)
+        let promise = eventLoop.makePromise(of: RESPValue.self)
         waitingResponseQueue.insert(promise, at: 0)
 
         // if we have a context for writing, flush the outgoing queue
@@ -59,10 +59,10 @@ internal final class RedisMessenger {
 
 extension RedisMessenger: ChannelInboundHandler {
     /// See `ChannelInboundHandler.InboundIn`
-    public typealias InboundIn = RedisData
+    public typealias InboundIn = RESPValue
 
     /// See `ChannelInboundHandler.OutboundOut`
-    public typealias OutboundOut = RedisData
+    public typealias OutboundOut = RESPValue
 
     /// Invoked by NIO when the channel for this handler has become active, receiving a context that is ready to
     /// send messages.
@@ -85,7 +85,7 @@ extension RedisMessenger: ChannelInboundHandler {
     }
 
     /// Invoked by NIO when a read has been fired from earlier in the response chain. This forwards the unwrapped
-    /// `RedisData` to the response at the front of the queue.
+    /// `RESPValue` to the response at the front of the queue.
     /// See `ChannelInboundHandler.channelRead(ctx:data:)`
     public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
         let input = unwrapInboundIn(data)

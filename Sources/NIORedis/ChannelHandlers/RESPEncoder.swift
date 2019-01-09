@@ -1,19 +1,19 @@
 import Foundation
 import NIO
 
-/// Handles outgoing `RedisData` on the wire by encoding it to the Redis RESP protocol.
+/// Handles outgoing `RESPValue` on the wire by encoding it to the Redis RESP protocol.
 ///
 /// See: https://redis.io/topics/protocol
-internal final class RedisDataEncoder: MessageToByteEncoder {
+internal final class RESPEncoder: MessageToByteEncoder {
     /// See `MessageToByteEncoder.OutboundIn`
-    typealias OutboundIn = RedisData
+    typealias OutboundIn = RESPValue
 
-    /// See `RedisDataEncoder.encode(ctx:data:out:)`
-    func encode(ctx: ChannelHandlerContext, data: RedisData, out: inout ByteBuffer) throws {
+    /// See `RESPEncoder.encode(ctx:data:out:)`
+    func encode(ctx: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
         out.write(bytes: _encode(data: data))
     }
 
-    func _encode(data: RedisData) -> Data {
+    func _encode(data: RESPValue) -> Data {
         switch data {
         case .simpleString(let string):
             return "+\(string)\r\n".convertedToData()

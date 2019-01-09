@@ -14,7 +14,7 @@ final class NIORedisTests: XCTestCase {
         defer { try? redis.terminate() }
 
         let connection = try redis.makeConnection().wait()
-        let result = try connection.command("SADD", [.bulkString("key".convertedToData()), try 3.convertToRedisData()]).wait()
+        let result = try connection.command("SADD", [.bulkString("key".convertedToData()), try 3.convertToRESP()]).wait()
         XCTAssertNotNil(result.int)
         XCTAssertEqual(result.int, 1)
         try connection.command("DEL", [.bulkString("key".convertedToData())]).wait()

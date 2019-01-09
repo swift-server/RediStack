@@ -30,8 +30,8 @@ public final class NIORedisConnection {
 
     /// Executes the desired command with the specified arguments.
     /// - Important: All arguments should be in `.bulkString` format.
-    public func command(_ command: String, _ arguments: [RedisData] = []) -> EventLoopFuture<RedisData> {
-        return _send(.array([RedisData(bulk: command)] + arguments))
+    public func command(_ command: String, _ arguments: [RESPValue] = []) -> EventLoopFuture<RESPValue> {
+        return _send(.array([RESPValue(bulk: command)] + arguments))
             .thenThrowing { response in
                 switch response {
                 case let .error(error): throw error
@@ -45,12 +45,12 @@ public final class NIORedisConnection {
         return .init(using: self)
     }
 
-    func _send(_ message: RedisData) -> EventLoopFuture<RedisData> {
+    func _send(_ message: RESPValue) -> EventLoopFuture<RESPValue> {
         // ensure the connection is still open
         guard !isClosed.load() else { return eventLoop.makeFailedFuture(error: RedisError.connectionClosed) }
 
         // create a new promise to store
-        let promise = eventLoop.makePromise(of: RedisData.self)
+        let promise = eventLoop.makePromise(of: RESPValue.self)
 
         // cascade this enqueue to the newly created promise
         messenger.enqueue(message).cascade(promise: promise)

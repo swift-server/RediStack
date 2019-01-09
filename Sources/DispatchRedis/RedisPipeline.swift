@@ -32,7 +32,7 @@ public final class RedisPipeline {
     ///     - arguments: The arguments, if any, to send with the command.
     /// - Returns: A self-reference to this `RedisPipeline` instance for chaining commands.
     @discardableResult
-    public func enqueue(command: String, arguments: [RedisDataConvertible] = []) throws -> RedisPipeline {
+    public func enqueue(command: String, arguments: [RESPConvertible] = []) throws -> RedisPipeline {
         try _driverPipeline.enqueue(command: command, arguments: arguments)
         return self
     }
@@ -40,7 +40,7 @@ public final class RedisPipeline {
     /// Flushes the queue, sending all of the commands to Redis in the same order as they were enqueued.
     /// - Important: If any of the commands fail, the remaining commands will not execute and the callback will receive a failure.
     /// - Parameter callback: The callback to receive the results of the pipeline of commands, or an error if thrown.
-    public func execute(_ callback: @escaping (Result<[RedisData], Error>) -> Void) {
+    public func execute(_ callback: @escaping (Result<[RESPValue], Error>) -> Void) {
         _driverPipeline.execute()
             .map { results in
                 self.queue.async { callback(.success(results)) }

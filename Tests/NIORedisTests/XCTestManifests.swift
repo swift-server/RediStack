@@ -4,11 +4,11 @@ import XCTest
 public func allTests() -> [XCTestCaseEntry] {
     return [
         testCase(NIORedisTests.allTests),
-        testCase(RedisDataDecoderTests.allTests),
-        testCase(RedisDataDecoderParsingTests.allTests),
-        testCase(RedisDataDecoderByteToMessageDecoderTests.allTests),
-        testCase(RedisDataEncoderTests.allTests),
-        testCase(RedisDataEncoderParsingTests.allTests),
+        testCase(RESPDecoderTests.allTests),
+        testCase(RESPDecoderParsingTests.allTests),
+        testCase(RESPDecoderByteToMessageDecoderTests.allTests),
+        testCase(RESPEncoderTests.allTests),
+        testCase(RESPEncoderParsingTests.allTests),
         testCase(BasicCommandsTests.allTests),
         testCase(NIORedisPipelineTests.allTests)
     ]

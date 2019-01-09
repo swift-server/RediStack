@@ -79,7 +79,7 @@ print(result) // Optional("some value")
 
 // raw commands
 
-let keyCount = try connection.command("DEL", [RedisData(bulk: "my_key")])
+let keyCount = try connection.command("DEL", [RESPValue(bulk: "my_key")])
     .thenThrowing { res in
         guard case let .integer(count) else {
             // throw Error
@@ -95,12 +95,12 @@ try redis.terminate()
 try elg.syncShutdownGracefully()
 ```
 
-### RedisData & RedisDataConvertible
+### RESPValue & RESPValueConvertible
 This is a 1:1 mapping enum of the `RESP` types: `Simple String`, `Bulk String`, `Array`, `Integer` and `Error`.
 
-Conforming to `RedisDataConvertible` allows Swift types to more easily convert between `RedisData` and native types.
+Conforming to `RESPValueConvertible` allows Swift types to more easily convert between `RESPValue` and native types.
 
-`Array`, `Data`, `Float`, `Double`, `FixedWidthInteger`, `String`, and of course `RedisData` all conform in this package.
+`Array`, `Data`, `Float`, `Double`, `FixedWidthInteger`, `String`, and of course `RESPValue` all conform in this package.
 
 A `ByteToMessageDecoder` and `MessageToByteEncoder` are used for the conversion process on connections.
 
@@ -110,10 +110,10 @@ This class uses a `ChannelInboundHandler` that handles the actual process of sen
 While it does handle a queue of messages, so as to not be blocking, pipelining is implemented with `NIORedisPipeline`.
 
 ### NIORedisPipeline
-A `NIORedisPipeline` is a quick abstraction that buffers an array of complete messages as `RedisData`, and executing them in sequence after a
+A `NIORedisPipeline` is a quick abstraction that buffers an array of complete messages as `RESPValue`, and executing them in sequence after a
 user has invoked `execute()`.
 
-It returns an `EventLoopFuture<[RedisData]>` with the results of all commands executed - unless one errors.
+It returns an `EventLoopFuture<[RESPValue]>` with the results of all commands executed - unless one errors.
 
 ## Redis
 

@@ -2,8 +2,8 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RedisDataDecoderTests: XCTestCase {
-    private let decoder = RedisDataDecoder()
+final class RESPDecoderTests: XCTestCase {
+    private let decoder = RESPDecoder()
     private let allocator = ByteBufferAllocator()
 
     func test_error() throws {
@@ -11,7 +11,7 @@ final class RedisDataDecoderTests: XCTestCase {
         XCTAssertNil(try runTest("-ERR\r"))
         XCTAssertEqual(try runTest("-ERROR\r\n")?.error?.description.contains("ERROR"), true)
 
-        let multiError: (RedisData?, RedisData?) = try runTest("-ERROR\r\n-OTHER ERROR\r\n")
+        let multiError: (RESPValue?, RESPValue?) = try runTest("-ERROR\r\n-OTHER ERROR\r\n")
         XCTAssertEqual(multiError.0?.error?.description.contains("ERROR"), true)
         XCTAssertEqual(multiError.1?.error?.description.contains("OTHER ERROR"), true)
     }
@@ -24,7 +24,7 @@ final class RedisDataDecoderTests: XCTestCase {
 
         XCTAssertEqual(try runTest("+©ºmpl³x\r\n")?.string, "©ºmpl³x")
 
-        let multiSimpleString: (RedisData?, RedisData?) = try runTest("+OK\r\n+OTHER STRINGS\r\n")
+        let multiSimpleString: (RESPValue?, RESPValue?) = try runTest("+OK\r\n+OTHER STRINGS\r\n")
         XCTAssertEqual(multiSimpleString.0?.string, "OK")
         XCTAssertEqual(multiSimpleString.1?.string, "OTHER STRINGS")
     }
@@ -38,7 +38,7 @@ final class RedisDataDecoderTests: XCTestCase {
         XCTAssertEqual(try runTest(":1000\r\n")?.int, 1000)
         XCTAssertEqual(try runTest(":-9223372036854775807\r\n")?.int, -9223372036854775807)
 
-        let multiInteger: (RedisData?, RedisData?) = try runTest(":9223372036854775807\r\n:99\r\n")
+        let multiInteger: (RESPValue?, RESPValue?) = try runTest(":9223372036854775807\r\n:99\r\n")
         XCTAssertEqual(multiInteger.0?.int, 9223372036854775807)
         XCTAssertEqual(multiInteger.1?.int, 99)
     }
@@ -63,7 +63,7 @@ final class RedisDataDecoderTests: XCTestCase {
         XCTAssertEqual(try runTest(strInput)?.string, str)
         XCTAssertEqual(try runTest(strInput)?.data, strBytes)
 
-        let multiBulkString: (RedisData?, RedisData?) = try runTest("$-1\r\n$3\r\nn³\r\n")
+        let multiBulkString: (RESPValue?, RESPValue?) = try runTest("$-1\r\n$3\r\nn³\r\n")
         XCTAssertEqual(multiBulkString.0?.isNull, true)
         XCTAssertEqual(multiBulkString.1?.string, "n³")
 
@@ -73,7 +73,7 @@ final class RedisDataDecoderTests: XCTestCase {
     }
 
     func test_array() throws {
-        func runArrayTest(_ input: String) throws -> [RedisData]? {
+        func runArrayTest(_ input: String) throws -> [RESPValue]? {
             return try runTest(input)?.array
         }
 
@@ -94,19 +94,19 @@ final class RedisDataDecoderTests: XCTestCase {
         ))
     }
 
-    private func runTest(_ input: String) throws -> RedisData? {
+    private func runTest(_ input: String) throws -> RESPValue? {
         return try runTest(input.convertedToData())
     }
 
-    private func runTest(_ input: Data) throws -> RedisData? {
+    private func runTest(_ input: Data) throws -> RESPValue? {
         return try runTest(input).0
     }
 
-    private func runTest(_ input: String) throws -> (RedisData?, RedisData?) {
+    private func runTest(_ input: String) throws -> (RESPValue?, RESPValue?) {
         return try runTest(input.convertedToData())
     }
 
-    private func runTest(_ input: Data) throws -> (RedisData?, RedisData?) {
+    private func runTest(_ input: Data) throws -> (RESPValue?, RESPValue?) {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
         let handler = ByteToMessageHandler(decoder)
@@ -117,7 +117,7 @@ final class RedisDataDecoderTests: XCTestCase {
         return (embeddedChannel.readInbound(), embeddedChannel.readInbound())
     }
 
-    private func arraysAreEqual(_ lhs: [RedisData]?, expected right: [RedisData]) -> Bool {
+    private func arraysAreEqual(_ lhs: [RESPValue]?, expected right: [RESPValue]) -> Bool {
         guard
             let left = lhs,
             left.count == right.count
@@ -147,7 +147,7 @@ final class RedisDataDecoderTests: XCTestCase {
 
 // MARK: All Types
 
-extension RedisDataDecoderTests {
+extension RESPDecoderTests {
     private struct AllData {
         static let expectedString = "string"
         static let expectedError = "ERROR"
@@ -181,7 +181,7 @@ extension RedisDataDecoderTests {
 
         try embeddedChannel.writeInbound(buffer)
 
-        var results = [RedisData?]()
+        var results = [RESPValue?]()
         for _ in 0..<AllData.messages.count {
             results.append(embeddedChannel.readInbound())
         }
@@ -219,7 +219,7 @@ extension RedisDataDecoderTests {
     }
 }
 
-extension RedisDataDecoderTests {
+extension RESPDecoderTests {
     static var allTests = [
         ("test_error", test_error),
         ("test_simpleString", test_simpleString),

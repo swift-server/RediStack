@@ -3,8 +3,8 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RedisDataEncoderParsingTests: XCTestCase {
-    private let encoder = RedisDataEncoder()
+final class RESPEncoderParsingTests: XCTestCase {
+    private let encoder = RESPEncoder()
 
     func testSimpleStrings() {
         XCTAssertEqual(
@@ -51,13 +51,13 @@ final class RedisDataEncoderParsingTests: XCTestCase {
             encoder._encode(data: .array([])),
             "*0\r\n".convertedToData()
         )
-        let a1: RedisData = .array([.integer(3), .simpleString("foo")])
+        let a1: RESPValue = .array([.integer(3), .simpleString("foo")])
         XCTAssertEqual(
             encoder._encode(data: a1),
             "*2\r\n:3\r\n+foo\r\n".convertedToData()
         )
         let bytes = Data(bytes: [ 0x0a, 0x1a, 0x1b, 0xff ])
-        let a2: RedisData = .array([.array([
+        let a2: RESPValue = .array([.array([
             .integer(3),
             .bulkString(bytes)
         ])])
@@ -78,7 +78,7 @@ final class RedisDataEncoderParsingTests: XCTestCase {
     }
 }
 
-extension RedisDataEncoderParsingTests {
+extension RESPEncoderParsingTests {
     static var allTests = [
         ("testSimpleStrings", testSimpleStrings),
         ("testBulkStrings", testBulkStrings),
