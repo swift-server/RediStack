@@ -13,6 +13,7 @@ import NIO
 ///     // results[1].int == Optional(4)
 /// - Important: The larger the pipeline queue, the more memory both NIORedis and Redis will use.
 /// See https://redis.io/topics/pipelining#redis-pipelining
+@available(*, deprecated)
 public final class NIORedisPipeline {
     /// The client to execute the commands on.
     private let connection: NIORedisConnection

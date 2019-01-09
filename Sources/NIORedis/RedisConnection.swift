@@ -53,9 +53,13 @@ public final class RedisConnection {
             promise: promise
         )
 
-        #warning("TODO - Pipelining")
         _ = channel.writeAndFlush(context)
 
         return promise.futureResult
+    }
+
+    /// Creates a `RedisPipeline` for executing a batch of commands.
+    public func makePipeline() -> RedisPipeline {
+        return .init(channel: channel)
     }
 }
