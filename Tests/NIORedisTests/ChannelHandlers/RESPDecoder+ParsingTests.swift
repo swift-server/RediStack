@@ -92,8 +92,8 @@ final class RESPDecoderParsingTests: XCTestCase {
         _ = runParse(offset: 0) { decoder, position, buffer in
             buffer.write(string: "&3\r\n")
             do {
-                _ = try decoder._parse(at: &position, from: &buffer)
-                XCTFail("_parse(at:from:) did not throw an expected error!")
+                _ = try decoder.parse(at: &position, from: &buffer)
+                XCTFail("parse(at:from:) did not throw an expected error!")
             }
             catch { XCTAssertTrue(error is RedisError) }
 
@@ -107,7 +107,7 @@ final class RESPDecoderParsingTests: XCTestCase {
         let result = runParse(offset: 0) { decoder, position, buffer in
             buffer.write(string: testString)
             guard
-                case .parsed(let data) = try decoder._parse(at: &position, from: &buffer),
+                case .parsed(let data) = try decoder.parse(at: &position, from: &buffer),
                 case .error = data
             else { return nil }
 
@@ -126,7 +126,7 @@ final class RESPDecoderParsingTests: XCTestCase {
     private func parseTest_singleValue(input: Data) -> RESPValue? {
         return runParse(offset: 0) { decoder, position, buffer in
             buffer.write(bytes: input)
-            guard case .parsed(let result)? = try? decoder._parse(at: &position, from: &buffer) else { return nil }
+            guard case .parsed(let result)? = try? decoder.parse(at: &position, from: &buffer) else { return nil }
             return result
         }
     }
@@ -148,8 +148,8 @@ final class RESPDecoderParsingTests: XCTestCase {
         }
 
         var position = 0
-        let p1 = try decoder._parse(at: &position, from: &buffer)
-        let p2 = try decoder._parse(at: &position, from: &buffer)
+        let p1 = try decoder.parse(at: &position, from: &buffer)
+        let p2 = try decoder.parse(at: &position, from: &buffer)
 
         guard
             case .parsed(let first) = p1,
