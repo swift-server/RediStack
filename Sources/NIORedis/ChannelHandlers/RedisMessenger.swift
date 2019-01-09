@@ -2,6 +2,7 @@ import NIO
 
 /// `ChannelInboundHandler` that is responsible for coordinating incoming and outgoing messages on a particular
 /// connection to Redis.
+@available(*, deprecated)
 internal final class RedisMessenger {
     private let eventLoop: EventLoop
 
