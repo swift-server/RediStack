@@ -4,12 +4,12 @@ import NIORedis
 
 /// A factory that handles all necessary details for creating `RedisConnection` instances.
 public final class Redis {
-    private let driver: NIORedis
+    private let driver: RedisDriver
 
     deinit { try? driver.terminate() }
 
     public init(threadCount: Int = 1) {
-        self.driver = NIORedis(executionModel: .spawnThreads(threadCount))
+        self.driver = RedisDriver(executionModel: .spawnThreads(threadCount))
     }
 
     public func makeConnection(

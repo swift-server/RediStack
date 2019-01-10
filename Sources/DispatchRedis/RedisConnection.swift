@@ -2,20 +2,20 @@ import Foundation
 import NIORedis
 
 public final class RedisConnection {
-    let _driverConnection: NIORedisConnection
+    let _driverConnection: NIORedis.RedisConnection
 
     private let queue: DispatchQueue
 
     deinit { _driverConnection.close() }
 
-    init(driver: NIORedisConnection, callbackQueue: DispatchQueue) {
+    init(driver: NIORedis.RedisConnection, callbackQueue: DispatchQueue) {
         self._driverConnection = driver
         self.queue = callbackQueue
     }
 
     /// Creates a `RedisPipeline` for executing a batch of commands.
     public func makePipeline(callbackQueue: DispatchQueue? = nil) -> RedisPipeline {
-        return .init(using: self, callbackQueue: callbackQueue ?? queue)
+        return .init(connection: self, callbackQueue: callbackQueue ?? queue)
     }
 
     public func get(
