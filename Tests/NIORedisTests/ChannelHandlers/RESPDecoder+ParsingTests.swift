@@ -3,16 +3,16 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RedisDataDecoderParsingTests: XCTestCase {
+final class RESPDecoderParsingTests: XCTestCase {
     private let allocator = ByteBufferAllocator()
 
     private func runParse(
         offset: Int = 1,
-        using parser: (RedisDataDecoder, inout Int, inout ByteBuffer) throws -> RedisData?
-    ) -> RedisData? {
+        using parser: (RESPDecoder, inout Int, inout ByteBuffer) throws -> RESPValue?
+    ) -> RESPValue? {
         var buffer = allocator.buffer(capacity: 30)
         var position = offset
-        do { return try parser(RedisDataDecoder(), &position, &buffer) }
+        do { return try parser(RESPDecoder(), &position, &buffer) }
         catch { return nil }
     }
 
@@ -43,12 +43,12 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         XCTAssertEqual(parseTest_singleValue(input: "$0\r\n\r\n")?.string, "")
         XCTAssertEqual(parseTest_singleValue(input: "$1\r\n!\r\n")?.string, "!")
         XCTAssertEqual(
-            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data(bytes: [0xa3]) + "\r\n".convertedToData())?.data,
-            Data(bytes: [0xa3])
+            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data([0xa3]) + "\r\n".convertedToData())?.data,
+            Data([0xa3])
         )
         XCTAssertEqual(
-            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data(bytes: [0xba]) + "\r\n".convertedToData())?.data,
-            Data(bytes: [0xba])
+            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data([0xba]) + "\r\n".convertedToData())?.data,
+            Data([0xba])
         )
     }
 
@@ -59,8 +59,8 @@ final class RedisDataDecoderParsingTests: XCTestCase {
 
         let t2 = try parseTest_twoValues(withChunks: [
             "$3\r".convertedToData(),
-            "\n".convertedToData() + Data(bytes: [0xAA, 0xA3, 0xFF]) + "\r\n$".convertedToData(),
-            "4\r\n".convertedToData() + Data(bytes: [0xbb, 0x3a, 0xba, 0xFF]) + "\r\n".convertedToData()
+            "\n".convertedToData() + Data([0xAA, 0xA3, 0xFF]) + "\r\n$".convertedToData(),
+            "4\r\n".convertedToData() + Data([0xbb, 0x3a, 0xba, 0xFF]) + "\r\n".convertedToData()
         ])
         XCTAssertTrue(t2.0?.data?.count == 3)
         XCTAssertTrue(t2.1?.data?.count == 4)
@@ -92,8 +92,8 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         _ = runParse(offset: 0) { decoder, position, buffer in
             buffer.write(string: "&3\r\n")
             do {
-                _ = try decoder._parse(at: &position, from: &buffer)
-                XCTFail("_parse(at:from:) did not throw an expected error!")
+                _ = try decoder.parse(at: &position, from: &buffer)
+                XCTFail("parse(at:from:) did not throw an expected error!")
             }
             catch { XCTAssertTrue(error is RedisError) }
 
@@ -107,7 +107,7 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         let result = runParse(offset: 0) { decoder, position, buffer in
             buffer.write(string: testString)
             guard
-                case .parsed(let data) = try decoder._parse(at: &position, from: &buffer),
+                case .parsed(let data) = try decoder.parse(at: &position, from: &buffer),
                 case .error = data
             else { return nil }
 
@@ -118,29 +118,29 @@ final class RedisDataDecoderParsingTests: XCTestCase {
     }
 
     /// See parse_Test_singleValue(input:) String
-    private func parseTest_singleValue(input: String) -> RedisData? {
+    private func parseTest_singleValue(input: String) -> RESPValue? {
         return parseTest_singleValue(input: input.convertedToData())
     }
 
     /// Takes a collection of bytes representing a complete message and returns the data
-    private func parseTest_singleValue(input: Data) -> RedisData? {
+    private func parseTest_singleValue(input: Data) -> RESPValue? {
         return runParse(offset: 0) { decoder, position, buffer in
             buffer.write(bytes: input)
-            guard case .parsed(let result)? = try? decoder._parse(at: &position, from: &buffer) else { return nil }
+            guard case .parsed(let result)? = try? decoder.parse(at: &position, from: &buffer) else { return nil }
             return result
         }
     }
 
     /// See parseTest_recursive(withCunks:) [Data]
-    private func parseTest_twoValues(withChunks messageChunks: [String]) throws -> (RedisData?, RedisData?) {
+    private func parseTest_twoValues(withChunks messageChunks: [String]) throws -> (RESPValue?, RESPValue?) {
         return try parseTest_twoValues(withChunks: messageChunks.map({ $0.convertedToData() }))
     }
 
-    /// Takes a collection of incomplete byte messages that produce exactly two decoded RedisData.
+    /// Takes a collection of incomplete byte messages that produce exactly two decoded RESPValue.
     /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
     /// - Returns: The first and second decoded data
-    private func parseTest_twoValues(withChunks messageChunks: [Data]) throws -> (RedisData?, RedisData?) {
-        let decoder = RedisDataDecoder()
+    private func parseTest_twoValues(withChunks messageChunks: [Data]) throws -> (RESPValue?, RESPValue?) {
+        let decoder = RESPDecoder()
         var buffer = allocator.buffer(capacity: messageChunks.joined().count)
 
         for chunk in messageChunks {
@@ -148,8 +148,8 @@ final class RedisDataDecoderParsingTests: XCTestCase {
         }
 
         var position = 0
-        let p1 = try decoder._parse(at: &position, from: &buffer)
-        let p2 = try decoder._parse(at: &position, from: &buffer)
+        let p1 = try decoder.parse(at: &position, from: &buffer)
+        let p2 = try decoder.parse(at: &position, from: &buffer)
 
         guard
             case .parsed(let first) = p1,
@@ -164,7 +164,7 @@ final class RedisDataDecoderParsingTests: XCTestCase {
 
 // MARK: Simple String Parsing
 
-extension RedisDataDecoderParsingTests {
+extension RESPDecoderParsingTests {
     func testParsing_simpleString_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestSimpleString("+OK"))
         XCTAssertNil(try parseTestSimpleString("+OK\r"))
@@ -211,7 +211,7 @@ extension RedisDataDecoderParsingTests {
 
 // MARK: Integer Parsing
 
-extension RedisDataDecoderParsingTests {
+extension RESPDecoderParsingTests {
     func testParsing_integer_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestInteger(":\r"))
         XCTAssertNil(try parseTestInteger(":\n"))
@@ -253,7 +253,7 @@ extension RedisDataDecoderParsingTests {
 
 // MARK: BulkString Parsing
 
-extension RedisDataDecoderParsingTests {
+extension RESPDecoderParsingTests {
     func testParsing_bulkString_handlesMissingEndings() throws {
         for message in ["$6", "$6\r\n", "$6\r\nabcdef", "$0\r\n"]  {
             XCTAssertNil(parseTestBulkString(message))
@@ -277,18 +277,18 @@ extension RedisDataDecoderParsingTests {
 
     func testParsing_bulkString_handlesRawBytes() throws {
         let bytes: [UInt8] = [0x00, 0x01, 0x02, 0x03, 0x0A, 0xFF]
-        let data = "$\(bytes.count)\r\n".convertedToData() + Data(bytes: bytes) + "\r\n".convertedToData()
+        let data = "$\(bytes.count)\r\n".convertedToData() + Data(bytes) + "\r\n".convertedToData()
 
         let result = parseTestBulkString(data)
 
         XCTAssertEqual(result?.data?.count, bytes.count)
     }
 
-    private func parseTestBulkString(_ input: String) -> RedisData? {
+    private func parseTestBulkString(_ input: String) -> RESPValue? {
         return parseTestBulkString(input.convertedToData())
     }
 
-    private func parseTestBulkString(_ input: Data) -> RedisData? {
+    private func parseTestBulkString(_ input: Data) -> RESPValue? {
         return runParse { decoder, position, buffer in
             buffer.write(bytes: input)
             guard case .parsed(let result) = try decoder._parseBulkString(at: &position, from: &buffer) else {
@@ -301,7 +301,7 @@ extension RedisDataDecoderParsingTests {
 
 // MARK: Array Parsing
 
-extension RedisDataDecoderParsingTests {
+extension RESPDecoderParsingTests {
     func testParsing_array_whenNull_returnsNil() {
         let result = parseTestArray("*-1\r\n")
         XCTAssertEqual(result?.isNull, true)
@@ -338,11 +338,11 @@ extension RedisDataDecoderParsingTests {
         XCTAssertEqual(nested?[1].int, 15)
     }
 
-    private func parseTestArray(_ input: String) -> RedisData? {
+    private func parseTestArray(_ input: String) -> RESPValue? {
         return parseTestArray(input.convertedToData())
     }
 
-    private func parseTestArray(_ input: Data) -> RedisData? {
+    private func parseTestArray(_ input: Data) -> RESPValue? {
         return runParse { decoder, position, buffer in
             buffer.write(bytes: input)
             guard case .parsed(let result) = try decoder._parseArray(at: &position, from: &buffer) else { return nil }
@@ -351,7 +351,7 @@ extension RedisDataDecoderParsingTests {
     }
 }
 
-extension RedisDataDecoderParsingTests {
+extension RESPDecoderParsingTests {
     static var allTests = [
         ("testParsing_with_simpleString", testParsing_with_simpleString),
         ("testParsing_with_simpleString_multiple", testParsing_with_simpleString_multiple),

@@ -2,8 +2,8 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RedisDataDecoderByteToMessageDecoderTests: XCTestCase {
-    private let decoder = RedisDataDecoder()
+final class RESPDecoderByteToMessageDecoderTests: XCTestCase {
+    private let decoder = RESPDecoder()
     private let allocator = ByteBufferAllocator()
 
     func testDecoding_partial_needsMoreData() throws {
@@ -32,13 +32,13 @@ final class RedisDataDecoderByteToMessageDecoderTests: XCTestCase {
     ]
 
     func testDecoding_complete_continues() throws {
-        for message in RedisDataDecoderByteToMessageDecoderTests.completeMessages {
+        for message in RESPDecoderByteToMessageDecoderTests.completeMessages {
             XCTAssertEqual(try decodeTest(message), .continue)
         }
     }
 
     func testDecoding_complete_movesReaderIndex() throws {
-        for message in RedisDataDecoderByteToMessageDecoderTests.completeMessages {
+        for message in RESPDecoderByteToMessageDecoderTests.completeMessages {
             let messageByteSize = message.convertedToData()
             XCTAssertEqual(try decodeTest(message).1, messageByteSize.count)
         }
@@ -67,7 +67,7 @@ final class RedisDataDecoderByteToMessageDecoderTests: XCTestCase {
     }
 }
 
-extension RedisDataDecoderByteToMessageDecoderTests {
+extension RESPDecoderByteToMessageDecoderTests {
     static var allTests = [
         ("testDecoding_partial_needsMoreData", testDecoding_partial_needsMoreData),
         ("testDecoding_badMessage_throws", testDecoding_badMessage_throws),

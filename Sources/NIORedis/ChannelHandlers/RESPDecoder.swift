@@ -1,31 +1,6 @@
 import Foundation
 import NIO
 
-/// Handles incoming byte messages from Redis and decodes them according to the RESP protocol.
-///
-/// See: https://redis.io/topics/protocol
-internal final class RedisDataDecoder: ByteToMessageDecoder {
-    /// `ByteToMessageDecoder`
-    public typealias InboundOut = RedisData
-
-    /// See `ByteToMessageDecoder.decode(ctx:buffer:)`
-    func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        var position = 0
-
-        switch try _parse(at: &position, from: &buffer) {
-        case .notYetParsed:
-            return .needMoreData
-
-        case .parsed(let redisData):
-            ctx.fireChannelRead(wrapInboundOut(redisData))
-            buffer.moveReaderIndex(forwardBy: position)
-            return .continue
-        }
-    }
-}
-
-// MARK: RESP Parsing
-
 extension UInt8 {
     static let newline: UInt8 = 0xA
     static let carriageReturn: UInt8 = 0xD
@@ -36,13 +11,39 @@ extension UInt8 {
     static let colon: UInt8 = 0x3A
 }
 
-extension RedisDataDecoder {
-    enum _RedisDataDecodingState {
+private extension ByteBuffer {
+    /// Copies bytes from the `ByteBuffer` from at the provided position, up to the length desired.
+    ///
+    ///     buffer.copyBytes(at: 3, length: 2)
+    ///     // Optional(2 bytes), assuming buffer contains 5 bytes
+    ///
+    /// - Parameters:
+    ///     - at: The position offset to copy bytes from the buffer, defaulting to `0`.
+    ///     - length: The number of bytes to copy.
+    func copyBytes(at offset: Int = 0, length: Int) -> [UInt8]? {
+        guard readableBytes >= offset + length else { return nil }
+        return getBytes(at: offset + readerIndex, length: length)
+    }
+}
+
+/// Handles incoming byte messages from Redis and decodes them according to the RESP protocol.
+///
+/// See: https://redis.io/topics/protocol
+public final class RESPDecoder {
+    /// Representation of a `RESPDecoder.parse(at:from:) result, with either a decoded `RESPValue` or an indicator
+    /// that the buffer contains an incomplete RESP message from the position provided.
+    public enum ParsingState {
         case notYetParsed
-        case parsed(RedisData)
+        case parsed(RESPValue)
     }
 
-    func _parse(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
+    /// Attempts to parse the `ByteBuffer`, starting at the specified position, following the RESP specification.
+    ///
+    /// See https://redis.io/topics/protocol
+    /// - Parameters:
+    ///     - at: The index of the buffer that should be considered the "front" to begin message parsing.
+    ///     - from: The buffer that contains the bytes that need to be decoded.
+    public func parse(at position: inout Int, from buffer: inout ByteBuffer) throws -> ParsingState {
         guard let token = buffer.copyBytes(at: position, length: 1)?.first else { return .notYetParsed }
 
         position += 1
@@ -120,7 +121,7 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-bulk-strings
-    func _parseBulkString(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
+    func _parseBulkString(at position: inout Int, from buffer: inout ByteBuffer) throws -> ParsingState {
         guard let size = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
 
         // Redis sends '-1' to represent a null string
@@ -153,16 +154,16 @@ extension RedisDataDecoder {
     }
 
     /// See https://redis.io/topics/protocol#resp-arrays
-    func _parseArray(at position: inout Int, from buffer: inout ByteBuffer) throws -> _RedisDataDecodingState {
+    func _parseArray(at position: inout Int, from buffer: inout ByteBuffer) throws -> ParsingState {
         guard let arraySize = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
         guard arraySize > -1 else { return .parsed(.null) }
         guard arraySize > 0 else { return .parsed(.array([])) }
 
-        var array = [_RedisDataDecodingState](repeating: .notYetParsed, count: arraySize)
+        var array = [ParsingState](repeating: .notYetParsed, count: arraySize)
         for index in 0..<arraySize {
             guard buffer.readableBytes - position > 0 else { return .notYetParsed }
 
-            let parseResult = try _parse(at: &position, from: &buffer)
+            let parseResult = try parse(at: &position, from: &buffer)
             switch parseResult {
             case .parsed:
                 array[index] = parseResult
@@ -171,7 +172,7 @@ extension RedisDataDecoder {
             }
         }
 
-        let values = try array.map { state -> RedisData in
+        let values = try array.map { state -> RESPValue in
             guard case .parsed(let value) = state else {
                 throw RedisError(
                     identifier: "parseArray",
@@ -184,17 +185,22 @@ extension RedisDataDecoder {
     }
 }
 
-private extension ByteBuffer {
-    /// Copies bytes from the `ByteBuffer` from at the provided position, up to the length desired.
-    ///
-    ///     buffer.copyBytes(at: 3, length: 2)
-    ///     // Optional(2 bytes), assuming buffer contains 5 bytes
-    ///
-    /// - Parameters:
-    ///     - at: The position offset to copy bytes from the buffer, defaulting to `0`.
-    ///     - length: The number of bytes to copy.
-    func copyBytes(at offset: Int = 0, length: Int) -> [UInt8]? {
-        guard readableBytes >= offset + length else { return nil }
-        return getBytes(at: offset + readerIndex, length: length)
+extension RESPDecoder: ByteToMessageDecoder {
+    /// `ByteToMessageDecoder.InboundOut`
+    public typealias InboundOut = RESPValue
+
+    /// See `ByteToMessageDecoder.decode(ctx:buffer:)`
+    public func decode(ctx: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
+        var position = 0
+
+        switch try parse(at: &position, from: &buffer) {
+        case .notYetParsed:
+            return .needMoreData
+
+        case .parsed(let RESPValue):
+            ctx.fireChannelRead(wrapInboundOut(RESPValue))
+            buffer.moveReaderIndex(forwardBy: position)
+            return .continue
+        }
     }
 }

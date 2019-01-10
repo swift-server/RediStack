@@ -2,10 +2,10 @@
 import XCTest
 
 final class BasicCommandsTests: XCTestCase {
-    private let redis = NIORedis(executionModel: .spawnThreads(1))
+    private let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
     deinit { try? redis.terminate() }
 
-    private var connection: NIORedisConnection?
+    private var connection: RedisConnection?
 
     override func setUp() {
         do {

@@ -1,20 +1,19 @@
-// swift-tools-version:4.2
+// swift-tools-version:5.0
 
 import PackageDescription
 
 let package = Package(
-    name: "Redis",
+    name: "nio-redis",
     products: [
         .library(name: "NIORedis", targets: ["NIORedis"]),
-        .library(name: "Redis", targets: ["Redis"])
+        .library(name: "DispatchRedis", targets: ["DispatchRedis"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-nio.git", .branch("master"))
     ],
     targets: [
         .target(name: "NIORedis", dependencies: ["NIO"]),
-        .target(name: "Redis", dependencies: ["NIORedis"]),
-        .testTarget(name: "NIORedisTests", dependencies: ["NIORedis", "NIO"]),
-        //.testTarget(name: "RedisTests", dependencies: ["Redis"])
+        .target(name: "DispatchRedis", dependencies: ["NIORedis"]),
+        .testTarget(name: "NIORedisTests", dependencies: ["NIORedis", "NIO"])
     ]
 )

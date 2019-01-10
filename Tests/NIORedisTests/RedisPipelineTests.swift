@@ -1,12 +1,12 @@
 @testable import NIORedis
 import XCTest
 
-final class NIORedisPipelineTests: XCTestCase {
-    private var redis: NIORedis!
-    private var connection: NIORedisConnection!
+final class RedisPipelineTests: XCTestCase {
+    private var redis: RedisDriver!
+    private var connection: RedisConnection!
 
     override func setUp() {
-        let redis = NIORedis(executionModel: .spawnThreads(2))
+        let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
 
         guard let connection = try? redis.makeConnection().wait() else {
             return XCTFail("Failed to create connection!")
@@ -30,10 +30,11 @@ final class NIORedisPipelineTests: XCTestCase {
     }
 
     func test_executeFails() throws {
-        let pipeline = try connection.makePipeline()
+        let future = try connection.makePipeline()
             .enqueue(command: "GET")
+            .execute()
 
-        XCTAssertThrowsError(try pipeline.execute().wait())
+        XCTAssertThrowsError(try future.wait())
     }
 
     func test_singleCommand() throws {
