@@ -41,15 +41,25 @@ public final class RedisConnection {
     ///     - command: The command to execute.
     ///     - arguments: The arguments to be sent with the command.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
-    public func send(command: String, arguments: [RESPConvertible] = []) throws -> EventLoopFuture<RESPValue> {
+    public func send(command: String, with arguments: [RESPConvertible] = []) throws -> EventLoopFuture<RESPValue> {
+        let args = try arguments.map { try $0.convertToRESP() }
+        return self.command(command, arguments: args)
+    }
+
+    /// Invokes a command against Redis with the provided arguments.
+    /// - Important: Arguments should be stored as `.bulkString`.
+    /// - Parameters:
+    ///     - command: The command to execute.
+    ///     - arguments: The arguments to be sent with the command.
+    /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
+    public func command(_ command: String, arguments: [RESPValue] = []) -> EventLoopFuture<RESPValue> {
         guard !isClosed.load() else {
             return channel.eventLoop.makeFailedFuture(error: RedisError.connectionClosed)
         }
 
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
-        let args = try arguments.map { try $0.convertToRESP() }
         let context = RedisCommandContext(
-            command: .array([RESPValue(bulk: command)] + args),
+            command: .array([RESPValue(bulk: command)] + arguments),
             promise: promise
         )
 

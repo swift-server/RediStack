@@ -66,9 +66,7 @@ public final class RedisDriver {
                     return self.eventLoopGroup.next().makeSucceededFuture(result: connection)
                 }
 
-                #warning("TODO - Fix command extensions")
-                return self.eventLoopGroup.next().makeSucceededFuture(result: connection)
-                // return connection.authorize(with: pw).map { _ in return connection }
+                return connection.authorize(with: pw).map { _ in return connection }
             }
     }
 }
