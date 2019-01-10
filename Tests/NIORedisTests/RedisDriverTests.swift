@@ -6,7 +6,7 @@ final class RedisDriverTests: XCTestCase {
     private var connection: RedisConnection!
 
     override func setUp() {
-        let driver = RedisDriver(executionModel: .spawnThreads(1))
+        let driver = RedisDriver(ownershipModel: .internal(threadCount: 1))
 
         guard let connection = try? driver.makeConnection().wait() else {
             return XCTFail("Failed to create a connection!")

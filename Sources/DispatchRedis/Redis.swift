@@ -9,7 +9,7 @@ public final class Redis {
     deinit { try? driver.terminate() }
 
     public init(threadCount: Int = 1) {
-        self.driver = RedisDriver(executionModel: .spawnThreads(threadCount))
+        self.driver = RedisDriver(ownershipModel: .internal(threadCount: threadCount))
     }
 
     public func makeConnection(

@@ -6,12 +6,12 @@ public final class RedisDriver {
     ///
     /// Using `.eventLoopGroup` will allow an external provider to handle the lifetime of the `EventLoopGroup`,
     /// while using `spawnThreads` will cause this `NIORedis` instance to handle the lifetime of a new `EventLoopGroup`.
-    public enum ExecutionModel {
-        case spawnThreads(Int)
-        case eventLoopGroup(EventLoopGroup)
+    public enum ThreadOwnershipModel {
+        case `internal`(threadCount: Int)
+        case external(EventLoopGroup)
     }
 
-    private let executionModel: ExecutionModel
+    private let ownershipModel: ThreadOwnershipModel
     private let eventLoopGroup: EventLoopGroup
 
     private let isRunning = Atomic<Bool>(value: true)
@@ -20,14 +20,14 @@ public final class RedisDriver {
 
     /// Creates a driver instance to create connections to a Redis.
     /// - Important: Call `terminate()` before deinitializing to properly cleanup resources.
-    /// - Parameter executionModel: The model to use for handling connection resources.
-    public init(executionModel model: ExecutionModel) {
-        self.executionModel = model
+    /// - Parameter ownershipModel: The model to use for handling connection resources.
+    public init(ownershipModel model: ThreadOwnershipModel) {
+        self.ownershipModel = model
 
         switch model {
-        case .spawnThreads(let count):
+        case .internal(let count):
             self.eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: count)
-        case .eventLoopGroup(let group):
+        case .external(let group):
             self.eventLoopGroup = group
         }
     }
@@ -37,9 +37,9 @@ public final class RedisDriver {
     public func terminate() throws {
         guard isRunning.exchange(with: false) else { return }
 
-        switch executionModel {
-        case .spawnThreads: try self.eventLoopGroup.syncShutdownGracefully()
-        case .eventLoopGroup: return
+        switch ownershipModel {
+        case .internal: try self.eventLoopGroup.syncShutdownGracefully()
+        case .external: return
         }
     }
 
