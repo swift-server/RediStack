@@ -14,9 +14,11 @@ public final class RedisDriver {
     private let ownershipModel: ThreadOwnershipModel
     private let eventLoopGroup: EventLoopGroup
 
-    private let isRunning = Atomic<Bool>(value: true)
+    /// Is the driver available for operations?
+    public var isRunning: Bool { return _isRunning.load() }
+    private let _isRunning = Atomic<Bool>(value: true)
 
-    deinit { assert(!isRunning.load(), "Redis driver was not properly shut down!") }
+    deinit { assert(!_isRunning.load(), "Redis driver was not properly shut down!") }
 
     /// Creates a driver instance to create connections to a Redis.
     /// - Important: Call `terminate()` before deinitializing to properly cleanup resources.
@@ -35,7 +37,7 @@ public final class RedisDriver {
     /// Handles the proper shutdown of managed resources.
     /// - Important: This method should always be called, even when running in `.eventLoopGroup` mode.
     public func terminate() throws {
-        guard isRunning.exchange(with: false) else { return }
+        guard _isRunning.exchange(with: false) else { return }
 
         switch ownershipModel {
         case .internal: try self.eventLoopGroup.syncShutdownGracefully()

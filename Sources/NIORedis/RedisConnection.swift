@@ -12,9 +12,10 @@ public final class RedisConnection {
     public let channel: Channel
 
     /// Has the connection been closed?
-    public private(set) var isClosed = Atomic<Bool>(value: false)
+    public var isClosed: Bool { return _isClosed.load() }
+    private var _isClosed = Atomic<Bool>(value: false)
 
-    deinit { assert(isClosed.load(), "Redis connection was not properly shut down!") }
+    deinit { assert(_isClosed.load(), "Redis connection was not properly shut down!") }
 
     /// Creates a new connection on the provided channel.
     /// - Note: This connection will take ownership of the `Channel` object.
@@ -27,7 +28,7 @@ public final class RedisConnection {
     /// - Returns: An `EventLoopFuture` that resolves when the connection has been closed.
     @discardableResult
     public func close() -> EventLoopFuture<Void> {
-        guard isClosed.exchange(with: true) else { return channel.eventLoop.makeSucceededFuture(result: ()) }
+        guard _isClosed.exchange(with: true) else { return channel.eventLoop.makeSucceededFuture(result: ()) }
 
         let promise = channel.eventLoop.makePromise(of: Void.self)
 
@@ -53,7 +54,7 @@ public final class RedisConnection {
     ///     - arguments: The arguments to be sent with the command.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
     public func command(_ command: String, arguments: [RESPValue] = []) -> EventLoopFuture<RESPValue> {
-        guard !isClosed.load() else {
+        guard !_isClosed.load() else {
             return channel.eventLoop.makeFailedFuture(error: RedisError.connectionClosed)
         }
 
