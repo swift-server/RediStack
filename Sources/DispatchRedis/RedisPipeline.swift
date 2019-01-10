@@ -14,15 +14,15 @@ import NIORedis
 /// - Important: The larger the pipeline queue, the more memory both the Redis driver and Redis server will use.
 /// See https://redis.io/topics/pipelining#redis-pipelining
 public final class RedisPipeline {
-    private let _driverPipeline: NIORedisPipeline
+    private let _driverPipeline: NIORedis.RedisPipeline
     private let queue: DispatchQueue
 
     /// Creates a new pipeline queue using the provided `RedisConnection`, executing callbacks on the provided `DispatchQueue`.
     /// - Parameters:
     ///     - using: The connection to execute the commands on.
     ///     - callbackQueue: The queue to execute all callbacks on.
-    public init(using connection: RedisConnection, callbackQueue: DispatchQueue) {
-        self._driverPipeline = NIORedisPipeline(using: connection._driverConnection)
+    public init(connection: RedisConnection, callbackQueue: DispatchQueue) {
+        self._driverPipeline = NIORedis.RedisPipeline(channel: connection._driverConnection.channel)
         self.queue = callbackQueue
     }
 
