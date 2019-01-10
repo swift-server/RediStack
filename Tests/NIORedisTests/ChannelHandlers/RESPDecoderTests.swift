@@ -67,7 +67,7 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(multiBulkString.0?.isNull, true)
         XCTAssertEqual(multiBulkString.1?.string, "n³")
 
-        let rawBytes = Data(bytes: [0x00, 0x01, 0x02, 0x03, 0x0A, 0xff])
+        let rawBytes = Data([0x00, 0x01, 0x02, 0x03, 0x0A, 0xff])
         let rawByteInput = "$\(rawBytes.count)\r\n".convertedToData() + rawBytes + "\r\n".convertedToData()
         XCTAssertEqual(try runTest(rawByteInput)?.data, rawBytes)
     }

@@ -18,7 +18,7 @@ final class RESPEncoderParsingTests: XCTestCase {
     }
 
     func testBulkStrings() {
-        let t1 = Data(bytes: [0x01, 0x02, 0x0a, 0x1b, 0xaa])
+        let t1 = Data([0x01, 0x02, 0x0a, 0x1b, 0xaa])
         XCTAssertEqual(
             encoder.encode(.bulkString(t1)),
             "$5\r\n".convertedToData() + t1 + "\r\n".convertedToData()
@@ -56,7 +56,7 @@ final class RESPEncoderParsingTests: XCTestCase {
             encoder.encode(a1),
             "*2\r\n:3\r\n+foo\r\n".convertedToData()
         )
-        let bytes = Data(bytes: [ 0x0a, 0x1a, 0x1b, 0xff ])
+        let bytes = Data([ 0x0a, 0x1a, 0x1b, 0xff ])
         let a2: RESPValue = .array([.array([
             .integer(3),
             .bulkString(bytes)

@@ -33,7 +33,7 @@ final class RESPEncoderTests: XCTestCase {
     }
 
     func testBulkStrings() throws {
-        let bs1 = RESPValue.bulkString(Data(bytes: [0x01, 0x02, 0x0a, 0x1b, 0xaa]))
+        let bs1 = RESPValue.bulkString(Data([0x01, 0x02, 0x0a, 0x1b, 0xaa]))
         try runEncodePass(with: bs1) { XCTAssertEqual($0.readableBytes, 11) }
         XCTAssertNoThrow(try channel.writeOutbound(bs1))
 
@@ -65,7 +65,7 @@ final class RESPEncoderTests: XCTestCase {
         try runEncodePass(with: a2) { XCTAssertEqual($0.readableBytes, 14) }
         XCTAssertNoThrow(try channel.writeOutbound(a2))
 
-        let bytes = Data(bytes: [ 0x0a, 0x1a, 0x1b, 0xff ])
+        let bytes = Data([ 0x0a, 0x1a, 0x1b, 0xff ])
         let a3: RESPValue = .array([.array([
             .integer(3),
             .bulkString(bytes)
