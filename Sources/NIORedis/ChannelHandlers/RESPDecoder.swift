@@ -37,6 +37,8 @@ public final class RESPDecoder {
         case parsed(RESPValue)
     }
 
+    public init() { }
+
     /// Attempts to parse the `ByteBuffer`, starting at the specified position, following the RESP specification.
     ///
     /// See https://redis.io/topics/protocol

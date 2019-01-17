@@ -5,6 +5,8 @@ import NIO
 ///
 /// See: https://redis.io/topics/protocol
 public final class RESPEncoder {
+    public init() { }
+    
     /// Encodes the `RedisValue` to bytes, following the RESP specification.
     ///
     /// See https://redis.io/topics/protocol

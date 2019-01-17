@@ -7,6 +7,11 @@ public struct RedisCommandContext {
     public let command: RESPValue
     /// A promise expected to be fulfilled with the `RESPValue` response to the command from Redis.
     public let promise: EventLoopPromise<RESPValue>
+
+    public init(command: RESPValue, promise: EventLoopPromise<RESPValue>) {
+        self.command = command
+        self.promise = promise
+    }
 }
 
 /// A `ChannelDuplexHandler` that works with `RedisCommandContext`s to send commands and forward responses.
