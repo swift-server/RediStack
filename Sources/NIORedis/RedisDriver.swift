@@ -11,8 +11,9 @@ public final class RedisDriver {
         case external(EventLoopGroup)
     }
 
+    public let eventLoopGroup: EventLoopGroup
+
     private let ownershipModel: ThreadOwnershipModel
-    private let eventLoopGroup: EventLoopGroup
 
     /// Is the driver available for operations?
     public var isRunning: Bool { return _isRunning.load() }
