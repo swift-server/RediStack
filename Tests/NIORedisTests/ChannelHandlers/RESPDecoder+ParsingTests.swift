@@ -57,11 +57,12 @@ final class RESPDecoderParsingTests: XCTestCase {
         XCTAssertTrue(t1.0?.data?.count == 3)
         XCTAssertTrue(t1.1?.data?.count == 4)
 
-        let t2 = try parseTest_twoValues(withChunks: [
+        let chunks: [Data] = [
             "$3\r".convertedToData(),
             "\n".convertedToData() + Data([0xAA, 0xA3, 0xFF]) + "\r\n$".convertedToData(),
             "4\r\n".convertedToData() + Data([0xbb, 0x3a, 0xba, 0xFF]) + "\r\n".convertedToData()
-        ])
+        ]
+        let t2 = try parseTest_twoValues(withChunks: chunks)
         XCTAssertTrue(t2.0?.data?.count == 3)
         XCTAssertTrue(t2.1?.data?.count == 4)
     }
