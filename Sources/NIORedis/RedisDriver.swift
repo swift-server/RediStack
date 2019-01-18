@@ -52,15 +52,7 @@ public final class RedisDriver {
         port: Int = 6379,
         password: String? = nil
     ) -> EventLoopFuture<RedisConnection> {
-        let bootstrap = ClientBootstrap(group: eventLoopGroup)
-            .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
-            .channelInitializer { channel in
-                return channel.pipeline.addHandlers(
-                    RESPEncoder(),
-                    ByteToMessageHandler(RESPDecoder()),
-                    RedisCommandHandler()
-                )
-            }
+        let bootstrap = ClientBootstrap.makeForRedis(using: eventLoopGroup)
 
         return bootstrap.connect(host: hostname, port: port)
             .map { return RedisConnection(channel: $0) }
