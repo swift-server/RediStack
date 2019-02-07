@@ -38,7 +38,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
         guard let leadPromise = commandResponseQueue.last else {
             return assertionFailure("Received unexpected error while idle: \(error.localizedDescription)")
         }
-        leadPromise.fail(error: error)
+        leadPromise.fail(error)
     }
 
     /// Invoked by NIO when a read has been fired from earlier in the response chain. This forwards the unwrapped
@@ -56,8 +56,8 @@ extension RedisCommandHandler: ChannelInboundHandler {
         assert(popped != nil)
 
         switch value {
-        case .error(let e): leadPromise.fail(error: e)
-        default: leadPromise.succeed(result: value)
+        case .error(let e): leadPromise.fail(e)
+        default: leadPromise.succeed(value)
         }
     }
 }

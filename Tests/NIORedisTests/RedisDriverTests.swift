@@ -18,7 +18,7 @@ final class RedisDriverTests: XCTestCase {
 
     override func tearDown() {
         _ = connection.command("FLUSHALL")
-            .then { _ in self.connection.close() }
+            .flatMap { _ in self.connection.close() }
             .map { _ in try? self.driver.terminate() }
     }
 

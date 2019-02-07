@@ -26,7 +26,7 @@ extension RedisConnection {
     public func delete(_ keys: String...) -> EventLoopFuture<Int> {
         let keyArgs = keys.map { RESPValue(bulk: $0) }
         return command("DEL", arguments: keyArgs)
-            .thenThrowing { res in
+            .flatMapThrowing { res in
                 guard let count = res.int else {
                     throw RedisError(identifier: "delete", reason: "Unexpected response: \(res)")
                 }
@@ -43,7 +43,7 @@ extension RedisConnection {
     /// - Returns: A future bool indicating if the expiration was set or not.
     public func expire(_ key: String, after deadline: Int) -> EventLoopFuture<Bool> {
         return command("EXPIRE", arguments: [RESPValue(bulk: key), RESPValue(bulk: deadline.description)])
-            .thenThrowing { res in
+            .flatMapThrowing { res in
                 guard let value = res.int else {
                     throw RedisError(identifier: "expire", reason: "Unexpected response: \(res)")
                 }

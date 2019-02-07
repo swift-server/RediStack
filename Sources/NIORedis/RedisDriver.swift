@@ -56,9 +56,9 @@ public final class RedisDriver {
 
         return bootstrap.connect(host: hostname, port: port)
             .map { return RedisConnection(channel: $0) }
-            .then { connection in
+            .flatMap { connection in
                 guard let pw = password else {
-                    return self.eventLoopGroup.next().makeSucceededFuture(result: connection)
+                    return self.eventLoopGroup.next().makeSucceededFuture(connection)
                 }
 
                 return connection.authorize(with: pw).map { _ in return connection }
@@ -68,6 +68,6 @@ public final class RedisDriver {
 
 private extension ChannelPipeline {
     func addHandlers(_ handlers: ChannelHandler...) -> EventLoopFuture<Void> {
-        return EventLoopFuture<Void>.andAll(handlers.map { add(handler: $0) }, eventLoop: eventLoop)
+        return .andAllSucceed(handlers.map { add(handler: $0) }, on: eventLoop)
     }
 }

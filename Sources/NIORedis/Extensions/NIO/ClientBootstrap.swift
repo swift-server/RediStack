@@ -17,10 +17,7 @@ extension ClientBootstrap {
                     ByteToMessageHandler(RESPDecoder()),
                     RedisCommandHandler()
                 ]
-                return EventLoopFuture<Void>.andAll(
-                    handlers.map { channel.pipeline.add(handler: $0) },
-                    eventLoop: group.next()
-                )
+                return .andAllSucceed(handlers.map { channel.pipeline.add(handler: $0) }, on: group.next())
             }
     }
 }
