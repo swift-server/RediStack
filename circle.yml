@@ -1,0 +1,23 @@
+version: 2
+
+jobs:
+  linux:
+    docker:
+      - image: codevapor/swift:5.0
+      - image: redis:5
+    steps:
+      - checkout
+      - run: swift build
+      - run: swift test
+  linux-release:
+    docker:
+      - image: codevapor/swift:5.0
+    steps:
+      - checkout
+      - run: swift build -c release
+workflows:
+  version: 2
+  tests:
+    jobs:
+      - linux
+      - linux-release
