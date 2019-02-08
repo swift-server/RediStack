@@ -41,3 +41,15 @@ let result = try connection.set("my_key", to: "some value")
 
 print(result) // Optional("some value")
 ```
+
+## Contributing
+
+Check out [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to help with NIORedis.
+
+It is highly recommended to use [Docker](https://docker.com) to install Redis locally.
+
+```bash
+docker run -d -p 6379:6379 --name nioredis redis:5
+```
+
+Otherwise, install Redis directly on your machine from [Redis.io](https://redis.io/download).
