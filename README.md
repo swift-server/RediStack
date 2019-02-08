@@ -1,56 +1,38 @@
-# NIORedis: A Redis Driver built on SwiftNIO
+[![License](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](https://www.apache.org/licenses/LICENSE-2.0.html)
+[![Build](https://img.shields.io/circleci/project/github/Mordil/nio-redis/master.svg?logo=circleci)](https://circleci.com/gh/Mordil/nio-redis/tree/master)
+[![Swift](https://img.shields.io/badge/Swift-5.0-brightgreen.svg?colorA=orange&colorB=4E4E4E)](https://swift.org)
 
-* Pitch discussion: [Swift Server Forums](https://forums.swift.org/t/swiftnio-redis-client/19325/13)
+# NIORedis
 
-> **NOTE: This this is written against SwiftNIO 2.0, and as such requires Swift 5.0!**
+* Pitch discussion: [Swift Server Forums](https://forums.swift.org/t/swiftnio-redis-client/19325)
+* Proposal: [SSWG-0004](https://github.com/swift-server/sswg/blob/56a26b50ade45d624b54abe13c7d1f88526f9bb1/proposals/0004-nio-redis.md)
 
-This is to take advantage of the [`Result`](https://github.com/apple/swift-evolution/blob/master/proposals/0235-add-result.md) type in the `DispatchRedis` module,
-and to stay ahead of development of the next version of SwiftNIO.
+## Installation
+
+To install `NIORedis`, just add the package as a dependency in your [**Package.swift**](https://github.com/apple/swift-package-manager/blob/master/Documentation/PackageDescriptionV4.md#dependencies)
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/Mordil/nio-redis.git", .upToNextMinor(from: "0.2.0")
+]
+```
+
+and run the following command: `swift package resolve`
+
+## Getting Started
+
+`NIORedis` is ready to use right after installation.
 
 ```swift
 import NIORedis
 
-let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
-let driver = RedisDriver(ownershipModel: .external(elg))
+let driver = NIORedisDriver(ownershipModel: .internal(threadCount: 2))
 
-// connections
+let connection = try driver.makeConnection().wait()
 
-// passing a value to 'password' will automatically authenticate with Redis before resolving the connection
-let connection = try redis.makeConnection(
-    hostname: "localhost", // this is the default
-    port: 6379, // this is the default
-    password: "MY_PASS" // default is 'nil'
-).wait()
-
-// convenience methods for commands
-
-let result = try conneciton.set("my_key", to: "some value")
-    .then { return connection.get("my_key")}
+let result = try connection.set("my_key", to: "some value")
+    .flatMap { return connection.get("my_key" }
     .wait()
+
 print(result) // Optional("some value")
-
-// raw commands
-
-let keyCount = try connection.command("DEL", [RESPValue(bulk: "my_key")])
-    .thenThrowing { response in
-        guard case let .integer(count) else {
-            // throw error
-        }
-        return count
-    }
-    .wait()
-print(keyCount) // 1
-
-// cleanup
-
-connection.close()
-    .thenThrowing { try redis.terminate() }
-    .whenSuccess { try elg.syncShutdownGracefully() }
 ```
-
-### RESPValue & RESPValueConvertible
-This is a 1:1 mapping enum of the `RESP` types: `Simple String`, `Bulk String`, `Array`, `Integer` and `Error`.
-
-Conforming to `RESPValueConvertible` allows Swift types to more easily convert between `RESPValue` and native types.
-
-`Array`, `Data`, `Float`, `Double`, `FixedWidthInteger`, `String`, and of course `RESPValue` all conform in this package.
