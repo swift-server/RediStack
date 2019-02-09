@@ -42,8 +42,8 @@ public final class RedisConnection {
     ///     - command: The command to execute.
     ///     - arguments: The arguments to be sent with the command.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
-    public func send(command: String, with arguments: [RESPConvertible] = []) throws -> EventLoopFuture<RESPValue> {
-        let args = try arguments.map { try $0.convertToRESP() }
+    public func send(command: String, with arguments: [RESPValueConvertible] = []) throws -> EventLoopFuture<RESPValue> {
+        let args = arguments.map { $0.convertedToRESPValue() }
         return self.command(command, arguments: args)
     }
 

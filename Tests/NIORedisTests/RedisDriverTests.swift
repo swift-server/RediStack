@@ -29,7 +29,7 @@ final class RedisDriverTests: XCTestCase {
     func test_command_succeeds() throws {
         let result = try connection.command(
             "SADD",
-            arguments: [.bulkString("key".convertedToData()), try 3.convertToRESP()
+            arguments: [.bulkString("key".convertedToData()), 3.convertedToRESPValue()
         ]).wait()
 
         XCTAssertNotNil(result.int)
