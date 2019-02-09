@@ -38,8 +38,8 @@ public final class RedisPipeline {
     ///     - arguments: The arguments, if any, to send with the command.
     /// - Returns: A self-reference for chaining commands.
     @discardableResult
-    public func enqueue(command: String, arguments: [RESPConvertible] = []) throws -> RedisPipeline {
-        let args = try arguments.map { try $0.convertToRESP() }
+    public func enqueue(command: String, arguments: [RESPValueConvertible] = []) throws -> RedisPipeline {
+        let args = arguments.map { $0.convertedToRESPValue() }
 
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let context = RedisCommandContext(

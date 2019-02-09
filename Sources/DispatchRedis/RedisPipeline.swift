@@ -32,7 +32,7 @@ public final class RedisPipeline {
     ///     - arguments: The arguments, if any, to send with the command.
     /// - Returns: A self-reference to this `RedisPipeline` instance for chaining commands.
     @discardableResult
-    public func enqueue(command: String, arguments: [RESPConvertible] = []) throws -> RedisPipeline {
+    public func enqueue(command: String, arguments: [RESPValueConvertible] = []) throws -> RedisPipeline {
         try _driverPipeline.enqueue(command: command, arguments: arguments)
         return self
     }

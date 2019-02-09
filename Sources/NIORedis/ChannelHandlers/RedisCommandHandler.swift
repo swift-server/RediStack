@@ -6,11 +6,11 @@ public struct RedisCommandContext {
     /// A full command keyword and arguments stored as a single `RESPValue`.
     public let command: RESPValue
     /// A promise expected to be fulfilled with the `RESPValue` response to the command from Redis.
-    public let promise: EventLoopPromise<RESPValue>
+    public let responsePromise: EventLoopPromise<RESPValue>
 
     public init(command: RESPValue, promise: EventLoopPromise<RESPValue>) {
         self.command = command
-        self.promise = promise
+        self.responsePromise = promise
     }
 }
 
@@ -77,7 +77,7 @@ extension RedisCommandHandler: ChannelOutboundHandler {
     /// See `ChannelOutboundHandler.write(ctx:data:promise:)`
     public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let context = unwrapOutboundIn(data)
-        commandResponseQueue.insert(context.promise, at: 0)
+        commandResponseQueue.insert(context.responsePromise, at: 0)
         ctx.write(wrapOutboundOut(context.command), promise: promise)
     }
 }
