@@ -29,7 +29,7 @@ public final class RESPEncoder {
             return "-\(error.description)\r\n".convertedToData()
 
         case .array(let array):
-            let encodedArray = array.map(encode).joined()
+            let encodedArray = array.map(encode).reduce(into: Data(), { $0.append($1) })
             return "*\(array.count)\r\n".convertedToData() + encodedArray
         }
     }
