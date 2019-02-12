@@ -9,7 +9,7 @@ public enum RESPValue {
     case bulkString(Data)
     case error(RedisError)
     case integer(Int)
-    indirect case array([RESPValue])
+    case array([RESPValue])
 
     /// Initializes a `bulkString` by converting the provided string input.
     public init(bulk: String) {
