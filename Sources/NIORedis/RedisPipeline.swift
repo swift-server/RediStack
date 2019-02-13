@@ -63,7 +63,7 @@ public final class RedisPipeline {
         return EventLoopFuture<[RESPValue]>.reduce(
             into: [],
             queuedCommandResults,
-            eventLoop: channel.eventLoop,
+            on: channel.eventLoop,
             { (results, response) in results.append(response) }
         )
     }

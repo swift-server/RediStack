@@ -91,7 +91,7 @@ final class RESPDecoderParsingTests: XCTestCase {
 
     func testParsing_withInvalidSymbol_throws() {
         _ = runParse(offset: 0) { decoder, position, buffer in
-            buffer.write(string: "&3\r\n")
+            buffer.writeString("&3\r\n")
             do {
                 _ = try decoder.parse(at: &position, from: &buffer)
                 XCTFail("parse(at:from:) did not throw an expected error!")
@@ -106,7 +106,7 @@ final class RESPDecoderParsingTests: XCTestCase {
         let expectedContent = "ERR unknown command 'foobar'"
         let testString = "-\(expectedContent)\r\n"
         let result = runParse(offset: 0) { decoder, position, buffer in
-            buffer.write(string: testString)
+            buffer.writeString(testString)
             guard
                 case .parsed(let data) = try decoder.parse(at: &position, from: &buffer),
                 case .error = data
@@ -126,7 +126,7 @@ final class RESPDecoderParsingTests: XCTestCase {
     /// Takes a collection of bytes representing a complete message and returns the data
     private func parseTest_singleValue(input: Data) -> RESPValue? {
         return runParse(offset: 0) { decoder, position, buffer in
-            buffer.write(bytes: input)
+            buffer.writeBytes(input)
             guard case .parsed(let result)? = try? decoder.parse(at: &position, from: &buffer) else { return nil }
             return result
         }
@@ -145,7 +145,7 @@ final class RESPDecoderParsingTests: XCTestCase {
         var buffer = allocator.buffer(capacity: messageChunks.joined().count)
 
         for chunk in messageChunks {
-            buffer.write(bytes: chunk)
+            buffer.writeBytes(chunk)
         }
 
         var position = 0
@@ -186,7 +186,7 @@ extension RESPDecoderParsingTests {
     func testParsing_simpleString_handlesRecursion() throws {
         _ = runParse { decoder, position, buffer in
             let testString = "+OK\r\n+OTHER STRING\r\n"
-            buffer.write(string: testString)
+            buffer.writeString(testString)
 
             _ = try decoder._parseSimpleString(at: &position, from: &buffer)
 
@@ -203,7 +203,7 @@ extension RESPDecoderParsingTests {
 
     private func parseTestSimpleString(_ input: String) throws -> String? {
         return runParse { decoder, position, buffer in
-            buffer.write(string: input)
+            buffer.writeString(input)
             guard let string = try decoder._parseSimpleString(at: &position, from: &buffer) else { return nil }
             return .simpleString(string)
         }?.string
@@ -228,7 +228,7 @@ extension RESPDecoderParsingTests {
     func testParsing_integer_handlesRecursion() throws {
         _ = runParse { decoder, position, buffer in
             let testString = ":1\r\n:300\r\n"
-            buffer.write(string: testString)
+            buffer.writeString(testString)
 
             _ = try decoder._parseInteger(at: &position, from: &buffer)
 
@@ -245,7 +245,7 @@ extension RESPDecoderParsingTests {
 
     private func parseTestInteger(_ input: String) throws -> Int? {
         return runParse { decoder, position, buffer in
-            buffer.write(string: input)
+            buffer.writeString(input)
             guard let int = try decoder._parseInteger(at: &position, from: &buffer) else { return nil }
             return .integer(int)
         }?.int
@@ -291,7 +291,7 @@ extension RESPDecoderParsingTests {
 
     private func parseTestBulkString(_ input: Data) -> RESPValue? {
         return runParse { decoder, position, buffer in
-            buffer.write(bytes: input)
+            buffer.writeBytes(input)
             guard case .parsed(let result) = try decoder._parseBulkString(at: &position, from: &buffer) else {
                 return nil
             }
@@ -345,7 +345,7 @@ extension RESPDecoderParsingTests {
 
     private func parseTestArray(_ input: Data) -> RESPValue? {
         return runParse { decoder, position, buffer in
-            buffer.write(bytes: input)
+            buffer.writeBytes(input)
             guard case .parsed(let result) = try decoder._parseArray(at: &position, from: &buffer) else { return nil }
             return result
         }

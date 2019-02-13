@@ -112,7 +112,7 @@ final class RESPDecoderTests: XCTestCase {
         let handler = ByteToMessageHandler(decoder)
         try embeddedChannel.pipeline.add(handler: handler).wait()
         var buffer = allocator.buffer(capacity: 256)
-        buffer.write(bytes: input)
+        buffer.writeBytes(input)
         try embeddedChannel.writeInbound(buffer)
         return (embeddedChannel.readInbound(), embeddedChannel.readInbound())
     }
@@ -176,7 +176,7 @@ extension RESPDecoderTests {
 
         var buffer = allocator.buffer(capacity: 256)
         for message in AllData.messages {
-            buffer.write(string: message)
+            buffer.writeString(message)
         }
 
         try embeddedChannel.writeInbound(buffer)

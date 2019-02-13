@@ -6,6 +6,6 @@ extension RESPEncoder: MessageToByteEncoder {
 
     /// See `RESPEncoder.encode(ctx:data:out:)`
     public func encode(ctx: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
-        out.write(bytes: encode(data))
+        out.writeBytes(encode(data))
     }
 }
