@@ -23,3 +23,7 @@ A great PR that is likely to be merged quickly is:
 1. Tested, ensuring that regressions aren't introduced now or in the future.
 1. Documented, adding API documentation as needed to cover new functions and properties.
 1. Accompanied by a [great commit message](https://chris.beams.io/posts/git-commit/)
+
+# Contributor Conduct
+
+All contributors are expected to adhere to this project's [Code of Conduct](CODE_OF_CONDUCT.md).
