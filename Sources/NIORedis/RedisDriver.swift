@@ -68,6 +68,6 @@ public final class RedisDriver {
 
 private extension ChannelPipeline {
     func addHandlers(_ handlers: ChannelHandler...) -> EventLoopFuture<Void> {
-        return .andAllSucceed(handlers.map { add(handler: $0) }, on: eventLoop)
+        return .andAllSucceed(handlers.map { addHandler($0) }, on: eventLoop)
     }
 }

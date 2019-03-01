@@ -33,8 +33,8 @@ extension RedisCommandHandler: ChannelInboundHandler {
     /// Invoked by NIO when an error has been thrown. The command response promise at the front of the queue will be
     /// failed with the error.
     ///
-    /// See `ChannelInboundHandler.errorCaught(ctx:error:)`
-    public func errorCaught(ctx: ChannelHandlerContext, error: Error) {
+    /// See `ChannelInboundHandler.errorCaught(context:error:)`
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
         guard let leadPromise = commandResponseQueue.last else {
             return assertionFailure("Received unexpected error while idle: \(error.localizedDescription)")
         }
@@ -44,8 +44,8 @@ extension RedisCommandHandler: ChannelInboundHandler {
     /// Invoked by NIO when a read has been fired from earlier in the response chain. This forwards the unwrapped
     /// `RESPValue` to the promise awaiting a response at the front of the queue.
     ///
-    /// See `ChannelInboundHandler.channelRead(ctx:data:)`
-    public func channelRead(ctx: ChannelHandlerContext, data: NIOAny) {
+    /// See `ChannelInboundHandler.channelRead(context:data:)`
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let value = unwrapInboundIn(data)
 
         guard let leadPromise = commandResponseQueue.last else {
@@ -74,10 +74,10 @@ extension RedisCommandHandler: ChannelOutboundHandler {
     /// This unwraps a `RedisCommandContext`, retaining a callback to forward a response to later, and forwards
     /// the underlying command data further into the pipeline.
     ///
-    /// See `ChannelOutboundHandler.write(ctx:data:promise:)`
-    public func write(ctx: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let context = unwrapOutboundIn(data)
-        commandResponseQueue.insert(context.responsePromise, at: 0)
-        ctx.write(wrapOutboundOut(context.command), promise: promise)
+    /// See `ChannelOutboundHandler.write(context:data:promise:)`
+    public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
+        let commandContext = unwrapOutboundIn(data)
+        commandResponseQueue.insert(commandContext.responsePromise, at: 0)
+        context.write(wrapOutboundOut(commandContext.command), promise: promise)
     }
 }

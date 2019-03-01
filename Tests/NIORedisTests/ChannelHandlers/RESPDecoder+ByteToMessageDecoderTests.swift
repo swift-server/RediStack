@@ -58,12 +58,12 @@ final class RESPDecoderByteToMessageDecoderTests: XCTestCase {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
         let handler = ByteToMessageHandler(decoder)
-        try embeddedChannel.pipeline.add(handler: handler).wait()
+        try embeddedChannel.pipeline.addHandler(handler).wait()
         let context = try embeddedChannel.pipeline.context(handler: handler).wait()
         
         buffer.writeString(input)
 
-        return try decoder.decode(ctx: context, buffer: &buffer)
+        return try decoder.decode(context: context, buffer: &buffer)
     }
 }
 
