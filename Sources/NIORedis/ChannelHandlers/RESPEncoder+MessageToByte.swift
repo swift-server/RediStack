@@ -4,8 +4,8 @@ extension RESPEncoder: MessageToByteEncoder {
     /// See `MessageToByteEncoder.OutboundIn`
     public typealias OutboundIn = RESPValue
 
-    /// See `RESPEncoder.encode(ctx:data:out:)`
-    public func encode(ctx: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
+    /// See `RESPEncoder.encode(context:data:out:)`
+    public func encode(context: ChannelHandlerContext, data: RESPValue, out: inout ByteBuffer) throws {
         out.writeBytes(encode(data))
     }
 }
