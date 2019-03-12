@@ -2,7 +2,7 @@ import Foundation
 
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
-/// See: https://redis.io/topics/protocol
+/// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public enum RESPValue {
     case null
     case simpleString(String)

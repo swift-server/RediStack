@@ -13,7 +13,7 @@ extension RESPValue: RESPValueConvertible {
         self = value
     }
 
-    /// See `RESPValueConvertible`
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return self
     }
@@ -37,7 +37,7 @@ extension String: RESPValueConvertible {
         self = string
     }
 
-    /// See `RESPValueConvertible`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .bulkString(Data(self.utf8))
     }
@@ -54,7 +54,7 @@ extension FixedWidthInteger {
         }
     }
 
-    /// See `convertedToRESP`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .bulkString(Data(self.description.utf8))
     }
@@ -78,7 +78,7 @@ extension Double: RESPValueConvertible {
         self = float
     }
 
-    /// See `RESPValueConvertible`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .bulkString(Data(self.description.utf8))
     }
@@ -91,7 +91,7 @@ extension Float: RESPValueConvertible {
         self = float
     }
 
-    /// See `RESPValueConvertible`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .bulkString(Data(self.description.utf8))
     }
@@ -103,7 +103,7 @@ extension Data: RESPValueConvertible {
         self = data
     }
 
-    /// See `RESPValueConvertible`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .bulkString(self)
     }
@@ -115,7 +115,7 @@ extension Array: RESPValueConvertible where Element: RESPValueConvertible {
         self = array.compactMap { Element($0) }
     }
 
-    /// See `RESPValueConvertible`.
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         let elements = map { $0.convertedToRESPValue() }
         return RESPValue.array(elements)

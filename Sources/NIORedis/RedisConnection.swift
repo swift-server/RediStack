@@ -6,7 +6,7 @@ import NIOConcurrencyHelpers
 ///     let result = connection.send(command: "GET", arguments: ["my_key"]
 ///     // result == EventLoopFuture<RESPValue>
 ///
-/// See https://redis.io/commands
+/// See [https://redis.io/commands](https://redis.io/commands)
 public final class RedisConnection {
     /// The `Channel` this connection is associated with.
     public let channel: Channel

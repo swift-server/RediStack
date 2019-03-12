@@ -6,7 +6,7 @@ public final class RESPEncoder {
 
     /// Encodes the `RedisValue` to bytes, following the RESP specification.
     ///
-    /// See https://redis.io/topics/protocol
+    /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
     /// - Parameter value: The `RESPValue` to encode.
     /// - Returns: The encoded value as a collection of bytes.
     public func encode(_ value: RESPValue, into buffer: inout ByteBuffer) {

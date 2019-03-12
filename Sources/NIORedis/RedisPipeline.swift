@@ -11,7 +11,7 @@ import Foundation
 ///     // results[0].string == Optional("OK")
 ///     // results[1].int == Optional(4)
 ///
-/// See https://redis.io/topics/pipelining#redis-pipelining
+/// See [https://redis.io/topics/pipelining#redis-pipelining](https://redis.io/topics/pipelining#redis-pipelining)
 /// - Important: The larger the pipeline queue, the more memory both NIORedis and Redis will use.
 public final class RedisPipeline {
     /// The number of commands in the pipeline.
@@ -34,7 +34,7 @@ public final class RedisPipeline {
 
     /// Queues the provided command and arguments to be executed when `execute()` is invoked.
     /// - Parameters:
-    ///     - command: The command to execute. See https://redis.io/commands
+    ///     - command: The command to execute. See [https://redis.io/commands](https://redis.io/commands)
     ///     - arguments: The arguments, if any, to send with the command.
     /// - Returns: A self-reference for chaining commands.
     @discardableResult

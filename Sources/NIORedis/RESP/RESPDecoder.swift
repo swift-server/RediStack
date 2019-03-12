@@ -28,7 +28,7 @@ private extension ByteBuffer {
 
 /// Handles incoming byte messages from Redis and decodes them according to the RESP protocol.
 ///
-/// See: https://redis.io/topics/protocol
+/// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public final class RESPDecoder {
     /// Representation of a `RESPDecoder.parse(at:from:) result, with either a decoded `RESPValue` or an indicator
     /// that the buffer contains an incomplete RESP message from the position provided.
@@ -41,7 +41,7 @@ public final class RESPDecoder {
 
     /// Attempts to parse the `ByteBuffer`, starting at the specified position, following the RESP specification.
     ///
-    /// See https://redis.io/topics/protocol
+    /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
     /// - Parameters:
     ///     - at: The index of the buffer that should be considered the "front" to begin message parsing.
     ///     - from: The buffer that contains the bytes that need to be decoded.
@@ -76,8 +76,12 @@ public final class RESPDecoder {
             )
         }
     }
+}
 
-    /// See https://redis.io/topics/protocol#resp-simple-strings
+// Parsing
+
+extension RESPDecoder {
+    /// See [https://redis.io/topics/protocol#resp-simple-strings](https://redis.io/topics/protocol#resp-simple-strings)
     func _parseSimpleString(at position: inout Int, from buffer: inout ByteBuffer) throws -> String? {
         let byteCount = buffer.readableBytes - position
         guard
@@ -108,7 +112,7 @@ public final class RESPDecoder {
         return String(bytes: bytes[ ..<(expectedNewlinePosition - 1) ], encoding: .utf8)
     }
 
-    /// See https://redis.io/topics/protocol#resp-integers
+    /// See [https://redis.io/topics/protocol#resp-integers](https://redis.io/topics/protocol#resp-integers)
     func _parseInteger(at position: inout Int, from buffer: inout ByteBuffer) throws -> Int? {
         guard let string = try _parseSimpleString(at: &position, from: &buffer) else { return nil }
 
@@ -122,7 +126,7 @@ public final class RESPDecoder {
         return number
     }
 
-    /// See https://redis.io/topics/protocol#resp-bulk-strings
+    /// See [https://redis.io/topics/protocol#resp-bulk-strings](https://redis.io/topics/protocol#resp-bulk-strings)
     func _parseBulkString(at position: inout Int, from buffer: inout ByteBuffer) throws -> ParsingState {
         guard let size = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
 
@@ -155,7 +159,7 @@ public final class RESPDecoder {
         )
     }
 
-    /// See https://redis.io/topics/protocol#resp-arrays
+    /// See [https://redis.io/topics/protocol#resp-arrays](https://redis.io/topics/protocol#resp-arrays)
     func _parseArray(at position: inout Int, from buffer: inout ByteBuffer) throws -> ParsingState {
         guard let arraySize = try _parseInteger(at: &position, from: &buffer) else { return .notYetParsed }
         guard arraySize > -1 else { return .parsed(.null) }
