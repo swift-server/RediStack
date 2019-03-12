@@ -6,6 +6,6 @@ extension RESPEncoder: MessageToByteEncoder {
 
     /// See `RESPEncoder.encode(data:out:)`
     public func encode(data: RESPValue, out: inout ByteBuffer) throws {
-        out.writeBytes(encode(data))
+        encode(data, into: &out)
     }
 }

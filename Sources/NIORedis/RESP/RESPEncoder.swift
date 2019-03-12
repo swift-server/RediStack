@@ -1,8 +1,6 @@
-import Foundation
-
-/// Translates `RedisValue` into raw bytes, formatted according to the Redis Serialization Protocol (RESP).
+/// Encodes `RedisValue` into a raw `ByteBuffer`, formatted according to the Redis Serialization Protocol (RESP).
 ///
-/// See: https://redis.io/topics/protocol
+/// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public final class RESPEncoder {
     public init() { }
 
@@ -11,26 +9,38 @@ public final class RESPEncoder {
     /// See https://redis.io/topics/protocol
     /// - Parameter value: The `RESPValue` to encode.
     /// - Returns: The encoded value as a collection of bytes.
-    public func encode(_ value: RESPValue) -> Data {
+    public func encode(_ value: RESPValue, into buffer: inout ByteBuffer) {
         switch value {
         case .simpleString(let string):
-            return "+\(string)\r\n".convertedToData()
+            buffer.writeStaticString("+")
+            buffer.writeString(string)
+            buffer.writeStaticString("\r\n")
 
         case .bulkString(let data):
-            return "$\(data.count)\r\n".convertedToData() + data + "\r\n".convertedToData()
+            buffer.writeStaticString("$")
+            buffer.writeString(data.count.description)
+            buffer.writeStaticString("\r\n")
+            buffer.writeBytes(data)
+            buffer.writeString("\r\n")
 
         case .integer(let number):
-            return ":\(number)\r\n".convertedToData()
+            buffer.writeStaticString(":")
+            buffer.writeString(number.description)
+            buffer.writeStaticString("\r\n")
 
         case .null:
-            return "$-1\r\n".convertedToData()
+            buffer.writeStaticString("$-1\r\n")
 
         case .error(let error):
-            return "-\(error.description)\r\n".convertedToData()
+            buffer.writeStaticString("-")
+            buffer.writeString(error.description)
+            buffer.writeStaticString("\r\n")
 
         case .array(let array):
-            let encodedArray = array.map(encode).reduce(into: Data(), { $0.append($1) })
-            return "*\(array.count)\r\n".convertedToData() + encodedArray
+            buffer.writeStaticString("*")
+            buffer.writeString(array.count.description)
+            buffer.writeStaticString("\r\n")
+            array.forEach { self.encode($0, into: &buffer) }
         }
     }
 }

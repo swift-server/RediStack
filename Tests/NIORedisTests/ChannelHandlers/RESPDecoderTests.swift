@@ -114,7 +114,7 @@ final class RESPDecoderTests: XCTestCase {
         var buffer = allocator.buffer(capacity: 256)
         buffer.writeBytes(input)
         try embeddedChannel.writeInbound(buffer)
-        return (embeddedChannel.readInbound(), embeddedChannel.readInbound())
+        return try (embeddedChannel.readInbound(), embeddedChannel.readInbound())
     }
 
     private func arraysAreEqual(_ lhs: [RESPValue]?, expected right: [RESPValue]) -> Bool {
@@ -183,7 +183,7 @@ extension RESPDecoderTests {
 
         var results = [RESPValue?]()
         for _ in 0..<AllData.messages.count {
-            results.append(embeddedChannel.readInbound())
+            results.append(try embeddedChannel.readInbound())
         }
 
         XCTAssertEqual(results[0]?.string, AllData.expectedString)

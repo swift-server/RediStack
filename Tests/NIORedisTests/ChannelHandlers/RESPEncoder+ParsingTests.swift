@@ -7,74 +7,66 @@ final class RESPEncoderParsingTests: XCTestCase {
     private let encoder = RESPEncoder()
 
     func testSimpleStrings() {
-        XCTAssertEqual(
-            encoder.encode(.simpleString("Test1")),
-            "+Test1\r\n".convertedToData()
-        )
-        XCTAssertEqual(
-            encoder.encode(.simpleString("®in§³¾")),
-            "+®in§³¾\r\n".convertedToData()
-        )
+        XCTAssertTrue(testPass(input: .simpleString("Test1"), expected: "+Test1\r\n"))
+        XCTAssertTrue(testPass(input: .simpleString("®in§³¾"), expected: "+®in§³¾\r\n"))
     }
 
     func testBulkStrings() {
-        let t1 = Data([0x01, 0x02, 0x0a, 0x1b, 0xaa])
-        XCTAssertEqual(
-            encoder.encode(.bulkString(t1)),
-            "$5\r\n".convertedToData() + t1 + "\r\n".convertedToData()
-        )
-        let t2 = "®in§³¾".convertedToData()
-        XCTAssertEqual(
-            encoder.encode(.bulkString(t2)),
-            "$10\r\n".convertedToData() + t2 + "\r\n".convertedToData()
-        )
-        let t3 = "".convertedToData()
-        XCTAssertEqual(
-            encoder.encode(.bulkString(t3)),
-            "$0\r\n\r\n".convertedToData()
-        )
+        let bytes = Data([0x01, 0x02, 0x0a, 0x1b, 0xaa])
+        XCTAssertTrue(testPass(input: .bulkString(bytes), expected: Data("$5\r\n".utf8) + bytes + Data("\r\n".utf8)))
+        XCTAssertTrue(testPass(input: .init(bulk: "®in§³¾"), expected: "$10\r\n®in§³¾\r\n"))
+        XCTAssertTrue(testPass(input: .init(bulk: ""), expected: "$0\r\n\r\n"))
     }
 
     func testIntegers() {
-        XCTAssertEqual(
-            encoder.encode(.integer(Int.min)),
-            ":\(Int.min)\r\n".convertedToData()
-        )
-        XCTAssertEqual(
-            encoder.encode(.integer(0)),
-            ":0\r\n".convertedToData()
-        )
+        XCTAssertTrue(testPass(input: .integer(Int.min), expected: ":\(Int.min)\r\n"))
+        XCTAssertTrue(testPass(input: .integer(0), expected: ":0\r\n"))
     }
 
     func testArrays() {
-        XCTAssertEqual(
-            encoder.encode(.array([])),
-            "*0\r\n".convertedToData()
-        )
-        let a1: RESPValue = .array([.integer(3), .simpleString("foo")])
-        XCTAssertEqual(
-            encoder.encode(a1),
-            "*2\r\n:3\r\n+foo\r\n".convertedToData()
-        )
+        XCTAssertTrue(testPass(input: .array([]), expected: "*0\r\n"))
+        XCTAssertTrue(testPass(
+            input: .array([ .integer(3), .simpleString("foo") ]),
+            expected: "*2\r\n:3\r\n+foo\r\n"
+        ))
         let bytes = Data([ 0x0a, 0x1a, 0x1b, 0xff ])
-        let a2: RESPValue = .array([.array([
-            .integer(3),
-            .bulkString(bytes)
-        ])])
-        XCTAssertEqual(
-            encoder.encode(a2),
-            "*1\r\n*2\r\n:3\r\n$4\r\n".convertedToData() + bytes + "\r\n".convertedToData()
-        )
+        XCTAssertTrue(testPass(
+            input: .array([ .array([ .integer(10), .bulkString(bytes) ]) ]),
+            expected: Data("*1\r\n*2\r\n:10\r\n$4\r\n".utf8) + bytes + Data("\r\n".utf8)
+        ))
     }
 
     func testError() {
         let error = RedisError(identifier: "testError", reason: "Manual error")
-        let result = encoder.encode(.error(error))
-        XCTAssertEqual(result, "-\(error.description)\r\n".convertedToData())
+        XCTAssertTrue(testPass(input: .error(error), expected: "-\(error.description)\r\n"))
     }
 
     func testNull() {
-        XCTAssertEqual(encoder.encode(.null), "$-1\r\n".convertedToData())
+        XCTAssertTrue(testPass(input: .null, expected: "$-1\r\n"))
+    }
+
+    private func testPass(input: RESPValue, expected: Data) -> Bool {
+        let allocator = ByteBufferAllocator()
+
+        var comparisonBuffer = allocator.buffer(capacity: expected.count)
+        comparisonBuffer.writeBytes(expected)
+
+        var buffer = allocator.buffer(capacity: expected.count)
+        encoder.encode(input.convertedToRESPValue(), into: &buffer)
+
+        return buffer == comparisonBuffer
+    }
+
+    private func testPass(input: RESPValue, expected: String) -> Bool {
+        let allocator = ByteBufferAllocator()
+
+        var comparisonBuffer = allocator.buffer(capacity: expected.count)
+        comparisonBuffer.writeString(expected)
+
+        var buffer = allocator.buffer(capacity: expected.count)
+        encoder.encode(input.convertedToRESPValue(), into: &buffer)
+
+        return buffer == comparisonBuffer
     }
 }
 

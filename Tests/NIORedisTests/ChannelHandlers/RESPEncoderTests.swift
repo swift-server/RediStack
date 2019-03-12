@@ -13,7 +13,7 @@ final class RESPEncoderTests: XCTestCase {
         encoder = RESPEncoder()
         allocator = ByteBufferAllocator()
         channel = EmbeddedChannel()
-        _ = try? channel.pipeline.addHandler(encoder).wait()
+        _ = try? channel.pipeline.addHandler(MessageToByteHandler(encoder)).wait()
     }
 
     override func tearDown() {
@@ -90,10 +90,8 @@ final class RESPEncoderTests: XCTestCase {
     }
 
     private func runEncodePass(with input: RESPValue, _ validation: (ByteBuffer) -> Void) throws {
-        let context = try channel.pipeline.context(handler: encoder).wait()
-
         var buffer = allocator.buffer(capacity: 256)
-        try encoder.encode(context: context, data: input, out: &buffer)
+        try encoder.encode(data: input, out: &buffer)
         validation(buffer)
     }
 }
