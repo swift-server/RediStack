@@ -13,7 +13,7 @@ extension ClientBootstrap {
             .channelOption(ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR), value: 1)
             .channelInitializer { channel in
                 let handlers: [ChannelHandler] = [
-                    RESPEncoder(),
+                    MessageToByteHandler(RESPEncoder()),
                     ByteToMessageHandler(RESPDecoder()),
                     RedisCommandHandler()
                 ]

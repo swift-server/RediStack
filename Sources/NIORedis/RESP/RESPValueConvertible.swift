@@ -19,6 +19,18 @@ extension RESPValue: RESPValueConvertible {
     }
 }
 
+extension RedisError: RESPValueConvertible {
+    public init?(_ value: RESPValue) {
+        guard let error = value.error else { return nil }
+        self = error
+    }
+
+    /// See `RESPValueConvertible.convertedToRESPValue()`
+    public func convertedToRESPValue() -> RESPValue {
+        return .error(self)
+    }
+}
+
 extension String: RESPValueConvertible {
     public init?(_ value: RESPValue) {
         guard let string = value.string else { return nil }
