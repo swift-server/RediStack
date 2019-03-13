@@ -23,4 +23,8 @@ extension RedisError {
     internal static var connectionClosed: RedisError {
         return RedisError(identifier: "connection", reason: "Connection was closed while trying to execute.")
     }
+
+    internal static func respConversion<T>(to dest: T.Type) -> RedisError {
+        return RedisError(identifier: "respConversion", reason: "Failed to convert RESP to \(String(describing: dest))")
+    }
 }
