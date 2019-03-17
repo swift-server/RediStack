@@ -16,7 +16,7 @@ final class SetCommandsTests: XCTestCase {
     }
 
     override func tearDown() {
-        _ = try? connection?.command("FLUSHALL").wait()
+        _ = try? connection?.send(command: "FLUSHALL").wait()
         connection?.close()
         connection = nil
     }

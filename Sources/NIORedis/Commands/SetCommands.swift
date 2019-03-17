@@ -1,7 +1,7 @@
 import Foundation
 import NIO
 
-extension RedisConnection {
+extension RedisCommandExecutor {
     /// Returns the all of the elements of the set stored at key.
     ///
     /// Ordering of results are stable between multiple calls of this method to the same set.
@@ -10,7 +10,7 @@ extension RedisConnection {
     ///
     /// [https://redis.io/commands/smembers](https://redis.io/commands/smembers)
     public func smembers(_ key: String) -> EventLoopFuture<RESPValue> {
-        return command("SMEMBERS", arguments: [RESPValue(bulk: key)])
+        return send(command: "SMEMBERS", with: [key])
     }
 
     /// Checks if the provided item is included in the set stored at key.
@@ -29,7 +29,7 @@ extension RedisConnection {
     ///
     /// [https://redis.io/commands/scard](https://redis.io/commands/scard)
     public func scard(_ key: String) -> EventLoopFuture<Int> {
-        return command("SCARD", arguments: [RESPValue(bulk: key)])
+        return send(command: "SCARD", with: [key])
             .flatMapThrowing {
                 guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
                 return count
@@ -68,7 +68,7 @@ extension RedisConnection {
     ///
     /// [https://redis.io/commands/spop](https://redis.io/commands/spop)
     public func spop(_ key: String) -> EventLoopFuture<RESPValue> {
-        return command("SPOP", arguments: [RESPValue(bulk: key)])
+        return send(command: "SPOP", with: [key])
     }
 
     /// Randomly selects elements from the set stored at string, up to the `count` provided.
@@ -82,14 +82,14 @@ extension RedisConnection {
     public func srandmember(_ key: String, max count: Int = 1) -> EventLoopFuture<RESPValue> {
         assert(count != 0, "A count of zero is a noop for selecting a random element.")
 
-        return command("SRANDMEMBER", arguments: [RESPValue(bulk: key), RESPValue(bulk: count.description)])
+        return send(command: "SRANDMEMBER", with: [key, count.description])
     }
 
     /// Returns the members of the set resulting from the difference between the first set and all the successive sets.
     ///
     /// [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
     public func sdiff(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
-        return command("SDIFF", arguments: keys.map(RESPValue.init(bulk:)))
+        return send(command: "SDIFF", with: keys)
             .flatMapThrowing {
                 guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
                 return elements
@@ -102,7 +102,7 @@ extension RedisConnection {
     /// [https://redis.io/commands/sdiffstore](https://redis.io/commands/sdiffstore)
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sdiffstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
-        return command("SDIFFSTORE", arguments: [RESPValue(bulk: dest)] + keys.map(RESPValue.init(bulk:)))
+        return send(command: "SDIFFSTORE", with: [dest] + keys)
             .flatMapThrowing {
                 guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
                 return count
@@ -113,7 +113,7 @@ extension RedisConnection {
     ///
     /// [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
     public func sinter(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
-        return command("SINTER", arguments: keys.map(RESPValue.init(bulk:)))
+        return send(command: "SINTER", with: keys)
             .flatMapThrowing {
                 guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
                 return elements
@@ -126,7 +126,7 @@ extension RedisConnection {
     /// [https://redis.io/commands/sinterstore](https://redis.io/commands/sinterstore)
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sinterstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
-        return command("SINTERSTORE", arguments: [RESPValue(bulk: dest)] + keys.map(RESPValue.init(bulk:)))
+        return send(command: "SINTERSTORE", with: [dest] + keys)
             .flatMapThrowing {
                 guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
                 return count
@@ -149,7 +149,7 @@ extension RedisConnection {
     ///
     /// [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
     public func sunion(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
-        return command("SUNION", arguments: keys.map(RESPValue.init(bulk:)))
+        return send(command: "SUNION", with: keys)
             .flatMapThrowing {
                 guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
                 return elements
@@ -162,7 +162,7 @@ extension RedisConnection {
     /// [https://redis.io/commands/sunionstore](https://redis.io/commands/sunionstore)
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sunionstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
-        return command("SUNIONSTORE", arguments: [RESPValue(bulk: dest)] + keys.map(RESPValue.init(bulk:)))
+        return send(command: "SUNIONSTORE", with: [dest] + keys)
             .flatMapThrowing {
                 guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
                 return count

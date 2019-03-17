@@ -51,11 +51,11 @@ public final class RedisDriver {
         hostname: String = "localhost",
         port: Int = 6379,
         password: String? = nil
-    ) -> EventLoopFuture<RedisConnection> {
+    ) -> EventLoopFuture<NIORedisConnection> {
         let bootstrap = ClientBootstrap.makeForRedis(using: eventLoopGroup)
 
         return bootstrap.connect(host: hostname, port: port)
-            .map { return RedisConnection(channel: $0) }
+            .map { return NIORedisConnection(channel: $0) }
             .flatMap { connection in
                 guard let pw = password else {
                     return self.eventLoopGroup.next().makeSucceededFuture(connection)

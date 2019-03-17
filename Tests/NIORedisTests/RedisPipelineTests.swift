@@ -17,7 +17,7 @@ final class RedisPipelineTests: XCTestCase {
     }
 
     override func tearDown() {
-        _ = try? connection.command("FLUSHALL").wait()
+        _ = try? connection.send(command: "FLUSHALL").wait()
         connection.close()
         try? redis.terminate()
     }
@@ -25,13 +25,16 @@ final class RedisPipelineTests: XCTestCase {
     func test_enqueue() {
         let pipeline = connection.makePipeline()
 
-        XCTAssertNoThrow(try pipeline.enqueue(command: "PING"))
-        XCTAssertNoThrow(try pipeline.enqueue(command: "SET", arguments: ["KEY", 3]))
+        pipeline.enqueue { $0.send(command: "PING") }
+        XCTAssertEqual(pipeline.count, 1)
+
+        pipeline.enqueue { $0.send(command: "SET", with: ["KEY", 3]) }
+        XCTAssertEqual(pipeline.count, 2)
     }
 
     func test_executeFails() throws {
-        let future = try connection.makePipeline()
-            .enqueue(command: "GET")
+        let future = connection.makePipeline()
+            .enqueue { $0.send(command: "GET") }
             .execute()
 
         XCTAssertThrowsError(try future.wait())
@@ -39,7 +42,7 @@ final class RedisPipelineTests: XCTestCase {
 
     func test_singleCommand() throws {
         let results = try connection.makePipeline()
-            .enqueue(command: "PING")
+            .enqueue { $0.send(command: "PING") }
             .execute()
             .wait()
 
@@ -48,9 +51,9 @@ final class RedisPipelineTests: XCTestCase {
 
     func test_multipleCommands() throws {
         let results = try connection.makePipeline()
-            .enqueue(command: "PING")
-            .enqueue(command: "SET", arguments: ["my_key", 3])
-            .enqueue(command: "GET", arguments: ["my_key"])
+            .enqueue { $0.send(command: "PING") }
+            .enqueue { $0.set("my_key", to: "3") }
+            .enqueue { $0.get("my_key") }
             .execute()
             .wait()
 
@@ -61,10 +64,10 @@ final class RedisPipelineTests: XCTestCase {
 
     func test_executeIsOrdered() throws {
         let results = try connection.makePipeline()
-            .enqueue(command: "SET", arguments: ["key", 1])
-            .enqueue(command: "INCR", arguments: ["key"])
-            .enqueue(command: "DECR", arguments: ["key"])
-            .enqueue(command: "INCRBY", arguments: ["key", 15])
+            .enqueue { $0.set("key", to: "1") }
+            .enqueue { $0.send(command: "INCR", with: ["key"]) }
+            .enqueue { $0.send(command: "DECR", with: ["key"]) }
+            .enqueue { $0.send(command: "INCRBY", with: ["key", 15]) }
             .execute()
             .wait()
 
