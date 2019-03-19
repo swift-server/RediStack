@@ -28,13 +28,14 @@ public final class RedisConnection {
     /// - Returns: An `EventLoopFuture` that resolves when the connection has been closed.
     @discardableResult
     public func close() -> EventLoopFuture<Void> {
-        guard _isClosed.exchange(with: true) else { return channel.eventLoop.makeSucceededFuture(()) }
+        guard !_isClosed.exchange(with: true) else { return channel.eventLoop.makeSucceededFuture(()) }
 
-        let promise = channel.eventLoop.makePromise(of: Void.self)
-
-        channel.close(promise: promise)
-
-        return promise.futureResult
+        return send(command: "QUIT")
+            .flatMap { _ in
+                let promise = self.channel.eventLoop.makePromise(of: Void.self)
+                self.channel.close(promise: promise)
+                return promise.futureResult
+            }
     }
 
     /// Sends the desired command with the specified arguments.
