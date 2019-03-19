@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 import NIO
 
 /// A context for `RedisCommandHandler` to operate within.
@@ -18,9 +19,17 @@ public struct RedisCommandContext {
 open class RedisCommandHandler {
     /// Queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: [EventLoopPromise<RESPValue>]
+    private var logger: Logger
 
-    public init() {
+    deinit {
+        guard commandResponseQueue.count > 0 else { return }
+        logger.warning("Command handler deinit when queue is not empty. Current size: \(commandResponseQueue.count)")
+    }
+
+    public init(logger: Logger = Logger(label: "NIORedis.CommandHandler")) {
         self.commandResponseQueue = []
+        self.logger = logger
+        self.logger[metadataKey: "CommandHandler"] = "\(UUID())"
     }
 }
 
@@ -49,7 +58,9 @@ extension RedisCommandHandler: ChannelInboundHandler {
         let value = unwrapInboundIn(data)
 
         guard let leadPromise = commandResponseQueue.last else {
-            return assertionFailure("Read triggered with an empty promise queue! Ignoring: \(value)")
+            assertionFailure("Read triggered with an empty promise queue! Ignoring: \(value)")
+            logger.emergency("Read triggered with no promise waiting in the queue!")
+            return
         }
 
         let popped = commandResponseQueue.popLast()

@@ -1,8 +1,14 @@
+import Logging
+
 /// Encodes `RedisValue` into a raw `ByteBuffer`, formatted according to the Redis Serialization Protocol (RESP).
 ///
 /// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public final class RESPEncoder {
-    public init() { }
+    let logger: Logger
+
+    public init(logger: Logger = Logger(label: "NIORedis.RESPEncoder")) {
+        self.logger = logger
+    }
 
     /// Encodes the `RedisValue` to bytes, following the RESP specification.
     ///
