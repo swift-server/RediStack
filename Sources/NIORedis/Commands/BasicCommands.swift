@@ -70,4 +70,40 @@ extension RedisConnection {
         return command("SET", arguments: [RESPValue(bulk: key), RESPValue(bulk: value)])
             .map { _ in return () }
     }
+
+    /// Echos the provided message through the Redis instance.
+    /// - Parameter message: The message to echo.
+    /// - Returns: The message sent with the command.
+    public func echo(_ message: String) -> EventLoopFuture<String> {
+        return send(command: "ECHO", with: [message])
+            .flatMapThrowing {
+                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
+                return response
+            }
+    }
+
+    /// Pings the server, which will respond with a message.
+    /// - Parameter with: The optional message that the server should respond with.
+    /// - Returns: The provided message or Redis' default response of `"PONG"`.
+    public func ping(with message: String? = nil) -> EventLoopFuture<String> {
+        let arg = message != nil ? [message] : []
+        return send(command: "PING", with: arg)
+            .flatMapThrowing {
+                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
+                return response
+            }
+    }
+
+    /// Swaps the data of two Redis database by their index ID.
+    /// - Parameters:
+    ///     - firstIndex: The index of the first database.
+    ///     - secondIndex: The index of the second database.
+    /// - Returns: `true` if the swap was successful.
+    public func swapdb(firstIndex: Int, secondIndex: Int) -> EventLoopFuture<Bool> {
+        return send(command: "SWAPDB", with: [firstIndex, secondIndex])
+            .flatMapThrowing {
+                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
+                return response == "OK"
+            }
+    }
 }

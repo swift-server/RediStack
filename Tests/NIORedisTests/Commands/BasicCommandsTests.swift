@@ -63,11 +63,50 @@ final class BasicCommandsTests: XCTestCase {
         XCTAssertNil(after)
     }
 
+    func test_ping() throws {
+        let first = try connection?.ping().wait()
+        XCTAssertEqual(first, "PONG")
+
+        let second = try connection?.ping(with: "My message").wait()
+        XCTAssertEqual(second, "My message")
+    }
+
+    func test_echo() throws {
+        let response = try connection?.echo("FIZZ_BUZZ").wait()
+        XCTAssertEqual(response, "FIZZ_BUZZ")
+    }
+
+    func test_swapdb() throws {
+        try connection?.set("first", to: "3").wait()
+        var first = try connection?.get("first").wait()
+        XCTAssertEqual(first, "3")
+
+        try connection?.select(1).wait()
+        var second = try connection?.get("first").wait()
+        XCTAssertEqual(second, nil)
+
+        try connection?.set("second", to: "100").wait()
+        second = try connection?.get("second").wait()
+        XCTAssertEqual(second, "100")
+
+        let success = try connection?.swapdb(firstIndex: 0, secondIndex: 1).wait()
+        XCTAssertEqual(success, true)
+
+        second = try connection?.get("first").wait()
+        XCTAssertEqual(second, "3")
+
+        try connection?.select(0).wait()
+        first = try connection?.get("second").wait()
+        XCTAssertEqual(first, "100")
+    }
+
     static var allTests = [
         ("test_select", test_select),
         ("test_set", test_set),
         ("test_get", test_get),
         ("test_expire", test_expire),
         ("test_delete", test_delete),
+        ("test_ping", test_ping),
+        ("test_echo", test_echo),
     ]
 }
