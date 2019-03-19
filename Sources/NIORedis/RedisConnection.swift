@@ -1,3 +1,5 @@
+import Logging
+import Foundation
 import NIO
 import NIOConcurrencyHelpers
 
@@ -51,6 +53,8 @@ extension RedisConnection {
     public var eventLoop: EventLoop { return self.channel.eventLoop }
 }
 
+private let loggingKeyID = "RedisConnection"
+
 /// A basic `RedisConnection`.
 public final class NIORedisConnection: RedisConnection {
     /// See `RedisConnection.channel`.
@@ -60,19 +64,28 @@ public final class NIORedisConnection: RedisConnection {
     public var isClosed: Bool { return _isClosed.load() }
     private var _isClosed = Atomic<Bool>(value: false)
 
+    private var logger: Logger
+
     deinit { assert(_isClosed.load(), "Redis connection was not properly shut down!") }
 
     /// Creates a new connection on the provided channel.
     /// - Note: This connection will take ownership of the `Channel` object.
     /// - Important: Call `close()` before deinitializing to properly cleanup resources.
-    public init(channel: Channel) {
+    public init(channel: Channel, logger: Logger = Logger(label: "NIORedis.Connection")) {
         self.channel = channel
+        self.logger = logger
+
+        self.logger[metadataKey: loggingKeyID] = "\(UUID())"
+        self.logger.debug("Connection created.")
     }
 
     /// See `RedisConnection.close()`.
     @discardableResult
     public func close() -> EventLoopFuture<Void> {
-        guard !_isClosed.exchange(with: true) else { return channel.eventLoop.makeSucceededFuture(()) }
+        guard !_isClosed.exchange(with: true) else {
+            logger.notice("Connection received more than one close() request.")
+            return channel.eventLoop.makeSucceededFuture(())
+        }
 
         return send(command: "QUIT")
             .flatMap { _ in
@@ -80,16 +93,22 @@ public final class NIORedisConnection: RedisConnection {
                 self.channel.close(promise: promise)
                 return promise.futureResult
             }
+            .map { self.logger.debug("Connection closed.") }
     }
 
     /// See `RedisConnection.makePipeline()`.
     public func makePipeline() -> RedisPipeline {
-        return NIORedisPipeline(channel: channel)
+        var logger = Logger(label: "NIORedis.Pipeline")
+        logger[metadataKey: loggingKeyID] = self.logger[metadataKey: loggingKeyID]
+        return NIORedisPipeline(channel: channel, logger: logger)
     }
 
     /// See `RedisCommandExecutor.send(command:with:)`.
     public func send(command: String, with arguments: [RESPValueConvertible] = []) -> EventLoopFuture<RESPValue> {
-        guard !_isClosed.load() else { return channel.eventLoop.makeFailedFuture(RedisError.connectionClosed) }
+        guard !_isClosed.load() else {
+            logger.error("Received command when connection is closed.")
+            return channel.eventLoop.makeFailedFuture(RedisError.connectionClosed)
+        }
 
         let args = arguments.map { $0.convertedToRESPValue() }
 
@@ -98,6 +117,12 @@ public final class NIORedisConnection: RedisConnection {
             command: .array([RESPValue(bulk: command)] + args),
             promise: promise
         )
+
+        promise.futureResult.whenComplete { result in
+            guard case let .failure(error) = result else { return }
+            self.logger.error("\(error)")
+        }
+        logger.debug("Sending command \"\(command)\" with \(arguments) encoded as \(args)")
 
         _ = channel.writeAndFlush(context)
 

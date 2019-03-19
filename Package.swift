@@ -8,10 +8,11 @@ let package = Package(
         .library(name: "NIORedis", targets: ["NIORedis"])
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-log.git", .branch("master")),
         .package(url: "https://github.com/apple/swift-nio.git", .branch("master"))
     ],
     targets: [
-        .target(name: "NIORedis", dependencies: ["NIO"]),
+        .target(name: "NIORedis", dependencies: ["NIO", "Logging"]),
         .testTarget(name: "NIORedisTests", dependencies: ["NIORedis", "NIO"])
     ]
 )

@@ -1,4 +1,5 @@
 import Foundation
+import Logging
 
 /// An object that provides a mechanism to "pipeline" multiple Redis commands in sequence,
 /// providing an aggregate response of all the Redis responses for each individual command.
@@ -36,6 +37,7 @@ public protocol RedisPipeline {
 }
 
 public final class NIORedisPipeline {
+    private var logger: Logger
     /// The channel being used to send commands with.
     private let channel: Channel
 
@@ -44,9 +46,13 @@ public final class NIORedisPipeline {
 
     /// Creates a new pipeline queue that will write to the channel provided.
     /// - Parameter channel: The `Channel` to write to.
-    public init(channel: Channel) {
+    public init(channel: Channel, logger: Logger = Logger(label: "NIORedis.Pipeline")) {
         self.channel = channel
+        self.logger = logger
         self.queuedCommandResults = []
+
+        self.logger[metadataKey: "RedisPipeline"] = "\(UUID())"
+        self.logger.debug("Pipeline created.")
     }
 }
 
@@ -62,14 +68,13 @@ extension NIORedisPipeline: RedisPipeline {
         // We are passing ourselves in as the executor instance,
         // and our implementation of `RedisCommandExecutor.send(command:with:) handles the actual queueing.
         _ = operation(self)
+        logger.debug("Command queued. Pipeline size: \(count)")
         return self
     }
 
     /// See `RedisPipeline.execute()`.
     /// - Important: If any of the commands fail, the remaining commands will not execute and the `EventLoopFuture` will fail.
     public func execute() -> EventLoopFuture<[RESPValue]> {
-        channel.flush()
-
         let response = EventLoopFuture<[RESPValue]>.reduce(
             into: [],
             queuedCommandResults,
@@ -77,7 +82,16 @@ extension NIORedisPipeline: RedisPipeline {
             { (results, response) in results.append(response) }
         )
 
-        response.whenComplete { _ in self.queuedCommandResults = [] }
+        response.whenComplete { result in
+            self.queuedCommandResults = []
+
+            switch result {
+            case .failure(let error): self.logger.error("\(error)")
+            case .success: self.logger.debug("Pipeline executed.")
+            }
+        }
+
+        channel.flush()
 
         return response
     }
@@ -100,6 +114,8 @@ extension NIORedisPipeline: RedisCommandExecutor {
         )
 
         queuedCommandResults.append(promise.futureResult)
+
+        logger.debug("Enqueuing command \"\(command)\" with \(arguments) encoded as \(args)")
 
         _ = channel.write(context)
 
