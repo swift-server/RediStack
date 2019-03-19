@@ -16,13 +16,13 @@ final class BasicCommandsTests: XCTestCase {
     }
 
     override func tearDown() {
-        _ = try? connection?.command("FLUSHALL").wait()
+        _ = try? connection?.send(command: "FLUSHALL").wait()
         connection?.close()
         connection = nil
     }
 
     func test_select() {
-        XCTAssertNoThrow(try connection?.select(3).wait())
+        XCTAssertNoThrow(try connection?.select(database: 3).wait())
     }
 
     func test_delete() throws {
@@ -81,7 +81,7 @@ final class BasicCommandsTests: XCTestCase {
         var first = try connection?.get("first").wait()
         XCTAssertEqual(first, "3")
 
-        try connection?.select(1).wait()
+        try connection?.select(database: 1).wait()
         var second = try connection?.get("first").wait()
         XCTAssertEqual(second, nil)
 
@@ -95,7 +95,7 @@ final class BasicCommandsTests: XCTestCase {
         second = try connection?.get("first").wait()
         XCTAssertEqual(second, "3")
 
-        try connection?.select(0).wait()
+        try connection?.select(database: 0).wait()
         first = try connection?.get("second").wait()
         XCTAssertEqual(first, "100")
     }

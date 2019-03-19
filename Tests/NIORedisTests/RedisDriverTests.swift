@@ -17,7 +17,7 @@ final class RedisDriverTests: XCTestCase {
     }
 
     override func tearDown() {
-        _ = connection.command("FLUSHALL")
+        _ = connection.send(command: "FLUSHALL")
             .flatMap { _ in self.connection.close() }
             .map { _ in try? self.driver.terminate() }
     }
@@ -27,17 +27,14 @@ final class RedisDriverTests: XCTestCase {
     }
 
     func test_command_succeeds() throws {
-        let result = try connection.command(
-            "SADD",
-            arguments: [.bulkString("key".convertedToData()), 3.convertedToRESPValue()
-        ]).wait()
+        let result = try connection.send(command: "SADD", with: ["key", 3]).wait()
 
         XCTAssertNotNil(result.int)
         XCTAssertEqual(result.int, 1)
     }
 
     func test_command_fails() {
-        let command = connection.command("GET")
+        let command = connection.send(command: "GET")
 
         XCTAssertThrowsError(try command.wait())
     }
