@@ -121,3 +121,20 @@ extension Array: RESPValueConvertible where Element: RESPValueConvertible {
         return RESPValue.array(elements)
     }
 }
+
+extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
+    public init?(_ value: RESPValue) {
+        guard !value.isNull else { return nil }
+        guard let wrapped = Wrapped(value) else { return nil }
+
+        self = .some(wrapped)
+    }
+
+    /// See `RESPValueConvertible.convertedToRESPValue()`.
+    public func convertedToRESPValue() -> RESPValue {
+        switch self {
+        case .none: return .null
+        case let .some(value): return value.convertedToRESPValue()
+        }
+    }
+}
