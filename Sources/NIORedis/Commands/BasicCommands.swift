@@ -2,13 +2,25 @@ import Foundation
 import NIO
 
 extension RedisCommandExecutor {
-    /// Select the Redis logical database having the specified zero-based numeric index.
-    /// New connections always use the database `0`.
+    /// Echos the provided message through the Redis instance.
     ///
-    /// [https://redis.io/commands/select](https://redis.io/commands/select)
-    public func select(database id: Int) -> EventLoopFuture<Void> {
-        return send(command: "SELECT", with: [id.description])
-            .map { _ in return () }
+    /// See [https://redis.io/commands/echo](https://redis.io/commands/echo)
+    /// - Parameter message: The message to echo.
+    /// - Returns: The message sent with the command.
+    public func echo(_ message: String) -> EventLoopFuture<String> {
+        return send(command: "ECHO", with: [message])
+            .mapFromRESP()
+    }
+
+    /// Pings the server, which will respond with a message.
+    ///
+    /// See [https://redis.io/commands/ping](https://redis.io/commands/ping)
+    /// - Parameter with: The optional message that the server should respond with.
+    /// - Returns: The provided message or Redis' default response of `"PONG"`.
+    public func ping(with message: String? = nil) -> EventLoopFuture<String> {
+        let arg = message != nil ? [message] : []
+        return send(command: "PING", with: arg)
+            .mapFromRESP()
     }
 
     /// Request for authentication in a password-protected Redis server.
@@ -19,6 +31,30 @@ extension RedisCommandExecutor {
             .map { _ in return () }
     }
 
+    /// Select the Redis logical database having the specified zero-based numeric index.
+    /// New connections always use the database `0`.
+    ///
+    /// [https://redis.io/commands/select](https://redis.io/commands/select)
+    public func select(database id: Int) -> EventLoopFuture<Void> {
+        return send(command: "SELECT", with: [id.description])
+            .map { _ in return () }
+    }
+
+    /// Swaps the data of two Redis database by their index ID.
+    ///
+    /// See [https://redis.io/commands/swapdb](https://redis.io/commands/swapdb)
+    /// - Parameters:
+    ///     - firstIndex: The index of the first database.
+    ///     - secondIndex: The index of the second database.
+    /// - Returns: `true` if the swap was successful.
+    public func swapdb(firstIndex: Int, secondIndex: Int) -> EventLoopFuture<Bool> {
+        return send(command: "SWAPDB", with: [firstIndex, secondIndex])
+            .mapFromRESP(to: String.self)
+            .map { return $0 == "OK" }
+    }
+}
+
+extension RedisCommandExecutor {
     /// Removes the specified keys. A key is ignored if it does not exist.
     ///
     /// [https://redis.io/commands/del](https://redis.io/commands/del)
@@ -59,39 +95,5 @@ extension RedisCommandExecutor {
     public func set(_ key: String, to value: String) -> EventLoopFuture<Void> {
         return send(command: "SET", with: [key, value])
             .map { _ in return () }
-    }
-
-    /// Echos the provided message through the Redis instance.
-    ///
-    /// See [https://redis.io/commands/echo](https://redis.io/commands/echo)
-    /// - Parameter message: The message to echo.
-    /// - Returns: The message sent with the command.
-    public func echo(_ message: String) -> EventLoopFuture<String> {
-        return send(command: "ECHO", with: [message])
-            .mapFromRESP()
-    }
-
-    /// Pings the server, which will respond with a message.
-    ///
-    /// See [https://redis.io/commands/ping](https://redis.io/commands/ping)
-    /// - Parameter with: The optional message that the server should respond with.
-    /// - Returns: The provided message or Redis' default response of `"PONG"`.
-    public func ping(with message: String? = nil) -> EventLoopFuture<String> {
-        let arg = message != nil ? [message] : []
-        return send(command: "PING", with: arg)
-            .mapFromRESP()
-    }
-
-    /// Swaps the data of two Redis database by their index ID.
-    ///
-    /// See [https://redis.io/commands/swapdb](https://redis.io/commands/swapdb)
-    /// - Parameters:
-    ///     - firstIndex: The index of the first database.
-    ///     - secondIndex: The index of the second database.
-    /// - Returns: `true` if the swap was successful.
-    public func swapdb(firstIndex: Int, secondIndex: Int) -> EventLoopFuture<Bool> {
-        return send(command: "SWAPDB", with: [firstIndex, secondIndex])
-            .mapFromRESP(to: String.self)
-            .map { return $0 == "OK" }
     }
 }
