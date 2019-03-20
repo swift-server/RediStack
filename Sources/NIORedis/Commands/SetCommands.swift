@@ -19,10 +19,8 @@ extension RedisCommandExecutor {
     /// - Parameter item: The element to look in the set for, stored as a `bulkString`.
     public func sismember(_ key: String, item: RESPValueConvertible) -> EventLoopFuture<Bool> {
         return send(command: "SISMEMBER", with: [key, item])
-            .flatMapThrowing {
-                guard let result = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return result == 1
-            }
+            .mapFromRESP(to: Int.self)
+            .map { return $0 == 1 }
     }
 
     /// Returns the total count of elements in the set stored at key.
@@ -30,10 +28,7 @@ extension RedisCommandExecutor {
     /// [https://redis.io/commands/scard](https://redis.io/commands/scard)
     public func scard(_ key: String) -> EventLoopFuture<Int> {
         return send(command: "SCARD", with: [key])
-            .flatMapThrowing {
-                guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return count
-            }
+            .mapFromRESP()
     }
 
     /// Adds the provided items to the set stored at key, returning the count of items added.
@@ -44,10 +39,7 @@ extension RedisCommandExecutor {
         assert(items.count > 0, "There must be at least 1 item to add.")
 
         return send(command: "SADD", with: [key] + items)
-            .flatMapThrowing {
-                guard let result = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return result
-            }
+            .mapFromRESP()
     }
 
     /// Removes the provided items from the set stored at key, returning the count of items removed.
@@ -58,10 +50,7 @@ extension RedisCommandExecutor {
         assert(items.count > 0, "There must be at least 1 item listed to remove.")
 
         return send(command: "SREM", with: [key] + items)
-            .flatMapThrowing {
-                guard let result = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return result
-            }
+            .mapFromRESP()
     }
 
     /// Randomly selects an item from the set stored at key, and removes it.
@@ -90,10 +79,7 @@ extension RedisCommandExecutor {
     /// [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
     public func sdiff(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
         return send(command: "SDIFF", with: keys)
-            .flatMapThrowing {
-                guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
-                return elements
-            }
+            .mapFromRESP()
     }
 
     /// Functionally equivalent to `sdiff`, but instead stores the resulting set at the `destination` key
@@ -103,10 +89,7 @@ extension RedisCommandExecutor {
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sdiffstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
         return send(command: "SDIFFSTORE", with: [dest] + keys)
-            .flatMapThrowing {
-                guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return count
-            }
+            .mapFromRESP()
     }
 
     /// Returns the members of the set resulting from the intersection of all the given sets.
@@ -114,10 +97,7 @@ extension RedisCommandExecutor {
     /// [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
     public func sinter(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
         return send(command: "SINTER", with: keys)
-            .flatMapThrowing {
-                guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
-                return elements
-            }
+            .mapFromRESP()
     }
 
     /// Functionally equivalent to `sinter`, but instead stores the resulting set at the `destination` key
@@ -127,10 +107,7 @@ extension RedisCommandExecutor {
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sinterstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
         return send(command: "SINTERSTORE", with: [dest] + keys)
-            .flatMapThrowing {
-                guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return count
-            }
+            .mapFromRESP()
     }
 
     /// Moves the `item` from the source key to the destination key.
@@ -139,10 +116,8 @@ extension RedisCommandExecutor {
     /// - Important: This will resolve to `true` as long as it was successfully removed from the `source` key.
     public func smove(item: RESPValueConvertible, fromKey source: String, toKey dest: String) -> EventLoopFuture<Bool> {
         return send(command: "SMOVE", with: [source, dest, item])
-            .flatMapThrowing {
-                guard let result = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return result == 1
-            }
+            .mapFromRESP()
+            .map { return $0 == 1 }
     }
 
     /// Returns the members of the set resulting from the union of all the given keys.
@@ -150,10 +125,7 @@ extension RedisCommandExecutor {
     /// [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
     public func sunion(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
         return send(command: "SUNION", with: keys)
-            .flatMapThrowing {
-                guard let elements = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
-                return elements
-            }
+            .mapFromRESP()
     }
 
     /// Functionally equivalent to `sunion`, but instead stores the resulting set at the `destination` key
@@ -163,10 +135,7 @@ extension RedisCommandExecutor {
     /// - Important: If the `destination` key already exists, it is overwritten.
     public func sunionstore(destination dest: String, _ keys: String...) -> EventLoopFuture<Int> {
         return send(command: "SUNIONSTORE", with: [dest] + keys)
-            .flatMapThrowing {
-                guard let count = $0.int else { throw RedisError.respConversion(to: Int.self) }
-                return count
-            }
+            .mapFromRESP()
     }
 
     /// Incrementally iterates over a set, returning a cursor position for additional calls with a limited collection
@@ -193,16 +162,18 @@ extension RedisCommandExecutor {
             args.append(c)
         }
 
-        return send(command: "SSCAN", with: args)
-            .flatMapThrowing {
-                guard let response = $0.array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
-                guard
-                    let position = response[0].string,
-                    let newPosition = Int(position)
-                else { throw RedisError.respConversion(to: Int.self) }
-                guard let elements = response[1].array else { throw RedisError.respConversion(to: Array<RESPValue>.self) }
+        let response = send(command: "SSCAN", with: args).mapFromRESP(to: [RESPValue].self)
+        let position = response.flatMapThrowing { result -> Int in
+            guard
+                let value = result[0].string,
+                let position = Int(value)
+            else { throw RedisError(identifier: #function, reason: "Unexpected value in response: \(result[0])") }
+            return position
+        }
+        let elements = response
+            .map { return $0[1] }
+            .mapFromRESP(to: [RESPValue].self)
 
-                return (newPosition, elements)
-            }
+        return position.and(elements)
     }
 }
