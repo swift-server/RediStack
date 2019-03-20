@@ -87,6 +87,16 @@ extension RedisCommandExecutor {
             .map { return $0.string }
     }
 
+    /// Returns the values of all specified keys, using `.null` to represent non-existant values.
+    ///
+    /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
+    public func mget(_ keys: [String]) -> EventLoopFuture<[RESPValue]> {
+        assert(keys.count > 0, "At least 1 key should be provided.")
+        
+        return send(command: "MGET", with: keys)
+            .mapFromRESP()
+    }
+
     /// Set key to hold the string value.
     /// If key already holds a value, it is overwritten, regardless of its type.
     /// Any previous time to live associated with the key is discarded on successful SET operation.
@@ -95,5 +105,87 @@ extension RedisCommandExecutor {
     public func set(_ key: String, to value: String) -> EventLoopFuture<Void> {
         return send(command: "SET", with: [key, value])
             .map { _ in return () }
+    }
+
+    /// Sets each key to the respective new value, overwriting existing values.
+    ///
+    /// - Note: Use `msetnx` if you don't want to overwrite values.
+    ///
+    /// See [https://redis.io/commands/mset](https://redis.io/commands/mset)
+    public func mset(_ operations: [String: RESPValueConvertible]) -> EventLoopFuture<Void> {
+        assert(operations.count > 0, "At least 1 key-value pair should be provided.")
+
+        let args = _convertMSET(operations)
+        return send(command: "MSET", with: args)
+            .map { _ in return () }
+    }
+
+    /// If every key does not exist, sets each key to the respective new value.
+    ///
+    /// See [https://redis.io/commands/msetnx](https://redis.io/commands/msetnx)
+    public func msetnx(_ operations: [String: RESPValueConvertible]) -> EventLoopFuture<Bool> {
+        assert(operations.count > 0, "At least 1 key-value pair should be provided.")
+
+        let args = _convertMSET(operations)
+        return send(command: "MSETNX", with: args)
+            .mapFromRESP(to: Int.self)
+            .map { return $0 == 1 }
+    }
+
+    @inline(__always)
+    private func _convertMSET(_ source: [String: RESPValueConvertible]) -> [RESPValueConvertible] {
+        return source.reduce(into: [RESPValueConvertible](), { (result, element) in
+            result.append(element.key)
+            result.append(element.value)
+        })
+    }
+}
+
+extension RedisCommandExecutor {
+    /// Increments the stored value by 1 and returns the new value.
+    ///
+    /// See [https://redis.io/commands/incr](https://redis.io/commands/incr)
+    /// - Returns: The new value after the operation.
+    public func increment(_ key: String) -> EventLoopFuture<Int> {
+        return send(command: "INCR", with: [key])
+            .mapFromRESP()
+    }
+
+    /// Increments the stored value by the amount desired and returns the new value.
+    ///
+    /// See [https://redis.io/commands/incrby](https://redis.io/commands/incrby)
+    /// - Returns: The new value after the operation.
+    public func increment(_ key: String, by count: Int) -> EventLoopFuture<Int> {
+        return send(command: "INCRBY", with: [key, count])
+            .mapFromRESP()
+    }
+
+    /// Increments the stored value by the amount desired and returns the new value.
+    ///
+    /// See [https://redis.io/commands/incrbyfloat](https://redis.io/commands/incrbyfloat)
+    /// - Returns: The new value after the operation.
+    public func increment<T: BinaryFloatingPoint>(_ key: String, by count: T) -> EventLoopFuture<T>
+        where T: RESPValueConvertible
+    {
+        return send(command: "INCRBYFLOAT", with: [key, count])
+            .mapFromRESP()
+    }
+
+    /// Decrements the stored value by 1 and returns the new value.
+    ///
+    /// See [https://redis.io/commands/decr](https://redis.io/commands/decr)
+    /// - Returns: The new value after the operation.
+    public func decrement(_ key: String) -> EventLoopFuture<Int> {
+        return send(command: "DECR", with: [key])
+            .mapFromRESP()
+    }
+
+    /// Decrements the stored valye by the amount desired and returns the new value.
+    ///
+    /// See [https://redis.io/commands/decrby](https://redis.io/commands/decrby)
+    /// - Returns: The new value after the operation.
+    public func decrement(_ key: String, by count: Int) -> EventLoopFuture<Int> {
+        return send(command: "DECRBY", with: [key, count])
+            .mapFromRESP()
     }
 }
