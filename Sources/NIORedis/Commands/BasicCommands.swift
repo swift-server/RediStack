@@ -25,12 +25,7 @@ extension RedisCommandExecutor {
     /// - Returns: A future number of keys that were removed.
     public func delete(_ keys: String...) -> EventLoopFuture<Int> {
         return send(command: "DEL", with: keys)
-            .flatMapThrowing { res in
-                guard let count = res.int else {
-                    throw RedisError(identifier: "delete", reason: "Unexpected response: \(res)")
-                }
-                return count
-            }
+            .mapFromRESP()
     }
 
     /// Set a timeout on key. After the timeout has expired, the key will automatically be deleted.
@@ -42,12 +37,8 @@ extension RedisCommandExecutor {
     /// - Returns: A future bool indicating if the expiration was set or not.
     public func expire(_ key: String, after deadline: Int) -> EventLoopFuture<Bool> {
         return send(command: "EXPIRE", with: [key, deadline.description])
-            .flatMapThrowing { res in
-                guard let value = res.int else {
-                    throw RedisError(identifier: "expire", reason: "Unexpected response: \(res)")
-                }
-                return value == 1
-            }
+            .mapFromRESP(to: Int.self)
+            .map { return $0 == 1 }
     }
 
     /// Get the value of a key.
@@ -71,38 +62,36 @@ extension RedisCommandExecutor {
     }
 
     /// Echos the provided message through the Redis instance.
+    ///
+    /// See [https://redis.io/commands/echo](https://redis.io/commands/echo)
     /// - Parameter message: The message to echo.
     /// - Returns: The message sent with the command.
     public func echo(_ message: String) -> EventLoopFuture<String> {
         return send(command: "ECHO", with: [message])
-            .flatMapThrowing {
-                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
-                return response
-            }
+            .mapFromRESP()
     }
 
     /// Pings the server, which will respond with a message.
+    ///
+    /// See [https://redis.io/commands/ping](https://redis.io/commands/ping)
     /// - Parameter with: The optional message that the server should respond with.
     /// - Returns: The provided message or Redis' default response of `"PONG"`.
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
         let arg = message != nil ? [message] : []
         return send(command: "PING", with: arg)
-            .flatMapThrowing {
-                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
-                return response
-            }
+            .mapFromRESP()
     }
 
     /// Swaps the data of two Redis database by their index ID.
+    ///
+    /// See [https://redis.io/commands/swapdb](https://redis.io/commands/swapdb)
     /// - Parameters:
     ///     - firstIndex: The index of the first database.
     ///     - secondIndex: The index of the second database.
     /// - Returns: `true` if the swap was successful.
     public func swapdb(firstIndex: Int, secondIndex: Int) -> EventLoopFuture<Bool> {
         return send(command: "SWAPDB", with: [firstIndex, secondIndex])
-            .flatMapThrowing {
-                guard let response = $0.string else { throw RedisError.respConversion(to: String.self) }
-                return response == "OK"
-            }
+            .mapFromRESP(to: String.self)
+            .map { return $0 == "OK" }
     }
 }

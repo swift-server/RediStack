@@ -8,14 +8,13 @@ public struct RedisError: CustomDebugStringConvertible, CustomStringConvertible,
     public init(
         identifier: String,
         reason: String,
-        file: String = #file,
-        function: String = #function,
-        line: UInt = #line,
-        column: UInt = #column
+        file: StaticString = #file,
+        function: StaticString = #function,
+        line: UInt = #line
     ) {
         let name = String(describing: type(of: self))
         description = "⚠️ [\(name).\(identifier): \(reason)]"
-        debugDescription = "⚠️ Redis Error: \(reason)\n- id: \(name).\(identifier)\n\n\(Thread.callStackSymbols)"
+        debugDescription = "⚠️ Redis Error: \(reason)\n- id: \(name).\(identifier)\n\n\(file): L\(line) - \(function)\n\n\(Thread.callStackSymbols)"
     }
 }
 
