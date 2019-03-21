@@ -195,29 +195,33 @@ extension RedisCommandExecutor {
     ///
     /// [https://redis.io/commands/scan](https://redis.io/commands/scan)
     /// - Parameters:
+    ///     - startingFrom: The cursor position to start from.
     ///     - count: The number of elements to advance by. Redis default is 10.
     ///     - matching: A glob-style pattern to filter values to be selected from the result set.
     /// - Returns: A cursor position for additional invocations with a limited collection of keys stored in the database.
     @inlinable
     public func scan(
-        _ key: String,
-        atPosition pos: Int = 0,
+        startingFrom pos: Int = 0,
         count: Int? = nil,
         matching match: String? = nil) -> EventLoopFuture<(Int, [String])>
     {
-        return _scan(command: "SCAN", resultType: [String].self, key, pos, count, match)
+        return _scan(command: "SCAN", resultType: [String].self, nil, pos, count, match)
     }
 
     @inline(__always)
     @usableFromInline func _scan<T: RESPValueConvertible>(
         command: String,
         resultType: T.Type,
-        _ key: String,
+        _ key: String?,
         _ pos: Int,
         _ count: Int?,
         _ match: String?) -> EventLoopFuture<(Int, T)>
     {
-        var args: [RESPValueConvertible] = [key, pos]
+        var args: [RESPValueConvertible] = [pos]
+
+        if let k = key {
+            args.insert(k, at: 0)
+        }
 
         if let m = match {
             args.append("match")

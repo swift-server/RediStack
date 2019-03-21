@@ -189,6 +189,32 @@ final class BasicCommandsTests: XCTestCase {
         XCTAssertEqual(values?[1], "2")
     }
 
+    func test_scan() throws {
+        var dataset: [String] = .init(repeating: "", count: 10)
+        for index in 1...15 {
+            let key = "key\(index)\(index % 2 == 0 ? "_even" : "_odd")"
+            dataset.append(key)
+            _ = try connection?.set(key, to: "\(index)").wait()
+        }
+
+        var (cursor, keys) = try connection?.scan(count: 5).wait() ?? (0, [])
+        XCTAssertGreaterThanOrEqual(cursor, 0)
+        XCTAssertGreaterThanOrEqual(keys.count, 5)
+
+        (_, keys) = try connection?.scan(startingFrom: cursor, count: 8).wait() ?? (0, [])
+        XCTAssertGreaterThanOrEqual(keys.count, 8)
+
+        (cursor, keys) = try connection?.scan(matching: "*_odd").wait() ?? (0, [])
+        XCTAssertGreaterThanOrEqual(cursor, 0)
+        XCTAssertGreaterThanOrEqual(keys.count, 1)
+        XCTAssertLessThanOrEqual(keys.count, 7)
+
+        (cursor, keys) = try connection?.scan(matching: "*_even*").wait() ?? (0, [])
+        XCTAssertGreaterThanOrEqual(cursor, 0)
+        XCTAssertGreaterThanOrEqual(keys.count, 1)
+        XCTAssertLessThanOrEqual(keys.count, 7)
+    }
+
     static var allTests = [
         ("test_select", test_select),
         ("test_set", test_set),
@@ -206,5 +232,6 @@ final class BasicCommandsTests: XCTestCase {
         ("test_mget", test_mget),
         ("test_mset", test_mset),
         ("test_msetnx", test_msetnx),
+        ("test_scan", test_scan),
     ]
 }
