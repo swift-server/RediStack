@@ -138,42 +138,19 @@ extension RedisCommandExecutor {
             .mapFromRESP()
     }
 
-    /// Incrementally iterates over a set, returning a cursor position for additional calls with a limited collection
-    /// of the entire set.
+    /// Incrementally iterates over all values in a set.
     ///
     /// [https://redis.io/commands/sscan](https://redis.io/commands/sscan)
     /// - Parameters:
     ///     - count: The number of elements to advance by. Redis default is 10.
     ///     - matching: A glob-style pattern to filter values to be selected from the result set.
+    /// - Returns: A cursor position for additional invocations with a limited collection of values stored at the keys.
     public func sscan(
         _ key: String,
         atPosition pos: Int = 0,
         count: Int? = nil,
-        matching match: String? = nil
-    ) -> EventLoopFuture<(Int, [RESPValue])> {
-        var args: [RESPValueConvertible] = [key, pos]
-
-        if let m = match {
-            args.append("match")
-            args.append(m)
-        }
-        if let c = count {
-            args.append("count")
-            args.append(c)
-        }
-
-        let response = send(command: "SSCAN", with: args).mapFromRESP(to: [RESPValue].self)
-        let position = response.flatMapThrowing { result -> Int in
-            guard
-                let value = result[0].string,
-                let position = Int(value)
-            else { throw RedisError(identifier: #function, reason: "Unexpected value in response: \(result[0])") }
-            return position
-        }
-        let elements = response
-            .map { return $0[1] }
-            .mapFromRESP(to: [RESPValue].self)
-
-        return position.and(elements)
+        matching match: String? = nil) -> EventLoopFuture<(Int, [RESPValue])>
+    {
+        return _scan(command: "SSCAN", resultType: [RESPValue].self, key, pos, count, match)
     }
 }
