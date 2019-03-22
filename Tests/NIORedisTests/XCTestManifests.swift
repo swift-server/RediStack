@@ -12,7 +12,8 @@ public func allTests() -> [XCTestCaseEntry] {
         testCase(BasicCommandsTests.allTests),
         testCase(SetCommandsTests.allTests),
         testCase(RedisPipelineTests.allTests),
-        testCase(HashCommandsTests.allTests)
+        testCase(HashCommandsTests.allTests),
+        testCase(ListCommandsTests.allTests)
     ]
 }
 #endif
