@@ -69,13 +69,13 @@ extension RESPValue {
     }
 
     /// Extracted value from `integer` representations.
-    var int: Int? {
+    public var int: Int? {
         guard case .integer(let int) = self else { return nil }
         return int
     }
 
     /// Returns `true` if this data is a "null" value from Redis.
-    var isNull: Bool {
+    public var isNull: Bool {
         switch self {
         case .null: return true
         default: return false
@@ -83,7 +83,7 @@ extension RESPValue {
     }
 
     /// Extracted value from `error` representations.
-    var error: RedisError? {
+    public var error: RedisError? {
         switch self {
         case .error(let error): return error
         default: return nil
