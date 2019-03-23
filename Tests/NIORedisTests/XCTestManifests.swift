@@ -13,7 +13,8 @@ public func allTests() -> [XCTestCaseEntry] {
         testCase(SetCommandsTests.allTests),
         testCase(RedisPipelineTests.allTests),
         testCase(HashCommandsTests.allTests),
-        testCase(ListCommandsTests.allTests)
+        testCase(ListCommandsTests.allTests),
+        testCase(SortedSetCommandsTests.allTests)
     ]
 }
 #endif
