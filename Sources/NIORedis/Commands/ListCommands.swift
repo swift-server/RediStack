@@ -1,67 +1,103 @@
 import NIO
 
+// MARK: General
+
 extension RedisCommandExecutor {
-    /// Returns the length of the list stored at the key provided.
+    /// Gets the length of a list.
     ///
     /// See [https://redis.io/commands/llen](https://redis.io/commands/llen)
+    /// - Parameter key: The key of the list.
+    /// - Returns: The number of elements in the list.
     @inlinable
     public func llen(of key: String) -> EventLoopFuture<Int> {
         return send(command: "LLEN", with: [key])
             .mapFromRESP()
     }
 
-    /// Returns the element at the specified index stored at the key provided.
+    /// Gets the element from a list stored at the provided index position.
     ///
-    /// See [https://redis.io/commands/llen](https://redis.io/commands/llen)
+    /// See [https://redis.io/commands/lindex](https://redis.io/commands/lindex)
+    /// - Parameters:
+    ///     - index: The 0-based index of the element to get.
+    ///     - key: The key of the list.
+    /// - Returns: The element stored at index, or `.null` if out of bounds.
     @inlinable
-    public func lindex(_ key: String, index: Int) -> EventLoopFuture<RESPValue> {
+    public func lindex(_ index: Int, from key: String) -> EventLoopFuture<RESPValue> {
         return send(command: "LINDEX", with: [key, index])
-            .flatMapThrowing { response in
-                guard response.isNull else { return response }
-                throw RedisError(identifier: #function, reason: "Index out of bounds.")
-            }
     }
 
-    /// Sets the value at the specified index stored at the key provided.
+    /// Sets the value of an element in a list at the provided index position.
     ///
     /// See [https://redis.io/commands/lset](https://redis.io/commands/lset)
+    /// - Parameters:
+    ///     - index: The 0-based index of the element to set.
+    ///     - value: The new value the element should be.
+    ///     - key: The key of the list to update.
+    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
-    public func lset(_ key: String, index: Int, to value: RESPValueConvertible) -> EventLoopFuture<Void> {
+    public func lset(
+        index: Int,
+        to value: RESPValueConvertible,
+        in key: String
+    ) -> EventLoopFuture<Void> {
         return send(command: "LSET", with: [key, index, value])
             .map { _ in () }
     }
 
-    /// Removes elements from the list matching the value provided, up to the count specified.
+    /// Removes elements from a list matching the value provided.
     ///
     /// See [https://redis.io/commands/lrem](https://redis.io/commands/lrem)
-    /// - Returns: The number of elements removed.
+    /// - Parameters:
+    ///     - value: The value to delete from the list.
+    ///     - key: The key of the list to remove from.
+    ///     - count: The max number of elements to remove matching the value. See Redis' documentation for more info.
+    /// - Returns: The number of elements removed from the list.
     @inlinable
-    public func lrem(_ value: RESPValueConvertible, from key: String, count: Int) -> EventLoopFuture<Int> {
+    public func lrem(
+        _ value: RESPValueConvertible,
+        from key: String,
+        count: Int = 0
+    ) -> EventLoopFuture<Int> {
         return send(command: "LREM", with: [key, count, value])
             .mapFromRESP()
     }
 
-    /// Trims the list stored at the key provided to contain elements within the bounds of indexes specified.
+    /// Trims a list to only contain elements within the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Parameters:
+    ///     - key: The key of the list to trim.
+    ///     - start: The index of the first element to keep.
+    ///     - stop: The index of the last element to keep.
+    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
-    public func ltrim(_ key: String, startIndex start: Int, endIndex end: Int) -> EventLoopFuture<Void> {
-        return send(command: "LTRIM", with: [key, start, end])
+    public func ltrim(_ key: String, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
+        return send(command: "LTRIM", with: [key, start, stop])
             .map { _ in () }
     }
 
-    /// Returns the elements within the range bounds provided.
+    /// Gets all elements from a list within the the specified inclusive bounds of 0-based indices.
     ///
-    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - range: The range of inclusive indices of elements to get.
+    ///     - key: The key of the list.
+    /// - Returns: A list of elements found within the range specified.
     @inlinable
-    public func lrange(of key: String, startIndex start: Int, endIndex end: Int) -> EventLoopFuture<[RESPValue]> {
-        return send(command: "LRANGE", with: [key, start, end])
+    public func lrange(
+        within range: (startIndex: Int, endIndex: Int),
+        from key: String
+    ) -> EventLoopFuture<[RESPValue]> {
+        return send(command: "LRANGE", with: [key, range.startIndex, range.endIndex])
             .mapFromRESP()
     }
 
-    /// Pops the last element from the source list and pushes it to the destination list.
+    /// Pops the last element from a source list and pushes it to a destination list.
     ///
     /// See [https://redis.io/commands/rpoplpush](https://redis.io/commands/rpoplpush)
+    /// - Parameters:
+    ///     - source: The key of the list to pop from.
+    ///     - dest: The key of the list to push to.
     /// - Returns: The element that was moved.
     @inlinable
     public func rpoplpush(from source: String, to dest: String) -> EventLoopFuture<RESPValue> {
@@ -72,36 +108,44 @@ extension RedisCommandExecutor {
 // MARK: Insert
 
 extension RedisCommandExecutor {
-    /// Inserts the value before the first element matching the pivot value provided.
+    /// Inserts the element before the first element matching the "pivot" value specified.
     ///
     /// See [https://redis.io/commands/linsert](https://redis.io/commands/linsert)
+    /// - Parameters:
+    ///     - element: The value to insert into the list.
+    ///     - key: The key of the list.
+    ///     - pivot: The value of the element to insert before.
     /// - Returns: The size of the list after the insert, or -1 if an element matching the pivot value was not found.
     @inlinable
-    public func linsert<T: RESPValueConvertible>(
-        _ value: T,
-        into key: String,
-        before pivot: T) -> EventLoopFuture<Int>
+    public func linsert<T>(_ element: T, into key: String, before pivot: T) -> EventLoopFuture<Int>
+        where T: RESPValueConvertible
     {
-        return _linsert(pivotKeyword: "BEFORE", value, key, pivot)
+        return _linsert(pivotKeyword: "BEFORE", element, key, pivot)
     }
 
-    /// Inserts the value after the first element matching the pivot value provided.
+    /// Inserts the element after the first element matching the "pivot" value provided.
     ///
     /// See [https://redis.io/commands/linsert](https://redis.io/commands/linsert)
+    /// - Parameters:
+    ///     - element: The value to insert into the list.
+    ///     - key: The key of the list.
+    ///     - pivot: The value of the element to insert after.
     /// - Returns: The size of the list after the insert, or -1 if an element matching the pivot value was not found.
     @inlinable
-    public func linsert<T: RESPValueConvertible>(
-        _ value: T,
-        into key: String,
-        after pivot: T) -> EventLoopFuture<Int>
+    public func linsert<T>(_ element: T, into key: String, after pivot: T) -> EventLoopFuture<Int>
+        where T: RESPValueConvertible
     {
-        return _linsert(pivotKeyword: "AFTER", value, key, pivot)
+        return _linsert(pivotKeyword: "AFTER", element, key, pivot)
     }
 
-    @inline(__always)
     @usableFromInline
-    func _linsert(pivotKeyword: StaticString, _ value: RESPValueConvertible, _ key: String, _ pivot: RESPValueConvertible) -> EventLoopFuture<Int> {
-        return send(command: "LINSERT", with: [key, pivotKeyword.description, pivot, value])
+    func _linsert(
+        pivotKeyword: String,
+        _ element: RESPValueConvertible,
+        _ key: String,
+        _ pivot: RESPValueConvertible
+    ) -> EventLoopFuture<Int> {
+        return send(command: "LINSERT", with: [key, pivotKeyword, pivot, element])
             .mapFromRESP()
     }
 }
@@ -109,34 +153,43 @@ extension RedisCommandExecutor {
 // MARK: Head Operations
 
 extension RedisCommandExecutor {
-    /// Removes the first element in the list and returns it.
+    /// Removes the first element of a list.
     ///
     /// See [https://redis.io/commands/lpop](https://redis.io/commands/lpop)
+    /// - Parameter key: The key of the list to pop from.
+    /// - Returns: The element that was popped from the list, or `.null`.
     @inlinable
-    public func lpop(from key: String) -> EventLoopFuture<RESPValue?> {
+    public func lpop(from key: String) -> EventLoopFuture<RESPValue> {
         return send(command: "LPOP", with: [key])
-            .mapFromRESP()
     }
 
-    /// Inserts all values provided into the list stored at the key specified.
-    /// - Note: This inserts the values at the head of the list, for the tail see `rpush(_:to:)`.
+    /// Pushes all of the provided elements into a list.
+    /// - Note: This inserts the elements at the head of the list; for the tail see `rpush(_:into:)`.
     ///
     /// See [https://redis.io/commands/lpush](https://redis.io/commands/lpush)
+    /// - Parameters:
+    ///     - elements: The values to push into the list.
+    ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpush(_ values: [RESPValueConvertible], to key: String) -> EventLoopFuture<Int> {
-        return send(command: "LPUSH", with: [key] + values)
+    public func lpush(_ elements: [RESPValueConvertible], into key: String) -> EventLoopFuture<Int> {
+        assert(elements.count > 0, "At least 1 element should be provided.")
+        
+        return send(command: "LPUSH", with: [key] + elements)
             .mapFromRESP()
     }
 
-    /// Inserts the value at the head of the list only if the key exists and holds a list.
-    /// - Note: This inserts the values at the head of the list, for the tail see `rpushx(_:to:)`.
+    /// Pushes an element into a list, but only if the key exists and holds a list.
+    /// - Note: This inserts the element at the head of the list, for the tail see `rpushx(_:into:)`.
     ///
     /// See [https://redis.io/commands/lpushx](https://redis.io/commands/lpushx)
+    /// - Parameters:
+    ///     - element: The value to try and push into the list.
+    ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpushx(_ value: RESPValueConvertible, to key: String) -> EventLoopFuture<Int> {
-        return send(command: "LPUSHX", with: [key, value])
+    public func lpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
+        return send(command: "LPUSHX", with: [key, element])
             .mapFromRESP()
     }
 }
@@ -144,34 +197,42 @@ extension RedisCommandExecutor {
 // MARK: Tail Operations
 
 extension RedisCommandExecutor {
-    /// Removes the last element in the list and returns it.
+    /// Removes the last element a list.
     ///
     /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
+    /// - Parameter key: The key of the list to pop from.
+    /// - Returns: The element that was popped from the list, else `.null`.
     @inlinable
-    public func rpop(from key: String) -> EventLoopFuture<RESPValue?> {
+    public func rpop(from key: String) -> EventLoopFuture<RESPValue> {
         return send(command: "RPOP", with: [key])
-            .mapFromRESP()
     }
 
-    /// Inserts all values provided into the list stored at the key specified.
-    /// - Note: This inserts the values at the tail of the list, for the head see `lpush(_:to:)`.
+    /// Pushes all of the provided elements into a list.
+    /// - Note: This inserts the elements at the tail of the list; for the head see `lpush(_:into:)`.
     ///
     /// See [https://redis.io/commands/rpush](https://redis.io/commands/rpush)
-    /// - Returns: The size of the list after adding the new elements.
+    ///     - elements: The values to push into the list.
+    ///     - key: The key of the list.
+    /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpush(_ values: [RESPValueConvertible], to key: String) -> EventLoopFuture<Int> {
-        return send(command: "RPUSH", with: [key] + values)
+    public func rpush(_ elements: [RESPValueConvertible], into key: String) -> EventLoopFuture<Int> {
+        assert(elements.count > 0, "At least 1 element should be provided.")
+
+        return send(command: "RPUSH", with: [key] + elements)
             .mapFromRESP()
     }
 
-    /// Inserts the value at the head of the list only if the key exists and holds a list.
-    /// - Note: This inserts the values at the tail of the list, for the head see `lpushx(_:to:)`.
+    /// Pushes an element into a list, but only if the key exists and holds a list.
+    /// - Note: This inserts the element at the tail of the list; for the head see `lpushx(_:into:)`.
     ///
     /// See [https://redis.io/commands/rpushx](https://redis.io/commands/rpushx)
+    /// - Parameters:
+    ///     - element: The value to try and push into the list.
+    ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpushx(_ value: RESPValueConvertible, to key: String) -> EventLoopFuture<Int> {
-        return send(command: "RPUSHX", with: [key, value])
+    public func rpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
+        return send(command: "RPUSHX", with: [key, element])
             .mapFromRESP()
     }
 }
