@@ -64,17 +64,17 @@ final class SortedSetCommandsTests: XCTestCase {
     func test_zscore() throws {
         _ = try connection.send(command: "FLUSHALL").wait()
 
-        var score = try connection.zscore(of: 30, storedAt: #function).wait()
+        var score = try connection.zscore(of: 30, in: #function).wait()
         XCTAssertEqual(score, nil)
 
         _ = try connection.zadd((30, 1), to: #function).wait()
 
-        score = try connection.zscore(of: 30, storedAt: #function).wait()
+        score = try connection.zscore(of: 30, in: #function).wait()
         XCTAssertEqual(score, 1)
 
-        _ = try connection.zincrby(#function, member: 30, by: 10).wait()
+        _ = try connection.zincrby(10, element: 30, in: #function).wait()
 
-        score = try connection.zscore(of: 30, storedAt: #function).wait()
+        score = try connection.zscore(of: 30, in: #function).wait()
         XCTAssertEqual(score, 11)
     }
 
@@ -99,9 +99,9 @@ final class SortedSetCommandsTests: XCTestCase {
 
     func test_zrank() throws {
         let futures = [
-            connection.zrank(of: 1, storedAt: key),
-            connection.zrank(of: 2, storedAt: key),
-            connection.zrank(of: 3, storedAt: key),
+            connection.zrank(of: 1, in: key),
+            connection.zrank(of: 2, in: key),
+            connection.zrank(of: 3, in: key),
         ]
         let scores = try EventLoopFuture<Int?>.whenAllSucceed(futures, on: connection.eventLoop).wait()
         XCTAssertEqual(scores, [0, 1, 2])
@@ -109,9 +109,9 @@ final class SortedSetCommandsTests: XCTestCase {
 
     func test_zrevrank() throws {
         let futures = [
-            connection.zrevrank(of: 1, storedAt: key),
-            connection.zrevrank(of: 2, storedAt: key),
-            connection.zrevrank(of: 3, storedAt: key),
+            connection.zrevrank(of: 1, in: key),
+            connection.zrevrank(of: 2, in: key),
+            connection.zrevrank(of: 3, in: key),
         ]
         let scores = try EventLoopFuture<Int?>.whenAllSucceed(futures, on: connection.eventLoop).wait()
         XCTAssertEqual(scores, [9, 8, 7])
@@ -135,9 +135,9 @@ final class SortedSetCommandsTests: XCTestCase {
         let min = try connection.zpopmin(from: key).wait()
         XCTAssertEqual(min?.1, 1)
 
-        _ = try connection.zpopmin(7, from: key).wait()
+        _ = try connection.zpopmin(from: key, max: 7).wait()
 
-        let results = try connection.zpopmin(3, from: key).wait()
+        let results = try connection.zpopmin(from: key, max: 3).wait()
         XCTAssertEqual(results.count, 2)
         XCTAssertEqual(results[0].1, 9)
         XCTAssertEqual(results[1].1, 10)
@@ -147,22 +147,22 @@ final class SortedSetCommandsTests: XCTestCase {
         let min = try connection.zpopmax(from: key).wait()
         XCTAssertEqual(min?.1, 10)
 
-        _ = try connection.zpopmax(7, from: key).wait()
+        _ = try connection.zpopmax(from: key, max: 7).wait()
 
-        let results = try connection.zpopmax(3, from: key).wait()
+        let results = try connection.zpopmax(from: key, max: 3).wait()
         XCTAssertEqual(results.count, 2)
         XCTAssertEqual(results[0].1, 2)
         XCTAssertEqual(results[1].1, 1)
     }
 
     func test_zincrby() throws {
-        var score = try connection.zincrby(key, member: 1, by: 3_00_1398.328923).wait()
+        var score = try connection.zincrby(3_00_1398.328923, element: 1, in: key).wait()
         XCTAssertEqual(score, 3_001_399.328923)
 
-        score = try connection.zincrby(key, member: 1, by: -201_309.1397318).wait()
+        score = try connection.zincrby(-201_309.1397318, element: 1, in: key).wait()
         XCTAssertEqual(score, 2_800_090.1891912)
 
-        score = try connection.zincrby(key, member: 1, by: 20).wait()
+        score = try connection.zincrby(20, element: 1, in: key).wait()
         XCTAssertEqual(score, 2_800_110.1891912)
     }
 
@@ -171,15 +171,15 @@ final class SortedSetCommandsTests: XCTestCase {
         _ = try connection.zadd([(3, 3), (4, 4)], to: #file).wait()
 
         let unionCount = try connection.zunionstore(
-            [key, #function, #file],
-            to: #function+#file,
+            as: #function+#file,
+            sources: [key, #function, #file],
             weights: [3, 2, 1],
             aggregateMethod: "MAX"
         ).wait()
         XCTAssertEqual(unionCount, 10)
-        let rank = try connection.zrank(of: 10, storedAt: #function+#file).wait()
+        let rank = try connection.zrank(of: 10, in: #function+#file).wait()
         XCTAssertEqual(rank, 9)
-        let score = try connection.zscore(of: 10, storedAt: #function+#file).wait()
+        let score = try connection.zscore(of: 10, in: #function+#file).wait()
         XCTAssertEqual(score, 30)
     }
 
@@ -187,22 +187,22 @@ final class SortedSetCommandsTests: XCTestCase {
         _ = try connection.zadd([(3, 3), (10, 10), (11, 11)], to: #function).wait()
 
         let unionCount = try connection.zinterstore(
-            [key, #function],
-            to: #file,
+            as: #file,
+            sources: [key, #function],
             weights: [3, 2],
             aggregateMethod: "MIN"
-            ).wait()
+        ).wait()
         XCTAssertEqual(unionCount, 2)
-        let rank = try connection.zrank(of: 10, storedAt: #file).wait()
+        let rank = try connection.zrank(of: 10, in: #file).wait()
         XCTAssertEqual(rank, 1)
-        let score = try connection.zscore(of: 10, storedAt: #file).wait()
+        let score = try connection.zscore(of: 10, in: #file).wait()
         XCTAssertEqual(score, 20.0)
     }
 
     func test_zrange() throws {
-        var elements = try connection.zrange(withinIndices: (1, 3), from: key).wait()
+        var elements = try connection.zrange(within: (1, 3), from: key).wait()
         XCTAssertEqual(elements.count, 3)
-        elements = try connection.zrange(withinIndices: (1, 3), from: key, withScores: true).wait()
+        elements = try connection.zrange(within: (1, 3), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
         let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
@@ -214,9 +214,9 @@ final class SortedSetCommandsTests: XCTestCase {
     }
 
     func test_zrevrange() throws {
-        var elements = try connection.zrevrange(withinIndices: (1, 3), from: key).wait()
+        var elements = try connection.zrevrange(within: (1, 3), from: key).wait()
         XCTAssertEqual(elements.count, 3)
-        elements = try connection.zrevrange(withinIndices: (1, 3), from: key, withScores: true).wait()
+        elements = try connection.zrevrange(within: (1, 3), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
         let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
@@ -313,11 +313,11 @@ final class SortedSetCommandsTests: XCTestCase {
     }
 
     func test_zremrangebyrank() throws {
-        var count = try connection.zremrangebyrank(startingFrom: 0, endingAt: 3, from: key).wait()
+        var count = try connection.zremrangebyrank(within: (0, 3), from: key).wait()
         XCTAssertEqual(count, 4)
-        count = try connection.zremrangebyrank(startingFrom: 0, endingAt: 10, from: key).wait()
+        count = try connection.zremrangebyrank(within: (0, 10), from: key).wait()
         XCTAssertEqual(count, 6)
-        count = try connection.zremrangebyrank(startingFrom: 0, endingAt: 3, from: key).wait()
+        count = try connection.zremrangebyrank(within: (0, 3), from: key).wait()
         XCTAssertEqual(count, 0)
     }
 
