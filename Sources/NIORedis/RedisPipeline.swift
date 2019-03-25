@@ -18,18 +18,18 @@ public protocol RedisPipeline {
     /// The number of commands in the pipeline.
     var count: Int { get }
 
-    /// Queues an operation executed with the provided `RedisCommandExecutor` that will be executed in sequence when
+    /// Queues an operation executed with the provided `RedisClient` that will be executed in sequence when
     /// `execute()` is invoked.
     ///
     ///     let pipeline = connection.makePipeline()
     ///         .enqueue { $0.set("my_key", "3") }
     ///         .enqueue { $0.send(command: "INCR", with: ["my_key"]) }
     ///
-    /// See `RedisCommandExecutor`.
-    /// - Parameter operation: The operation specified with `RedisCommandExecutor` provided.
+    /// See `RedisClient`.
+    /// - Parameter operation: The operation specified with `RedisClient` provided.
     /// - Returns: A self-reference for chaining commands.
     @discardableResult
-    func enqueue<T>(operation: (RedisCommandExecutor) -> EventLoopFuture<T>) -> RedisPipeline
+    func enqueue<T>(operation: (RedisClient) -> EventLoopFuture<T>) -> RedisPipeline
 
     /// Flushes the queue, sending all of the commands to Redis.
     /// - Returns: An `EventLoopFuture` that resolves the `RESPValue` responses, in the same order as the command queue.
@@ -64,7 +64,7 @@ extension NIORedisPipeline: RedisPipeline {
 
     /// See `RedisPipeline.enqueue(operation:)`.
     @discardableResult
-    public func enqueue<T>(operation: (RedisCommandExecutor) -> EventLoopFuture<T>) -> RedisPipeline {
+    public func enqueue<T>(operation: (RedisClient) -> EventLoopFuture<T>) -> RedisPipeline {
         // We are passing ourselves in as the executor instance,
         // and our implementation of `RedisCommandExecutor.send(command:with:) handles the actual queueing.
         _ = operation(self)
@@ -97,7 +97,7 @@ extension NIORedisPipeline: RedisPipeline {
     }
 }
 
-extension NIORedisPipeline: RedisCommandExecutor {
+extension NIORedisPipeline: RedisClient {
     /// See `RedisCommandExecutor.eventLoop`.
     public var eventLoop: EventLoop { return self.channel.eventLoop }
 

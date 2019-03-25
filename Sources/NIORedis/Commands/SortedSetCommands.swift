@@ -2,7 +2,7 @@ import NIO
 
 // MARK: Static Helpers
 
-extension RedisCommandExecutor {
+extension RedisClient {
     @usableFromInline
     static func _mapSortedSetResponse(
         _ response: [RESPValue],
@@ -32,7 +32,7 @@ extension RedisCommandExecutor {
 
 // MARK: General
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Adds elements to a sorted set, assigning their score to the values provided.
     ///
     /// See [https://redis.io/commands/zadd](https://redis.io/commands/zadd)
@@ -140,7 +140,7 @@ extension RedisCommandExecutor {
 
 // MARK: Rank
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Returns the rank (index) of the specified element in a sorted set.
     /// - Note: This treats the ordered set as ordered from low to high.
     /// For the inverse, see `zrevrank(of:in:)`.
@@ -174,7 +174,7 @@ extension RedisCommandExecutor {
 
 // MARK: Count
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Returns the number of elements in a sorted set with a score within the range specified.
     ///
     /// See [https://redis.io/commands/zcount](https://redis.io/commands/zcount)
@@ -211,7 +211,7 @@ extension RedisCommandExecutor {
 
 // MARK: Pop
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Removes elements from a sorted set with the lowest scores.
     ///
     /// See [https://redis.io/commands/zpopmin](https://redis.io/commands/zpopmin)
@@ -280,7 +280,7 @@ extension RedisCommandExecutor {
 
 // MARK: Increment
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Increments the score of the specified element in a sorted set.
     ///
     /// See [https://redis.io/commands/zincrby](https://redis.io/commands/zincrby)
@@ -302,7 +302,7 @@ extension RedisCommandExecutor {
 
 // MARK: Intersect and Union
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Calculates the union of two or more sorted sets and stores the result.
     /// - Note: This operation overwrites any value stored at the destination key.
     ///
@@ -377,7 +377,7 @@ extension RedisCommandExecutor {
 
 // MARK: Range
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets the specified range of elements in a sorted set.
     /// - Note: This treats the ordered set as ordered from low to high.
     ///
@@ -437,7 +437,7 @@ extension RedisCommandExecutor {
 
 // MARK: Range by Score
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets elements from a sorted set whose score fits within the range specified.
     /// - Note: This treats the ordered set as ordered from low to high.
     ///
@@ -506,7 +506,7 @@ extension RedisCommandExecutor {
 
 // MARK: Range by Lexiographical
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets elements from a sorted set whose lexiographical values are between the range specified.
     /// - Important: This assumes all elements in the sorted set have the same score. If not, the returned elements are unspecified.
     /// - Note: This treats the ordered set as ordered from low to high.
@@ -570,7 +570,7 @@ extension RedisCommandExecutor {
 
 // MARK: Remove
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Removes the specified elements from a sorted set.
     ///
     /// See [https://redis.io/commands/zrem](https://redis.io/commands/zrem)

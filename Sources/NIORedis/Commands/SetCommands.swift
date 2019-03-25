@@ -3,7 +3,7 @@ import NIO
 
 // MARK: General
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets all of the elements contained in a set.
     /// - Note: Ordering of results are stable between multiple calls of this method to the same set.
     ///
@@ -152,7 +152,7 @@ extension RedisCommandExecutor {
 
 // MARK: Diff
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Calculates the difference between two or more sets.
     ///
     /// See [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
@@ -185,7 +185,7 @@ extension RedisCommandExecutor {
 
 // MARK: Intersect
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Calculates the intersection of two or more sets.
     ///
     /// See [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
@@ -218,7 +218,7 @@ extension RedisCommandExecutor {
 
 // MARK: Union
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Calculates the union of two or more sets.
     ///
     /// See [https://redis.io/commands/sunion](https://redis.io/commands/sunion)

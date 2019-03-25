@@ -21,7 +21,7 @@ final class SortedSetCommandsTests: XCTestCase {
 
             _ = try connection.zadd(dataset, to: SortedSetCommandsTests.testKey).wait()
         } catch {
-            XCTFail("Failed to create NIORedisConnection!")
+            XCTFail("Failed to create RedisConnection!")
         }
     }
 
@@ -205,7 +205,7 @@ final class SortedSetCommandsTests: XCTestCase {
         elements = try connection.zrange(within: (1, 3), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
-        let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
+        let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (value, _) in return Int(value) }
 
         XCTAssertEqual(values[0], 2)
@@ -219,7 +219,7 @@ final class SortedSetCommandsTests: XCTestCase {
         elements = try connection.zrevrange(within: (1, 3), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
-        let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
+        let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (value, _) in return Int(value) }
 
         XCTAssertEqual(values[0], 9)
@@ -233,7 +233,7 @@ final class SortedSetCommandsTests: XCTestCase {
         elements = try connection.zrangebyscore(within: ("1", "3"), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
-        let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
+        let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (_, score) in return score }
 
         XCTAssertEqual(values[0], 1.0)
@@ -247,7 +247,7 @@ final class SortedSetCommandsTests: XCTestCase {
         elements = try connection.zrevrangebyscore(within: ("1", "3"), from: key, withScores: true).wait()
         XCTAssertEqual(elements.count, 6)
 
-        let values = try NIORedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
+        let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (_, score) in return score }
 
         XCTAssertEqual(values[0], 3.0)

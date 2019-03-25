@@ -2,7 +2,7 @@ import NIO
 
 // MARK: General
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets the length of a list.
     ///
     /// See [https://redis.io/commands/llen](https://redis.io/commands/llen)
@@ -107,7 +107,7 @@ extension RedisCommandExecutor {
 
 // MARK: Insert
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Inserts the element before the first element matching the "pivot" value specified.
     ///
     /// See [https://redis.io/commands/linsert](https://redis.io/commands/linsert)
@@ -152,7 +152,7 @@ extension RedisCommandExecutor {
 
 // MARK: Head Operations
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Removes the first element of a list.
     ///
     /// See [https://redis.io/commands/lpop](https://redis.io/commands/lpop)
@@ -196,7 +196,7 @@ extension RedisCommandExecutor {
 
 // MARK: Tail Operations
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Removes the last element a list.
     ///
     /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
