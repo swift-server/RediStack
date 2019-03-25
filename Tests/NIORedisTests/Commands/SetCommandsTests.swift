@@ -5,7 +5,7 @@ final class SetCommandsTests: XCTestCase {
     private let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
     deinit { try? redis.terminate() }
 
-    private var connection: RedisConnection?
+    private var connection: RedisConnection!
 
     override func setUp() {
         do {
@@ -16,91 +16,79 @@ final class SetCommandsTests: XCTestCase {
     }
 
     override func tearDown() {
-        _ = try? connection?.send(command: "FLUSHALL").wait()
-        connection?.close()
+        _ = try? connection.send(command: "FLUSHALL").wait()
+        connection.close()
         connection = nil
     }
 
     func test_sadd() throws {
-        let key = #function
-
-        var insertCount = try connection?.sadd(key, items: [1, 2, 3]).wait()
+        var insertCount = try connection.sadd([1, 2, 3], to: #function).wait()
         XCTAssertEqual(insertCount, 3)
-        insertCount = try connection?.sadd(key, items: [3, 4, 5]).wait()
+        insertCount = try connection.sadd([3, 4, 5], to: #function).wait()
         XCTAssertEqual(insertCount, 2)
     }
 
     func test_smembers() throws {
-        let key = #function
         let first = ["Hello", ","]
         let second = ["World", "!"]
 
-        _ = try connection?.sadd(key, items: first).wait()
-        var set = try connection?.smembers(key).wait()
-        XCTAssertEqual(set?.array?.count, 2)
+        _ = try connection.sadd(first, to: #function).wait()
+        var set = try connection.smembers(of: #function).wait()
+        XCTAssertEqual(set.count, 2)
 
-        _ = try connection?.sadd(key, items: first).wait()
-        set = try connection?.smembers(key).wait()
-        XCTAssertEqual(set?.array?.count, 2)
+        _ = try connection.sadd(first, to: #function).wait()
+        set = try connection.smembers(of: #function).wait()
+        XCTAssertEqual(set.count, 2)
 
-        _ = try connection?.sadd(key, items: second).wait()
-        set = try connection?.smembers(key).wait()
-        XCTAssertEqual(set?.array?.count, 4)
+        _ = try connection.sadd(second, to: #function).wait()
+        set = try connection.smembers(of: #function).wait()
+        XCTAssertEqual(set.count, 4)
     }
 
     func test_sismember() throws {
-        let key = #function
+        _ = try connection.sadd(["Hello"], to: #function).wait()
+        XCTAssertTrue(try connection.sismember("Hello", of: #function).wait())
 
-        _ = try connection?.sadd(key, items: ["Hello"]).wait()
-        XCTAssertTrue(try connection?.sismember(key, item: "Hello").wait() ?? false)
-
-        XCTAssertFalse(try connection?.sismember(key, item: 3).wait() ?? true)
-
-        _ = try connection?.sadd(key, items: [3]).wait()
-        XCTAssertTrue(try connection?.sismember(key, item: 3).wait() ?? false)
+        XCTAssertFalse(try connection.sismember(3, of: #function).wait())
+        _ = try connection.sadd([3], to: #function).wait()
+        XCTAssertTrue(try connection.sismember(3, of: #function).wait())
     }
 
     func test_scard() throws {
-        let key = #function
-
-        XCTAssertEqual(try connection?.scard(key).wait(), 0)
-        _ = try connection?.sadd(key, items: [1, 2, 3]).wait()
-        XCTAssertEqual(try connection?.scard(key).wait(), 3)
+        XCTAssertEqual(try connection.scard(of: #function).wait(), 0)
+        _ = try connection.sadd([1, 2, 3], to: #function).wait()
+        XCTAssertEqual(try connection.scard(of: #function).wait(), 3)
     }
 
     func test_srem() throws {
-        let key = #function
-
-        var removedCount = try connection?.srem(key, items: [1]).wait()
+        var removedCount = try connection.srem([1], from: #function).wait()
         XCTAssertEqual(removedCount, 0)
 
-        _ = try connection?.sadd(key, items: [1]).wait()
-        removedCount = try connection?.srem(key, items: [1]).wait()
+        _ = try connection.sadd([1], to: #function).wait()
+        removedCount = try connection.srem([1], from: #function).wait()
         XCTAssertEqual(removedCount, 1)
     }
 
     func test_spop() throws {
-        let key = #function
-
-        var count = try connection?.scard(key).wait()
-        var item = try connection?.spop(key).wait()
+        var count = try connection.scard(of: #function).wait()
+        var result = try connection.spop(from: #function).wait()
         XCTAssertEqual(count, 0)
-        XCTAssertEqual(item?.isNull, true)
+        XCTAssertEqual(result.count, 0)
 
-        _ = try connection?.sadd(key, items: ["Hello"]).wait()
-        item = try connection?.spop(key).wait()
-        XCTAssertEqual(item?.string, "Hello")
-        count = try connection?.scard(key).wait()
+        _ = try connection.sadd(["Hello"], to: #function).wait()
+
+        result = try connection.spop(from: #function).wait()
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].string, "Hello")
+        count = try connection.scard(of: #function).wait()
         XCTAssertEqual(count, 0)
     }
 
     func test_srandmember() throws {
-        let key = #function
-
-        _ = try connection?.sadd(key, items: [1, 2, 3]).wait()
-        XCTAssertEqual(try connection?.srandmember(key).wait().array?.count, 1)
-        XCTAssertEqual(try connection?.srandmember(key, max: 4).wait().array?.count, 3)
-        XCTAssertEqual(try connection?.srandmember(key, max: -4).wait().array?.count, 4)
+        _ = try connection.sadd([1, 2, 3], to: #function).wait()
+        XCTAssertEqual(try connection.srandmember(from: #function).wait().count, 1)
+        XCTAssertEqual(try connection.srandmember(from: #function, max: 4).wait().count, 3)
+        XCTAssertEqual(try connection.srandmember(from: #function, max: -4).wait().count, 4)
     }
 
     func test_sdiff() throws {
@@ -108,20 +96,20 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
-        _ = try connection?.sadd(key3, items: [2, 4]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([3, 4, 5], to: key2).wait()
+        _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let diff1 = try connection?.sdiff(key1, key2).wait() ?? []
+        let diff1 = try connection.sdiff(of: [key1, key2]).wait()
         XCTAssertEqual(diff1.count, 2)
 
-        let diff2 = try connection?.sdiff(key1, key3).wait() ?? []
+        let diff2 = try connection.sdiff(of: [key1, key3]).wait()
         XCTAssertEqual(diff2.count, 2)
 
-        let diff3 = try connection?.sdiff(key1, key2, key3).wait() ?? []
+        let diff3 = try connection.sdiff(of: [key1, key2, key3]).wait()
         XCTAssertEqual(diff3.count, 1)
 
-        let diff4 = try connection?.sdiff(key3, key1, key2).wait() ?? []
+        let diff4 = try connection.sdiff(of: [key3, key1, key2]).wait()
         XCTAssertEqual(diff4.count, 0)
     }
 
@@ -130,14 +118,14 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([3, 4, 5], to: key2).wait()
 
-        let diffCount = try connection?.sdiffstore(destination: key3, key1, key2).wait()
+        let diffCount = try connection.sdiffstore(as: key3, sources: [key1, key2]).wait()
         XCTAssertEqual(diffCount, 2)
-        let members = try connection?.smembers(key3).wait().array
-        XCTAssertEqual(members?[0].string, "1")
-        XCTAssertEqual(members?[1].string, "2")
+        let members = try connection.smembers(of: key3).wait()
+        XCTAssertEqual(members[0].string, "1")
+        XCTAssertEqual(members[1].string, "2")
     }
 
     func test_sinter() throws {
@@ -145,20 +133,20 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
-        _ = try connection?.sadd(key3, items: [2, 4]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([3, 4, 5], to: key2).wait()
+        _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let diff1 = try connection?.sinter(key1, key2).wait() ?? []
+        let diff1 = try connection.sinter(of: [key1, key2]).wait()
         XCTAssertEqual(diff1.count, 1)
 
-        let diff2 = try connection?.sinter(key1, key3).wait() ?? []
+        let diff2 = try connection.sinter(of: [key1, key3]).wait()
         XCTAssertEqual(diff2.count, 1)
 
-        let diff3 = try connection?.sinter(key1, key2, key3).wait() ?? []
+        let diff3 = try connection.sinter(of: [key1, key2, key3]).wait()
         XCTAssertEqual(diff3.count, 0)
 
-        let diff4 = try connection?.sinter(key3, key1, key2).wait() ?? []
+        let diff4 = try connection.sinter(of: [key3, key1, key2]).wait()
         XCTAssertEqual(diff4.count, 0)
     }
 
@@ -167,33 +155,30 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([3, 4, 5], to: key2).wait()
 
-        let diffCount = try connection?.sinterstore(destination: key3, key1, key2).wait()
+        let diffCount = try connection.sinterstore(as: key3, sources: [key1, key2]).wait()
         XCTAssertEqual(diffCount, 1)
-        XCTAssertEqual(try connection?.smembers(key3).wait().array?[0].string, "3")
+        XCTAssertEqual(try connection.smembers(of: key3).wait()[0].string, "3")
     }
 
     func test_smove() throws {
-        let key1 = #function
-        let key2 = #file
+        _ = try connection.sadd([1, 2, 3], to: #function).wait()
+        _ = try connection.sadd([3, 4, 5], to: #file).wait()
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
+        var didMove = try connection.smove(3, from: #function, to: #file).wait()
+        XCTAssertTrue(didMove)
+        XCTAssertEqual(try connection.scard(of: #function).wait(), 2)
+        XCTAssertEqual(try connection.scard(of: #file).wait(), 3)
 
-        var didMove = try connection?.smove(item: 3, fromKey: key1, toKey: key2).wait()
-        XCTAssertTrue(didMove ?? false)
-        XCTAssertEqual(try connection?.scard(key1).wait(), 2)
-        XCTAssertEqual(try connection?.scard(key2).wait(), 3)
+        didMove = try connection.smove(2, from: #function, to: #file).wait()
+        XCTAssertTrue(didMove)
+        XCTAssertEqual(try connection.scard(of: #function).wait(), 1)
+        XCTAssertEqual(try connection.scard(of: #file).wait(), 4)
 
-        didMove = try connection?.smove(item: 2, fromKey: key1, toKey: key2).wait()
-        XCTAssertTrue(didMove ?? false)
-        XCTAssertEqual(try connection?.scard(key1).wait(), 1)
-        XCTAssertEqual(try connection?.scard(key2).wait(), 4)
-
-        didMove = try connection?.smove(item: 6, fromKey: key2, toKey: key1).wait()
-        XCTAssertFalse(didMove ?? false)
+        didMove = try connection.smove(6, from: #file, to: #function).wait()
+        XCTAssertFalse(didMove)
     }
 
     func test_sunion() throws {
@@ -201,17 +186,17 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [3, 4, 5]).wait()
-        _ = try connection?.sadd(key3, items: [2, 4]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([3, 4, 5], to: key2).wait()
+        _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let union1 = try connection?.sunion(key1, key2).wait() ?? []
+        let union1 = try connection.sunion(of: [key1, key2]).wait()
         XCTAssertEqual(union1.count, 5)
 
-        let union2 = try connection?.sunion(key2, key3).wait() ?? []
+        let union2 = try connection.sunion(of: [key2, key3]).wait()
         XCTAssertEqual(union2.count, 4)
 
-        let diff3 = try connection?.sunion(key1, key2, key3).wait() ?? []
+        let diff3 = try connection.sunion(of: [key1, key2, key3]).wait()
         XCTAssertEqual(diff3.count, 5)
     }
 
@@ -220,16 +205,16 @@ final class SetCommandsTests: XCTestCase {
         let key2 = #file
         let key3 = key1 + key2
 
-        _ = try connection?.sadd(key1, items: [1, 2, 3]).wait()
-        _ = try connection?.sadd(key2, items: [2, 3, 4]).wait()
+        _ = try connection.sadd([1, 2, 3], to: key1).wait()
+        _ = try connection.sadd([2, 3, 4], to: key2).wait()
 
-        let unionCount = try connection?.sunionstore(destination: key3, key1, key2).wait()
+        let unionCount = try connection.sunionstore(as: key3, sources: [key1, key2]).wait()
         XCTAssertEqual(unionCount, 4)
-        let results = try connection?.smembers(key3).wait().array
-        XCTAssertEqual(results?[0].string, "1")
-        XCTAssertEqual(results?[1].string, "2")
-        XCTAssertEqual(results?[2].string, "3")
-        XCTAssertEqual(results?[3].string, "4")
+        let results = try connection.smembers(of: key3).wait()
+        XCTAssertEqual(results[0].string, "1")
+        XCTAssertEqual(results[1].string, "2")
+        XCTAssertEqual(results[2].string, "3")
+        XCTAssertEqual(results[3].string, "4")
     }
 
     func test_sscan() throws {
@@ -252,21 +237,21 @@ final class SetCommandsTests: XCTestCase {
             "Honolulu, United States"
         ]
 
-        _ = try connection?.sadd(key, items: dataset).wait()
+        _ = try connection.sadd(dataset, to: key).wait()
 
-        var (cursor, results) = try connection?.sscan(key, count: 5).wait() ?? (0, [])
+        var (cursor, results) = try connection.sscan(key, count: 5).wait()
         XCTAssertGreaterThanOrEqual(cursor, 0)
         XCTAssertGreaterThanOrEqual(results.count, 5)
 
-        (_, results) = try connection?.sscan(key, atPosition: cursor, count: 8).wait() ?? (0, [])
+        (_, results) = try connection.sscan(key, startingFrom: cursor, count: 8).wait()
         XCTAssertGreaterThanOrEqual(results.count, 8)
 
-        (cursor, results) = try connection?.sscan(key, matching: "*Denmark").wait() ?? (0, [])
+        (cursor, results) = try connection.sscan(key, matching: "*Denmark").wait()
         XCTAssertGreaterThanOrEqual(cursor, 0)
         XCTAssertGreaterThanOrEqual(results.count, 1)
         XCTAssertLessThanOrEqual(results.count, 5)
 
-        (cursor, results) = try connection?.sscan(key, matching: "*ing*").wait() ?? (0, [])
+        (cursor, results) = try connection.sscan(key, matching: "*ing*").wait()
         XCTAssertGreaterThanOrEqual(cursor, 0)
         XCTAssertGreaterThanOrEqual(results.count, 1)
         XCTAssertLessThanOrEqual(results.count, 3)
