@@ -2,14 +2,11 @@
 import XCTest
 
 final class HashCommandsTests: XCTestCase {
-    private let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
-    deinit { try? redis.terminate() }
-
     private var connection: RedisConnection!
 
     override func setUp() {
         do {
-            connection = try redis.makeConnection().wait()
+            connection = try RedisConnection.connect().wait()
         } catch {
             XCTFail("Failed to create RedisConnection!")
         }
@@ -17,7 +14,7 @@ final class HashCommandsTests: XCTestCase {
 
     override func tearDown() {
         _ = try? connection.send(command: "FLUSHALL").wait()
-        connection.close()
+        try? connection.close().wait()
         connection = nil
     }
 

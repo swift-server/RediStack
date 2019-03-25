@@ -4,14 +4,11 @@ import XCTest
 final class StringCommandsTests: XCTestCase {
     private static let testKey = "SortedSetCommandsTests"
 
-    private let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
-    deinit { try? redis.terminate() }
-
     private var connection: RedisConnection!
 
     override func setUp() {
         do {
-            connection = try redis.makeConnection().wait()
+            connection = try RedisConnection.connect().wait()
         } catch {
             XCTFail("Failed to create RedisConnection!")
         }
@@ -19,7 +16,7 @@ final class StringCommandsTests: XCTestCase {
 
     override func tearDown() {
         _ = try? connection.send(command: "FLUSHALL").wait()
-        connection.close()
+        try? connection.close().wait()
         connection = nil
     }
 

@@ -4,15 +4,13 @@ import XCTest
 final class SortedSetCommandsTests: XCTestCase {
     private static let testKey = "SortedSetCommandsTests"
 
-    private let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
-    deinit { try? redis.terminate() }
-
     private var connection: RedisConnection!
+
     private var key: String { return SortedSetCommandsTests.testKey }
 
     override func setUp() {
         do {
-            connection = try redis.makeConnection().wait()
+            connection = try RedisConnection.connect().wait()
 
             var dataset: [(RESPValueConvertible, Double)] = []
             for index in 1...10 {
@@ -27,7 +25,7 @@ final class SortedSetCommandsTests: XCTestCase {
 
     override func tearDown() {
         _ = try? connection.send(command: "FLUSHALL").wait()
-        connection.close()
+        try? connection.close().wait()
         connection = nil
     }
 
