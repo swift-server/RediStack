@@ -9,7 +9,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", .branch("master")),
-        .package(url: "https://github.com/apple/swift-nio.git", .branch("master"))
+        .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")
     ],
     targets: [
         .target(name: "NIORedis", dependencies: ["NIO", "Logging"]),
