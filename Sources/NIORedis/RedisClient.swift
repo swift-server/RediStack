@@ -106,7 +106,7 @@ public final class RedisConnection: RedisClient {
         var logger = Logger(label: "NIORedis.RedisPipeline")
         logger[metadataKey: loggingKeyID] = self.logger[metadataKey: loggingKeyID]
 
-        return NIORedisPipeline(channel: channel, logger: logger)
+        return RedisPipeline(channel: channel, logger: logger)
     }
 
     /// See `RedisClient.send(command:with:)`

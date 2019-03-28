@@ -22,7 +22,7 @@ final class RedisPipelineTests: XCTestCase {
         try? redis.terminate()
     }
 
-    func test_enqueue() {
+    func test_enqueue() throws {
         let pipeline = connection.makePipeline()
 
         pipeline.enqueue { $0.send(command: "PING") }
