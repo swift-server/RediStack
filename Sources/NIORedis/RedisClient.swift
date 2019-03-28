@@ -161,7 +161,8 @@ extension RedisConnection {
                 guard let pw = password else {
                     return eventLoopGroup.next().makeSucceededFuture(client)
                 }
-                return client.authorize(with: pw)
+
+                return client.send(command: "AUTH", with: [pw])
                     .map { _ in return client }
             }
     }
