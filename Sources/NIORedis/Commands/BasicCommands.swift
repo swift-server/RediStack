@@ -25,17 +25,6 @@ extension RedisClient {
             .mapFromRESP()
     }
 
-    /// Request for authentication in a password-protected Redis server.
-    ///
-    /// [https://redis.io/commands/auth](https://redis.io/commands/auth)
-    /// - Parameter password: The password being used to access the Redis server.
-    /// - Returns: An `EventLoopFuture` that resolves when the connection has been authorized, or fails with a `RedisError`.
-    @inlinable
-    public func authorize(with password: String) -> EventLoopFuture<Void> {
-        return send(command: "AUTH", with: [password])
-            .map { _ in return () }
-    }
-
     /// Select the Redis logical database having the specified zero-based numeric index.
     /// - Note: New connections always use the database `0`.
     ///
