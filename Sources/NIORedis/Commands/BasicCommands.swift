@@ -1,7 +1,7 @@
 import Foundation
 import NIO
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Echos the provided message through the Redis instance.
     ///
     /// See [https://redis.io/commands/echo](https://redis.io/commands/echo)
@@ -95,7 +95,7 @@ extension RedisCommandExecutor {
 
 // MARK: Scan
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Incrementally iterates over all keys in the currently selected database.
     ///
     /// [https://redis.io/commands/scan](https://redis.io/commands/scan)

@@ -2,7 +2,7 @@ import NIO
 
 // MARK: Get
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Get the value of a key.
     /// - Note: This operation only works with string values.
     ///     The `EventLoopFuture` will fail with a `RedisError` if the value is not a string, such as a Set.
@@ -32,7 +32,7 @@ extension RedisCommandExecutor {
 
 // MARK: Set
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Sets the value stored in the key provided, overwriting the previous value.
     ///
     /// Any previous expiration set on the key is discarded if the SET operation was successful.
@@ -93,7 +93,7 @@ extension RedisCommandExecutor {
 
 // MARK: Increment
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Increments the stored value by 1.
     ///
     /// See [https://redis.io/commands/incr](https://redis.io/commands/incr)
@@ -136,7 +136,7 @@ extension RedisCommandExecutor {
 
 // MARK: Decrement
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Decrements the stored value by 1.
     ///
     /// See [https://redis.io/commands/decr](https://redis.io/commands/decr)

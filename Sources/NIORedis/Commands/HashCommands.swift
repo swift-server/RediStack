@@ -2,7 +2,7 @@ import NIO
 
 // MARK: Static Helpers
 
-extension RedisCommandExecutor {
+extension RedisClient {
     @usableFromInline
     static func _mapHashResponse(_ values: [String]) -> [String: String] {
         guard values.count > 0 else { return [:] }
@@ -23,7 +23,7 @@ extension RedisCommandExecutor {
 
 // MARK: General
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Removes the specified fields from a hash.
     ///
     /// See [https://redis.io/commands/hdel](https://redis.io/commands/hdel)
@@ -125,7 +125,7 @@ extension RedisCommandExecutor {
 
 // MARK: Set
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Sets a hash field to the value specified.
     /// - Note: If you do not want to overwrite existing values, use `hsetnx(_:field:to:)`.
     ///
@@ -192,7 +192,7 @@ extension RedisCommandExecutor {
 
 // MARK: Get
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Gets a hash field's value.
     ///
     /// See [https://redis.io/commands/hget](https://redis.io/commands/hget)
@@ -237,7 +237,7 @@ extension RedisCommandExecutor {
 
 // MARK: Increment
 
-extension RedisCommandExecutor {
+extension RedisClient {
     /// Increments a hash field's value and returns the new value.
     ///
     /// See [https://redis.io/commands/hincrby](https://redis.io/commands/hincrby)

@@ -11,7 +11,7 @@ final class ListCommandsTests: XCTestCase {
         do {
             connection = try redis.makeConnection().wait()
         } catch {
-            XCTFail("Failed to create NIORedisConnection!")
+            XCTFail("Failed to create RedisConnection!")
         }
     }
 
