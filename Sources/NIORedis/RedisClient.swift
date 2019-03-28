@@ -138,3 +138,31 @@ public final class RedisConnection: RedisClient {
         return promise.futureResult
     }
 }
+
+extension RedisConnection {
+    /// Makes a client connection to a Redis instance.
+    /// - Parameters:
+    ///     - socket: The `SocketAddress` information of the Redis instance to connect to.
+    ///     - password: The optional password to authorize the client with.
+    ///     - eventLoopGroup: The `EventLoopGroup` to build the connection on.
+    ///     - logger: The `Logger` instance to log with.
+    /// - Returns: A `RedisClient` instance representing this new connection.
+    public static func connect(
+        to socket: SocketAddress,
+        with password: String? = nil,
+        on eventLoopGroup: EventLoopGroup,
+        logger: Logger = Logger(label: "NIORedis.RedisClient")
+    ) -> EventLoopFuture<RedisConnection> {
+        let bootstrap = ClientBootstrap.makeRedisDefault(using: eventLoopGroup)
+
+        return bootstrap.connect(to: socket)
+            .map { return RedisConnection(channel: $0, logger: logger) }
+            .flatMap { client in
+                guard let pw = password else {
+                    return eventLoopGroup.next().makeSucceededFuture(client)
+                }
+                return client.authorize(with: pw)
+                    .map { _ in return client }
+            }
+    }
+}

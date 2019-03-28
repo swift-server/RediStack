@@ -2,24 +2,20 @@
 import XCTest
 
 final class RedisPipelineTests: XCTestCase {
-    private var redis: RedisDriver!
     private var connection: RedisConnection!
 
     override func setUp() {
-        let redis = RedisDriver(ownershipModel: .internal(threadCount: 1))
-
-        guard let connection = try? redis.makeConnection().wait() else {
-            return XCTFail("Failed to create connection!")
+        do {
+            connection = try RedisConnection.connect().wait()
+        } catch {
+            XCTFail("Failed to create RedisConnection!")
         }
-
-        self.redis = redis
-        self.connection = connection
     }
 
     override func tearDown() {
         _ = try? connection.send(command: "FLUSHALL").wait()
-        connection.close()
-        try? redis.terminate()
+        try? connection.close().wait()
+        connection = nil
     }
 
     func test_enqueue() throws {
