@@ -50,7 +50,10 @@ public final class RedisConnection: RedisClient {
     private var sentQuitCommand = Atomic<Bool>(value: false)
 
     deinit {
-        assert(sentQuitCommand.load(), "RedisConnection did not properly shutdown before deinit!")
+        if !sentQuitCommand.load() {
+            assertionFailure("close() was not called before deinit!")
+            logger.warning("RedisConnection did not properly shutdown before deinit!")
+        }
     }
 
     /// Creates a new connection on the provided `Channel`.
