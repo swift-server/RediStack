@@ -1,5 +1,5 @@
+import struct Foundation.UUID
 import Logging
-import Foundation
 import NIO
 import NIOConcurrencyHelpers
 

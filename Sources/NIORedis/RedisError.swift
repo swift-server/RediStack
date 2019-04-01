@@ -1,4 +1,5 @@
-import Foundation
+import protocol Foundation.LocalizedError
+import class Foundation.Thread
 
 /// Errors thrown while working with Redis.
 public struct RedisError: CustomDebugStringConvertible, CustomStringConvertible, LocalizedError {

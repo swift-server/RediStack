@@ -1,5 +1,3 @@
-import Foundation
-
 /// Capable of converting to / from `RESPValue`.
 public protocol RESPValueConvertible {
     init?(_ value: RESPValue)
@@ -39,7 +37,7 @@ extension String: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(Data(self.utf8))
+        return .bulkString(.init(self.utf8))
     }
 }
 
@@ -56,7 +54,7 @@ extension FixedWidthInteger {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(Data(self.description.utf8))
+        return .bulkString(.init(self.description.utf8))
     }
 }
 
@@ -80,7 +78,7 @@ extension Double: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(Data(self.description.utf8))
+        return .bulkString(.init(self.description.utf8))
     }
 }
 
@@ -93,19 +91,7 @@ extension Float: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(Data(self.description.utf8))
-    }
-}
-
-extension Data: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
-        guard let data = value.data else { return nil }
-        self = data
-    }
-
-    /// See `RESPValueConvertible.convertedToRESPValue()`
-    public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(self)
+        return .bulkString(.init(self.description.utf8))
     }
 }
 

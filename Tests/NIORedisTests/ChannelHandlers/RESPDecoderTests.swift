@@ -58,18 +58,18 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(try runTest("$3\r\nn³\r\n")?.string, "n³")
 
         let str = "κόσμε"
-        let strBytes = str.convertedToData()
+        let strBytes = str.bytes
         let strInput = "$\(strBytes.count)\r\n\(str)\r\n"
         XCTAssertEqual(try runTest(strInput)?.string, str)
-        XCTAssertEqual(try runTest(strInput)?.data, strBytes)
+        XCTAssertEqual(try runTest(strInput)?.bytes, strBytes)
 
         let multiBulkString: (RESPValue?, RESPValue?) = try runTest("$-1\r\n$3\r\nn³\r\n")
         XCTAssertEqual(multiBulkString.0?.isNull, true)
         XCTAssertEqual(multiBulkString.1?.string, "n³")
 
-        let rawBytes = Data([0x00, 0x01, 0x02, 0x03, 0x0A, 0xff])
-        let rawByteInput = "$\(rawBytes.count)\r\n".convertedToData() + rawBytes + "\r\n".convertedToData()
-        XCTAssertEqual(try runTest(rawByteInput)?.data, rawBytes)
+        let rawBytes: [UInt8] = [0x00, 0x01, 0x02, 0x03, 0x0A, 0xff]
+        let rawByteInput = "$\(rawBytes.count)\r\n".bytes + rawBytes + "\r\n".bytes
+        XCTAssertEqual(try runTest(rawByteInput)?.bytes, rawBytes)
     }
 
     func test_array() throws {
@@ -82,11 +82,11 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(try runArrayTest("*0\r\n")?.count, 0)
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*1\r\n$3\r\nfoo\r\n"),
-            expected: [.bulkString("foo".convertedToData())]
+            expected: [.bulkString("foo".bytes)]
         ))
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n"),
-            expected: [.simpleString("foo"), .bulkString("bar".convertedToData()), .integer(3)]
+            expected: [.simpleString("foo"), .bulkString("bar".bytes), .integer(3)]
         ))
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*1\r\n*2\r\n+OK\r\n:1\r\n"),
@@ -95,18 +95,18 @@ final class RESPDecoderTests: XCTestCase {
     }
 
     private func runTest(_ input: String) throws -> RESPValue? {
-        return try runTest(input.convertedToData())
+        return try runTest(input.bytes)
     }
 
-    private func runTest(_ input: Data) throws -> RESPValue? {
+    private func runTest(_ input: [UInt8]) throws -> RESPValue? {
         return try runTest(input).0
     }
 
     private func runTest(_ input: String) throws -> (RESPValue?, RESPValue?) {
-        return try runTest(input.convertedToData())
+        return try runTest(input.bytes)
     }
 
-    private func runTest(_ input: Data) throws -> (RESPValue?, RESPValue?) {
+    private func runTest(_ input: [UInt8]) throws -> (RESPValue?, RESPValue?) {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
         let handler = ByteToMessageHandler(decoder)
@@ -191,11 +191,11 @@ extension RESPDecoderTests {
         XCTAssertEqual(results[2]?.error?.description.contains(AllData.expectedError), true)
 
         XCTAssertEqual(results[3]?.string, AllData.expectedBulkString)
-        XCTAssertEqual(results[3]?.data, AllData.expectedBulkString.convertedToData())
+        XCTAssertEqual(results[3]?.bytes, AllData.expectedBulkString.bytes)
 
         XCTAssertEqual(results[4]?.isNull, true)
 
-        XCTAssertEqual(results[5]?.data?.count, 0)
+        XCTAssertEqual(results[5]?.bytes?.count, 0)
         XCTAssertEqual(results[5]?.string, "")
 
         XCTAssertEqual(results[6]?.array?.count, 3)
@@ -203,7 +203,7 @@ extension RESPDecoderTests {
             results[6]?.array,
             expected: [
                 .simpleString(AllData.expectedString),
-                .bulkString(AllData.expectedBulkString.convertedToData()),
+                .bulkString(AllData.expectedBulkString.bytes),
                 .integer(AllData.expectedInteger)
             ]
         ))
