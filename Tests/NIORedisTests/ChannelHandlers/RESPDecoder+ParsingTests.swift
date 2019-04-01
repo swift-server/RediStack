@@ -43,35 +43,35 @@ final class RESPDecoderParsingTests: XCTestCase {
         XCTAssertEqual(parseTest_singleValue(input: "$0\r\n\r\n")?.string, "")
         XCTAssertEqual(parseTest_singleValue(input: "$1\r\n!\r\n")?.string, "!")
         XCTAssertEqual(
-            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data([0xa3]) + "\r\n".convertedToData())?.data,
-            Data([0xa3])
+            parseTest_singleValue(input: "$1\r\n".bytes + [0xa3] + "\r\n".bytes)?.bytes,
+            [0xa3]
         )
         XCTAssertEqual(
-            parseTest_singleValue(input: "$1\r\n".convertedToData() + Data([0xba]) + "\r\n".convertedToData())?.data,
-            Data([0xba])
+            parseTest_singleValue(input: "$1\r\n".bytes + [0xba] + "\r\n".bytes)?.bytes,
+            [0xba]
         )
     }
 
     func testParsing_with_bulkString_multiple() throws {
         let t1 = try parseTest_twoValues(withChunks: ["$3\r", "\naaa\r\n$", "4\r\nnio!\r\n"])
-        XCTAssertTrue(t1.0?.data?.count == 3)
-        XCTAssertTrue(t1.1?.data?.count == 4)
+        XCTAssertTrue(t1.0?.bytes?.count == 3)
+        XCTAssertTrue(t1.1?.bytes?.count == 4)
 
-        let chunks: [Data] = [
-            "$3\r".convertedToData(),
-            "\n".convertedToData() + Data([0xAA, 0xA3, 0xFF]) + "\r\n$".convertedToData(),
-            "4\r\n".convertedToData() + Data([0xbb, 0x3a, 0xba, 0xFF]) + "\r\n".convertedToData()
+        let chunks: [[UInt8]] = [
+            "$3\r".bytes,
+            "\n".bytes + [0xAA, 0xA3, 0xFF] + "\r\n$".bytes,
+            "4\r\n".bytes + [0xbb, 0x3a, 0xba, 0xFF] + "\r\n".bytes
         ]
         let t2 = try parseTest_twoValues(withChunks: chunks)
-        XCTAssertTrue(t2.0?.data?.count == 3)
-        XCTAssertTrue(t2.1?.data?.count == 4)
+        XCTAssertTrue(t2.0?.bytes?.count == 3)
+        XCTAssertTrue(t2.1?.bytes?.count == 4)
     }
 
     func testParsing_with_arrays() {
         XCTAssertEqual(parseTest_singleValue(input: "*1\r\n+!\r\n")?.array?.count, 1)
         XCTAssertEqual(parseTest_singleValue(input: "*2\r\n*1\r\n:1\r\n:3\r\n")?.array?.count, 2)
-        XCTAssertEqual(parseTest_singleValue(input: "*0\r\n".convertedToData())?.array?.count, 0)
-        XCTAssertNil(parseTest_singleValue(input: "*-1\r\n".convertedToData())?.array)
+        XCTAssertEqual(parseTest_singleValue(input: "*0\r\n".bytes)?.array?.count, 0)
+        XCTAssertNil(parseTest_singleValue(input: "*-1\r\n".bytes)?.array)
     }
 
     func testParsing_with_arrays_multiple() throws {
@@ -80,10 +80,10 @@ final class RESPDecoderParsingTests: XCTestCase {
         XCTAssertTrue(t1.1?.array?.count == 0)
 
         let t2 = try parseTest_twoValues(withChunks: [
-            "*-1\r".convertedToData(),
-            "\n".convertedToData(),
-            "*1\r".convertedToData(),
-            "\n+£\r\n".convertedToData()
+            "*-1\r".bytes,
+            "\n".bytes,
+            "*1\r".bytes,
+            "\n+£\r\n".bytes
         ])
         XCTAssertTrue(t2.0?.array == nil)
         XCTAssertTrue(t2.1?.array?.count == 1)
@@ -120,11 +120,11 @@ final class RESPDecoderParsingTests: XCTestCase {
 
     /// See parse_Test_singleValue(input:) String
     private func parseTest_singleValue(input: String) -> RESPValue? {
-        return parseTest_singleValue(input: input.convertedToData())
+        return parseTest_singleValue(input: input.bytes)
     }
 
     /// Takes a collection of bytes representing a complete message and returns the data
-    private func parseTest_singleValue(input: Data) -> RESPValue? {
+    private func parseTest_singleValue(input: [UInt8]) -> RESPValue? {
         return runParse(offset: 0) { decoder, position, buffer in
             buffer.writeBytes(input)
             guard case .parsed(let result)? = try? decoder.parse(at: &position, from: &buffer) else { return nil }
@@ -134,13 +134,13 @@ final class RESPDecoderParsingTests: XCTestCase {
 
     /// See parseTest_recursive(withCunks:) [Data]
     private func parseTest_twoValues(withChunks messageChunks: [String]) throws -> (RESPValue?, RESPValue?) {
-        return try parseTest_twoValues(withChunks: messageChunks.map({ $0.convertedToData() }))
+        return try parseTest_twoValues(withChunks: messageChunks.map({ $0.bytes }))
     }
 
     /// Takes a collection of incomplete byte messages that produce exactly two decoded RESPValue.
     /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
     /// - Returns: The first and second decoded data
-    private func parseTest_twoValues(withChunks messageChunks: [Data]) throws -> (RESPValue?, RESPValue?) {
+    private func parseTest_twoValues(withChunks messageChunks: [[UInt8]]) throws -> (RESPValue?, RESPValue?) {
         let decoder = RESPDecoder()
         var buffer = allocator.buffer(capacity: messageChunks.joined().count)
 
@@ -263,12 +263,12 @@ extension RESPDecoderParsingTests {
 
     func testParsing_bulkString_withNoSize_returnsEmpty() throws {
         let result = parseTestBulkString("$0\r\n\r\n")
-        XCTAssertEqual(result?.data?.count, 0)
+        XCTAssertEqual(result?.bytes?.count, 0)
     }
 
     func testParsing_bulkString_withSize_returnsContent() throws {
         let result = parseTestBulkString("$1\r\n1\r\n")
-        XCTAssertEqual(result?.data?.count, 1)
+        XCTAssertEqual(result?.bytes?.count, 1)
     }
 
     func testParsing_bulkString_withNull_returnsNil() throws {
@@ -278,18 +278,18 @@ extension RESPDecoderParsingTests {
 
     func testParsing_bulkString_handlesRawBytes() throws {
         let bytes: [UInt8] = [0x00, 0x01, 0x02, 0x03, 0x0A, 0xFF]
-        let data = "$\(bytes.count)\r\n".convertedToData() + Data(bytes) + "\r\n".convertedToData()
+        let allBytes = "$\(bytes.count)\r\n".bytes + bytes + "\r\n".bytes
 
-        let result = parseTestBulkString(data)
+        let result = parseTestBulkString(allBytes)
 
-        XCTAssertEqual(result?.data?.count, bytes.count)
+        XCTAssertEqual(result?.bytes?.count, bytes.count)
     }
 
     private func parseTestBulkString(_ input: String) -> RESPValue? {
-        return parseTestBulkString(input.convertedToData())
+        return parseTestBulkString(input.bytes)
     }
 
-    private func parseTestBulkString(_ input: Data) -> RESPValue? {
+    private func parseTestBulkString(_ input: [UInt8]) -> RESPValue? {
         return runParse { decoder, position, buffer in
             buffer.writeBytes(input)
             guard case .parsed(let result) = try decoder._parseBulkString(at: &position, from: &buffer) else {
@@ -318,7 +318,7 @@ extension RESPDecoderParsingTests {
         XCTAssertEqual(result?.count, 3)
         XCTAssertEqual(result?[0].int, 3)
         XCTAssertEqual(result?[1].string, "OK")
-        XCTAssertEqual(result?[2].data?.count, 1)
+        XCTAssertEqual(result?[2].bytes?.count, 1)
     }
 
     func testParsing_array_handlesNullElements() {
@@ -340,10 +340,10 @@ extension RESPDecoderParsingTests {
     }
 
     private func parseTestArray(_ input: String) -> RESPValue? {
-        return parseTestArray(input.convertedToData())
+        return parseTestArray(input.bytes)
     }
 
-    private func parseTestArray(_ input: Data) -> RESPValue? {
+    private func parseTestArray(_ input: [UInt8]) -> RESPValue? {
         return runParse { decoder, position, buffer in
             buffer.writeBytes(input)
             guard case .parsed(let result) = try decoder._parseArray(at: &position, from: &buffer) else { return nil }

@@ -39,8 +39,7 @@ final class RESPDecoderByteToMessageDecoderTests: XCTestCase {
 
     func testDecoding_complete_movesReaderIndex() throws {
         for message in RESPDecoderByteToMessageDecoderTests.completeMessages {
-            let messageByteSize = message.convertedToData()
-            XCTAssertEqual(try decodeTest(message).1, messageByteSize.count)
+            XCTAssertEqual(try decodeTest(message).1, message.bytes.count)
         }
     }
 

@@ -12,8 +12,8 @@ final class RESPEncoderParsingTests: XCTestCase {
     }
 
     func testBulkStrings() {
-        let bytes = Data([0x01, 0x02, 0x0a, 0x1b, 0xaa])
-        XCTAssertTrue(testPass(input: .bulkString(bytes), expected: Data("$5\r\n".utf8) + bytes + Data("\r\n".utf8)))
+        let bytes: [UInt8] = [0x01, 0x02, 0x0a, 0x1b, 0xaa]
+        XCTAssertTrue(testPass(input: .bulkString(bytes), expected: "$5\r\n".bytes + bytes + "\r\n".bytes))
         XCTAssertTrue(testPass(input: .init(bulk: "®in§³¾"), expected: "$10\r\n®in§³¾\r\n"))
         XCTAssertTrue(testPass(input: .init(bulk: ""), expected: "$0\r\n\r\n"))
     }
@@ -29,10 +29,10 @@ final class RESPEncoderParsingTests: XCTestCase {
             input: .array([ .integer(3), .simpleString("foo") ]),
             expected: "*2\r\n:3\r\n+foo\r\n"
         ))
-        let bytes = Data([ 0x0a, 0x1a, 0x1b, 0xff ])
+        let bytes: [UInt8] = [ 0x0a, 0x1a, 0x1b, 0xff ]
         XCTAssertTrue(testPass(
             input: .array([ .array([ .integer(10), .bulkString(bytes) ]) ]),
-            expected: Data("*1\r\n*2\r\n:10\r\n$4\r\n".utf8) + bytes + Data("\r\n".utf8)
+            expected: "*1\r\n*2\r\n:10\r\n$4\r\n".bytes + bytes + "\r\n".bytes
         ))
     }
 
@@ -45,7 +45,7 @@ final class RESPEncoderParsingTests: XCTestCase {
         XCTAssertTrue(testPass(input: .null, expected: "$-1\r\n"))
     }
 
-    private func testPass(input: RESPValue, expected: Data) -> Bool {
+    private func testPass(input: RESPValue, expected: [UInt8]) -> Bool {
         let allocator = ByteBufferAllocator()
 
         var comparisonBuffer = allocator.buffer(capacity: expected.count)

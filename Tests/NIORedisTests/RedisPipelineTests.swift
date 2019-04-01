@@ -55,7 +55,7 @@ final class RedisPipelineTests: XCTestCase {
 
         XCTAssertEqual(results[0].string, "PONG")
         XCTAssertEqual(results[1].string, "OK")
-        XCTAssertEqual(results[2].data, "3".convertedToData())
+        XCTAssertEqual(results[2].bytes, "3".bytes)
     }
 
     func test_executeIsOrdered() throws {

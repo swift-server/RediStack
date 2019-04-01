@@ -1,26 +1,26 @@
-import Foundation
-
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
 /// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public enum RESPValue {
     case null
     case simpleString(String)
-    case bulkString(Data)
+    case bulkString([UInt8])
     case error(RedisError)
     case integer(Int)
     case array([RESPValue])
 
     /// Initializes a `bulkString` by converting the provided string input.
     public init(bulk: String) {
-        self = .bulkString(Data(bulk.utf8))
+        let bytes = [UInt8](bulk.utf8)
+        self = .bulkString(bytes)
     }
 }
 
 extension RESPValue: ExpressibleByStringLiteral {
     /// Initializes a bulk string from a String literal
     public init(stringLiteral value: String) {
-        self = .bulkString(Data(value.utf8))
+        let bytes = [UInt8](value.utf8)
+        self = .bulkString(bytes)
     }
 }
 
@@ -51,15 +51,15 @@ extension RESPValue {
     public var string: String? {
         switch self {
         case .simpleString(let string): return string
-        case .bulkString(let data): return String(bytes: data, encoding: .utf8)
+        case .bulkString(let bytes): return String(bytes: bytes, encoding: .utf8)
         default: return nil
         }
     }
 
-    /// Extracted binary data from `bulkString` representations.
-    public var data: Data? {
-        guard case .bulkString(let data) = self else { return nil }
-        return data
+    /// Extracted byte representation from `bulkString` values.
+    public var bytes: [UInt8]? {
+        guard case let .bulkString(bytes) = self else { return nil }
+        return bytes
     }
 
     /// Extracted container of data elements from `array` representations.

@@ -1,4 +1,4 @@
-import Foundation
+import struct Foundation.UUID
 import Logging
 
 /// An object that provides a mechanism to "pipeline" multiple Redis commands in sequence,

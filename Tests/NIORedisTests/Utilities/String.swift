@@ -2,5 +2,5 @@ import Foundation
 
 extension String {
     /// Converts this String to a byte representation.
-    func convertedToData() -> Data { return Data(utf8) }
+    var bytes: [UInt8] { return .init(self.utf8) }
 }

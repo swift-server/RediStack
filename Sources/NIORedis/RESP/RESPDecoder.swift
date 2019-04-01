@@ -1,4 +1,3 @@
-import Foundation
 import NIO
 
 extension UInt8 {
@@ -143,7 +142,7 @@ extension RESPDecoder {
         guard size > 0 else {
             // Move the tip of the message position
             position += 2
-            return .parsed(.bulkString(Data()))
+            return .parsed(.bulkString([]))
         }
 
         guard let bytes = buffer.copyBytes(at: position, length: expectedRemainingMessageSize) else {
@@ -154,9 +153,9 @@ extension RESPDecoder {
         // of the bulk string content
         position += expectedRemainingMessageSize
 
-        return .parsed(
-            .bulkString(Data(bytes[ ..<size ]))
-        )
+        return .parsed(.bulkString(
+            .init(bytes[..<size])
+        ))
     }
 
     /// See [https://redis.io/topics/protocol#resp-arrays](https://redis.io/topics/protocol#resp-arrays)

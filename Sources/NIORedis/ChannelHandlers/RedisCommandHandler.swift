@@ -1,4 +1,4 @@
-import Foundation
+import struct Foundation.UUID
 import Logging
 import NIO
 

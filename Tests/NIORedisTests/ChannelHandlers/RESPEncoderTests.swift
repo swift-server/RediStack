@@ -33,15 +33,15 @@ final class RESPEncoderTests: XCTestCase {
     }
 
     func testBulkStrings() throws {
-        let bs1 = RESPValue.bulkString(Data([0x01, 0x02, 0x0a, 0x1b, 0xaa]))
+        let bs1 = RESPValue.bulkString([0x01, 0x02, 0x0a, 0x1b, 0xaa])
         try runEncodePass(with: bs1) { XCTAssertEqual($0.readableBytes, 11) }
         XCTAssertNoThrow(try channel.writeOutbound(bs1))
 
-        let bs2 = RESPValue.bulkString("®in§³¾".convertedToData())
+        let bs2 = RESPValue.bulkString("®in§³¾".bytes)
         try runEncodePass(with: bs2) { XCTAssertEqual($0.readableBytes, 17) }
         XCTAssertNoThrow(try channel.writeOutbound(bs2))
 
-        let bs3 = RESPValue.bulkString("".convertedToData())
+        let bs3 = RESPValue.bulkString("".bytes)
         try runEncodePass(with: bs3) { XCTAssertEqual($0.readableBytes, 6) }
         XCTAssertNoThrow(try channel.writeOutbound(bs3))
     }
@@ -65,7 +65,7 @@ final class RESPEncoderTests: XCTestCase {
         try runEncodePass(with: a2) { XCTAssertEqual($0.readableBytes, 14) }
         XCTAssertNoThrow(try channel.writeOutbound(a2))
 
-        let bytes = Data([ 0x0a, 0x1a, 0x1b, 0xff ])
+        let bytes: [UInt8] = [ 0x0a, 0x1a, 0x1b, 0xff ]
         let a3: RESPValue = .array([.array([
             .integer(3),
             .bulkString(bytes)
@@ -78,7 +78,7 @@ final class RESPEncoderTests: XCTestCase {
         let error = RedisError(identifier: "testError", reason: "Manual error")
         let data = RESPValue.error(error)
         try runEncodePass(with: data) {
-            XCTAssertEqual($0.readableBytes, "-\(error.description)\r\n".convertedToData().count)
+            XCTAssertEqual($0.readableBytes, "-\(error.description)\r\n".bytes.count)
         }
         XCTAssertNoThrow(try channel.writeOutbound(data))
     }
