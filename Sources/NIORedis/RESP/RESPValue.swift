@@ -1,33 +1,55 @@
+import struct Foundation.Data
+import NIO
+
+extension String {
+    @inline(__always)
+    var byteBuffer: ByteBuffer {
+        var buffer = RESPValue.allocator.buffer(capacity: self.count)
+        buffer.writeString(self)
+        return buffer
+    }
+}
+
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
 /// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public enum RESPValue {
     case null
-    case simpleString(String)
-    case bulkString([UInt8])
+    case simpleString(ByteBuffer)
+    case bulkString(ByteBuffer?)
     case error(RedisError)
     case integer(Int)
-    case array([RESPValue])
+    case array(ContiguousArray<RESPValue>)
+
+    fileprivate static let allocator = ByteBufferAllocator()
 
     /// Initializes a `bulkString` by converting the provided string input.
-    public init(bulk: String) {
-        let bytes = [UInt8](bulk.utf8)
-        self = .bulkString(bytes)
+    public init(bulk value: String? = nil) {
+        self = .bulkString(value?.byteBuffer)
+    }
+
+    public init(bulk value: Int) {
+        self = .bulkString(value.description.byteBuffer)
+    }
+
+    public init(_ source: RESPValueConvertible) {
+        self = source.convertedToRESPValue()
     }
 }
+
+// MARK: Expressible by Literals
 
 extension RESPValue: ExpressibleByStringLiteral {
     /// Initializes a bulk string from a String literal
     public init(stringLiteral value: String) {
-        let bytes = [UInt8](value.utf8)
-        self = .bulkString(bytes)
+        self = .bulkString(value.byteBuffer)
     }
 }
 
 extension RESPValue: ExpressibleByArrayLiteral {
     /// Initializes an array from an Array literal
     public init(arrayLiteral elements: RESPValue...) {
-        self = .array(elements)
+        self = .array(.init(elements))
     }
 }
 
@@ -45,36 +67,33 @@ extension RESPValue: ExpressibleByIntegerLiteral {
     }
 }
 
+// MARK: Computed Values
+
 extension RESPValue {
-    /// Extracted value of `simpleString` and `bulkString` representations.
-    /// - Important: `bulkString` conversions to `String` assume UTF-8 encoding. Use the `data` property in other encodings.
-    public var string: String? {
+    /// The `ByteBuffer` storage for either `.simpleString` or `.bulkString` representations.
+    public var byteBuffer: ByteBuffer? {
         switch self {
-        case .simpleString(let string): return string
-        case .bulkString(let bytes): return String(bytes: bytes, encoding: .utf8)
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)): return buffer
         default: return nil
         }
     }
 
-    /// Extracted byte representation from `bulkString` values.
-    public var bytes: [UInt8]? {
-        guard case let .bulkString(bytes) = self else { return nil }
-        return bytes
-    }
-
-    /// Extracted container of data elements from `array` representations.
-    public var array: [RESPValue]? {
+    /// The storage value for `array` representations.
+    public var array: ContiguousArray<RESPValue>? {
         guard case .array(let array) = self else { return nil }
         return array
     }
 
-    /// Extracted value from `integer` representations.
+    /// The storage value for `integer` representations.
     public var int: Int? {
-        guard case .integer(let int) = self else { return nil }
-        return int
+        switch self {
+        case let .integer(value): return value
+        default: return nil
+        }
     }
 
-    /// Returns `true` if this data is a "null" value from Redis.
+    /// Returns `true` if the value represents a `null` value from Redis.
     public var isNull: Bool {
         switch self {
         case .null: return true
@@ -82,11 +101,68 @@ extension RESPValue {
         }
     }
 
-    /// Extracted value from `error` representations.
+    /// The error returned from Redis.
     public var error: RedisError? {
         switch self {
         case .error(let error): return error
         default: return nil
         }
+    }
+}
+
+// MARK: Conversion Values
+
+extension RESPValue {
+    /// The `RESPValue` converted to a `String`.
+    /// - Important: This will always return `nil` from `.error`, `.null`, and `array` cases.
+    /// - Note: This creates a `String` using UTF-8 encoding.
+    public var string: String? {
+        switch self {
+        case let .integer(value): return value.description
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            return buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)
+
+        case .bulkString(.none): return ""
+        default: return nil
+        }
+    }
+
+    /// The raw bytes of the `RESPValue` representation.
+    /// - Important: This will always return `nil` from `.error` and `.null` cases.
+    public var bytes: [UInt8]? {
+        switch self {
+        case let .integer(value): return withUnsafeBytes(of: value, RESPValue.copyMemory)
+        case let .array(values): return values.withUnsafeBytes(RESPValue.copyMemory)
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            return buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes)
+
+        case .bulkString(.none): return []
+        default: return nil
+        }
+    }
+
+    public var data: Data? {
+        switch self {
+        case let .integer(value): return withUnsafeBytes(of: value, RESPValue.copyMemory)
+        case let .array(values): return values.withUnsafeBytes(RESPValue.copyMemory)
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            return buffer.withUnsafeReadableBytes(RESPValue.copyMemory)
+
+        case .bulkString(.none): return Data()
+        default: return nil
+        }
+    }
+
+    // SR-9604
+    @inline(__always)
+    private static func copyMemory(_ ptr: UnsafeRawBufferPointer) -> Data {
+        return Data(UnsafeRawBufferPointer(ptr).bindMemory(to: UInt8.self))
+    }
+    @inline(__always)
+    private static func copyMemory(_ ptr: UnsafeRawBufferPointer) -> [UInt8]? {
+        return Array<UInt8>(UnsafeRawBufferPointer(ptr).bindMemory(to: UInt8.self))
     }
 }

@@ -36,10 +36,10 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(try runTest(":0\r\n")?.int, 0)
         XCTAssertEqual(try runTest(":01\r\n")?.int, 1)
         XCTAssertEqual(try runTest(":1000\r\n")?.int, 1000)
-        XCTAssertEqual(try runTest(":-9223372036854775807\r\n")?.int, -9223372036854775807)
+        XCTAssertEqual(try runTest(":\(Int.min)\r\n")?.int, Int.min)
 
-        let multiInteger: (RESPValue?, RESPValue?) = try runTest(":9223372036854775807\r\n:99\r\n")
-        XCTAssertEqual(multiInteger.0?.int, 9223372036854775807)
+        let multiInteger: (RESPValue?, RESPValue?) = try runTest(":\(Int.max)\r\n:99\r\n")
+        XCTAssertEqual(multiInteger.0?.int, Int.max)
         XCTAssertEqual(multiInteger.1?.int, 99)
     }
 
@@ -73,7 +73,7 @@ final class RESPDecoderTests: XCTestCase {
     }
 
     func test_array() throws {
-        func runArrayTest(_ input: String) throws -> [RESPValue]? {
+        func runArrayTest(_ input: String) throws -> ContiguousArray<RESPValue>? {
             return try runTest(input)?.array
         }
 
@@ -82,15 +82,15 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(try runArrayTest("*0\r\n")?.count, 0)
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*1\r\n$3\r\nfoo\r\n"),
-            expected: [.bulkString("foo".bytes)]
+            expected: ["foo"]
         ))
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n"),
-            expected: [.simpleString("foo"), .bulkString("bar".bytes), .integer(3)]
+            expected: [.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)]
         ))
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*1\r\n*2\r\n+OK\r\n:1\r\n"),
-            expected: [.array([ .simpleString("OK"), .integer(1) ])]
+            expected: [.array([ .simpleString("OK".byteBuffer), .integer(1) ])]
         ))
     }
 
@@ -117,7 +117,10 @@ final class RESPDecoderTests: XCTestCase {
         return try (embeddedChannel.readInbound(), embeddedChannel.readInbound())
     }
 
-    private func arraysAreEqual(_ lhs: [RESPValue]?, expected right: [RESPValue]) -> Bool {
+    private func arraysAreEqual(
+        _ lhs: ContiguousArray<RESPValue>?,
+        expected right: ContiguousArray<RESPValue>
+    ) -> Bool {
         guard
             let left = lhs,
             left.count == right.count
@@ -202,8 +205,8 @@ extension RESPDecoderTests {
         XCTAssertTrue(arraysAreEqual(
             results[6]?.array,
             expected: [
-                .simpleString(AllData.expectedString),
-                .bulkString(AllData.expectedBulkString.bytes),
+                .simpleString(AllData.expectedString.byteBuffer),
+                .bulkString(AllData.expectedBulkString.byteBuffer),
                 .integer(AllData.expectedInteger)
             ]
         ))

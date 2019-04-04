@@ -1,4 +1,5 @@
 import Logging
+import NIO
 
 /// Encodes `RedisValue` into a raw `ByteBuffer`, formatted according to the Redis Serialization Protocol (RESP).
 ///
@@ -12,41 +13,59 @@ public final class RESPEncoder {
 
     /// Encodes the `RedisValue` to bytes, following the RESP specification.
     ///
-    /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
+    /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol) and `RESPEncoder.encode(data:out:)`
     /// - Parameter value: The `RESPValue` to encode.
     /// - Returns: The encoded value as a collection of bytes.
-    public func encode(_ value: RESPValue, into buffer: inout ByteBuffer) {
-        switch value {
-        case .simpleString(let string):
-            buffer.writeStaticString("+")
-            buffer.writeString(string)
-            buffer.writeStaticString("\r\n")
+    public func encode(data: RESPValue, out: inout ByteBuffer) {
+        defer { logger.debug("Encoded \(data) to \(getPrintableString(for: &out))") }
 
-        case .bulkString(let data):
-            buffer.writeStaticString("$")
-            buffer.writeString(data.count.description)
-            buffer.writeStaticString("\r\n")
-            buffer.writeBytes(data)
-            buffer.writeString("\r\n")
+        switch data {
+        case .simpleString(var buffer):
+            out.writeStaticString("+")
+            out.writeBuffer(&buffer)
+            out.writeStaticString("\r\n")
+
+        case .bulkString(.some(var buffer)):
+            out.writeStaticString("$")
+            out.writeString(buffer.readableBytes.description)
+            out.writeStaticString("\r\n")
+            out.writeBuffer(&buffer)
+            out.writeString("\r\n")
+
+        case .bulkString(.none):
+            out.writeStaticString("$0\r\n\r\n")
 
         case .integer(let number):
-            buffer.writeStaticString(":")
-            buffer.writeString(number.description)
-            buffer.writeStaticString("\r\n")
+            out.writeStaticString(":")
+            out.writeString(number.description)
+            out.writeStaticString("\r\n")
 
         case .null:
-            buffer.writeStaticString("$-1\r\n")
+            out.writeStaticString("$-1\r\n")
 
         case .error(let error):
-            buffer.writeStaticString("-")
-            buffer.writeString(error.description)
-            buffer.writeStaticString("\r\n")
+            out.writeStaticString("-")
+            out.writeString(error.description)
+            out.writeStaticString("\r\n")
 
         case .array(let array):
-            buffer.writeStaticString("*")
-            buffer.writeString(array.count.description)
-            buffer.writeStaticString("\r\n")
-            array.forEach { self.encode($0, into: &buffer) }
+            out.writeStaticString("*")
+            out.writeString(array.count.description)
+            out.writeStaticString("\r\n")
+            array.forEach { self.encode(data: $0, out: &out) }
         }
     }
+
+    // used only for debugging purposes where we build a formatted string for the encoded bytes
+    private func getPrintableString(for buffer: inout ByteBuffer) -> String {
+        return String(describing: buffer.getString(at: 0, length: buffer.readableBytes))
+            .dropFirst(9)
+            .dropLast()
+            .description
+    }
+}
+
+extension RESPEncoder: MessageToByteEncoder {
+    /// See `MessageToByteEncoder.OutboundIn`
+    public typealias OutboundIn = RESPValue
 }
