@@ -23,25 +23,27 @@ final class RESPEncoderTests: XCTestCase {
     }
 
     func testSimpleStrings() throws {
-        let simpleString1 = RESPValue.simpleString("Test1")
+        let simpleString1 = RESPValue.simpleString("Test1".byteBuffer)
         try runEncodePass(with: simpleString1) { XCTAssertEqual($0.readableBytes, 8) }
         XCTAssertNoThrow(try channel.writeOutbound(simpleString1))
 
-        let simpleString2 = RESPValue.simpleString("®in§³¾")
+        let simpleString2 = RESPValue.simpleString("®in§³¾".byteBuffer)
         try runEncodePass(with: simpleString2) { XCTAssertEqual($0.readableBytes, 13) }
         XCTAssertNoThrow(try channel.writeOutbound(simpleString2))
     }
 
     func testBulkStrings() throws {
-        let bs1 = RESPValue.bulkString([0x01, 0x02, 0x0a, 0x1b, 0xaa])
+        var buffer = allocator.buffer(capacity: 5)
+        buffer.writeBytes([0x01, 0x02, 0x0a, 0x1b, 0xaa])
+        let bs1 = RESPValue.bulkString(buffer)
         try runEncodePass(with: bs1) { XCTAssertEqual($0.readableBytes, 11) }
         XCTAssertNoThrow(try channel.writeOutbound(bs1))
 
-        let bs2 = RESPValue.bulkString("®in§³¾".bytes)
+        let bs2: RESPValue = "®in§³¾"
         try runEncodePass(with: bs2) { XCTAssertEqual($0.readableBytes, 17) }
         XCTAssertNoThrow(try channel.writeOutbound(bs2))
 
-        let bs3 = RESPValue.bulkString("".bytes)
+        let bs3: RESPValue = ""
         try runEncodePass(with: bs3) { XCTAssertEqual($0.readableBytes, 6) }
         XCTAssertNoThrow(try channel.writeOutbound(bs3))
     }
@@ -61,14 +63,16 @@ final class RESPEncoderTests: XCTestCase {
         try runEncodePass(with: a1) { XCTAssertEqual($0.readableBytes, 4) }
         XCTAssertNoThrow(try channel.writeOutbound(a1))
 
-        let a2: RESPValue = .array([.integer(3), .simpleString("foo")])
+        let a2: RESPValue = .array([.integer(3), .simpleString("foo".byteBuffer)])
         try runEncodePass(with: a2) { XCTAssertEqual($0.readableBytes, 14) }
         XCTAssertNoThrow(try channel.writeOutbound(a2))
 
         let bytes: [UInt8] = [ 0x0a, 0x1a, 0x1b, 0xff ]
+        var buffer = allocator.buffer(capacity: bytes.count)
+        buffer.writeBytes(bytes)
         let a3: RESPValue = .array([.array([
             .integer(3),
-            .bulkString(bytes)
+            .bulkString(buffer)
         ])])
         try runEncodePass(with: a3) { XCTAssertEqual($0.readableBytes, 22) }
         XCTAssertNoThrow(try channel.writeOutbound(a3))
@@ -91,7 +95,7 @@ final class RESPEncoderTests: XCTestCase {
 
     private func runEncodePass(with input: RESPValue, _ validation: (ByteBuffer) -> Void) throws {
         var buffer = allocator.buffer(capacity: 256)
-        try encoder.encode(data: input, out: &buffer)
+        encoder.encode(data: input, out: &buffer)
         validation(buffer)
     }
 }

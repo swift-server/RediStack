@@ -37,7 +37,7 @@ extension String: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(.init(self.utf8))
+        return .init(bulk: self)
     }
 }
 
@@ -54,7 +54,7 @@ extension FixedWidthInteger {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(.init(self.description.utf8))
+        return .init(bulk: self.description)
     }
 }
 
@@ -78,7 +78,7 @@ extension Double: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(.init(self.description.utf8))
+        return .init(bulk: self.description)
     }
 }
 
@@ -91,7 +91,18 @@ extension Float: RESPValueConvertible {
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(.init(self.description.utf8))
+        return .init(bulk: self.description)
+    }
+}
+
+extension Collection where Element: RESPValueConvertible {
+    /// See `RESPValueConvertible.convertedToRESPValue()`
+    public func convertedToRESPValue() -> RESPValue {
+        let elements = map { $0.convertedToRESPValue() }
+        let value = elements.withUnsafeBufferPointer {
+            ContiguousArray<RESPValue>(UnsafeRawBufferPointer($0).bindMemory(to: RESPValue.self))
+        }
+        return .array(value)
     }
 }
 
@@ -100,11 +111,14 @@ extension Array: RESPValueConvertible where Element: RESPValueConvertible {
         guard let array = value.array else { return nil }
         self = array.compactMap { Element($0) }
     }
+}
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
-    public func convertedToRESPValue() -> RESPValue {
-        let elements = map { $0.convertedToRESPValue() }
-        return RESPValue.array(elements)
+extension ContiguousArray: RESPValueConvertible where Element: RESPValueConvertible {
+    public init?(_ value: RESPValue) {
+        guard let array = value.array else { return nil }
+        self = array.compactMap(Element.init).withUnsafeBytes {
+            .init(UnsafeRawBufferPointer($0).bindMemory(to: Element.self))
+        }
     }
 }
 

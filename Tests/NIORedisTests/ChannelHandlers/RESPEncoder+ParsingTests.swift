@@ -5,15 +5,18 @@ import XCTest
 
 final class RESPEncoderParsingTests: XCTestCase {
     private let encoder = RESPEncoder()
+    private let allocator = ByteBufferAllocator()
 
     func testSimpleStrings() {
-        XCTAssertTrue(testPass(input: .simpleString("Test1"), expected: "+Test1\r\n"))
-        XCTAssertTrue(testPass(input: .simpleString("®in§³¾"), expected: "+®in§³¾\r\n"))
+        XCTAssertTrue(testPass(input: .simpleString("Test1".byteBuffer), expected: "+Test1\r\n"))
+        XCTAssertTrue(testPass(input: .simpleString("®in§³¾".byteBuffer), expected: "+®in§³¾\r\n"))
     }
 
     func testBulkStrings() {
         let bytes: [UInt8] = [0x01, 0x02, 0x0a, 0x1b, 0xaa]
-        XCTAssertTrue(testPass(input: .bulkString(bytes), expected: "$5\r\n".bytes + bytes + "\r\n".bytes))
+        var buffer = allocator.buffer(capacity: 5)
+        buffer.writeBytes(bytes)
+        XCTAssertTrue(testPass(input: .bulkString(buffer), expected: "$5\r\n".bytes + bytes + "\r\n".bytes))
         XCTAssertTrue(testPass(input: .init(bulk: "®in§³¾"), expected: "$10\r\n®in§³¾\r\n"))
         XCTAssertTrue(testPass(input: .init(bulk: ""), expected: "$0\r\n\r\n"))
     }
@@ -26,12 +29,14 @@ final class RESPEncoderParsingTests: XCTestCase {
     func testArrays() {
         XCTAssertTrue(testPass(input: .array([]), expected: "*0\r\n"))
         XCTAssertTrue(testPass(
-            input: .array([ .integer(3), .simpleString("foo") ]),
+            input: .array([ .integer(3), .simpleString("foo".byteBuffer) ]),
             expected: "*2\r\n:3\r\n+foo\r\n"
         ))
         let bytes: [UInt8] = [ 0x0a, 0x1a, 0x1b, 0xff ]
+        var buffer = allocator.buffer(capacity: 4)
+        buffer.writeBytes(bytes)
         XCTAssertTrue(testPass(
-            input: .array([ .array([ .integer(10), .bulkString(bytes) ]) ]),
+            input: .array([ .array([ .integer(10), .bulkString(buffer) ]) ]),
             expected: "*1\r\n*2\r\n:10\r\n$4\r\n".bytes + bytes + "\r\n".bytes
         ))
     }
@@ -52,7 +57,7 @@ final class RESPEncoderParsingTests: XCTestCase {
         comparisonBuffer.writeBytes(expected)
 
         var buffer = allocator.buffer(capacity: expected.count)
-        encoder.encode(input.convertedToRESPValue(), into: &buffer)
+        encoder.encode(data: input.convertedToRESPValue(), out: &buffer)
 
         return buffer == comparisonBuffer
     }
@@ -64,7 +69,7 @@ final class RESPEncoderParsingTests: XCTestCase {
         comparisonBuffer.writeString(expected)
 
         var buffer = allocator.buffer(capacity: expected.count)
-        encoder.encode(input.convertedToRESPValue(), into: &buffer)
+        encoder.encode(data: input.convertedToRESPValue(), out: &buffer)
 
         return buffer == comparisonBuffer
     }
