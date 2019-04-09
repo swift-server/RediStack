@@ -59,7 +59,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
 
         guard let leadPromise = commandResponseQueue.last else {
             assertionFailure("Read triggered with an empty promise queue! Ignoring: \(value)")
-            logger.emergency("Read triggered with no promise waiting in the queue!")
+            logger.critical("Read triggered with no promise waiting in the queue!")
             return
         }
 
