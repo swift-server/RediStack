@@ -19,7 +19,7 @@ final class SortedSetCommandsTests: XCTestCase {
 
             _ = try connection.zadd(dataset, to: SortedSetCommandsTests.testKey).wait()
         } catch {
-            XCTFail("Failed to create RedisConnection!")
+            XCTFail("Failed to create RedisConnection! \(error)")
         }
     }
 

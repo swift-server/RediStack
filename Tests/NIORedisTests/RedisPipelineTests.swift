@@ -8,7 +8,7 @@ final class RedisPipelineTests: XCTestCase {
         do {
             connection = try RedisConnection.connect().wait()
         } catch {
-            XCTFail("Failed to create RedisConnection!")
+            XCTFail("Failed to create RedisConnection! \(error)")
         }
     }
 
