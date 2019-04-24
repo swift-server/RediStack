@@ -166,7 +166,7 @@ extension RedisConnection {
         to socket: SocketAddress,
         with password: String? = nil,
         on eventLoopGroup: EventLoopGroup,
-        logger: Logger = Logger(label: "NIORedis.RedisClient")
+        logger: Logger = Logger(label: "NIORedis.RedisConnection")
     ) -> EventLoopFuture<RedisConnection> {
         let bootstrap = ClientBootstrap.makeRedisDefault(using: eventLoopGroup)
 
