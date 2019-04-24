@@ -40,17 +40,28 @@ private let loggingKeyID = "RedisConnection"
 ///
 /// See `RedisClient`
 public final class RedisConnection: RedisClient {
+    private enum ConnectionState {
+        case open
+        case closed
+    }
+
     /// See `RedisClient.eventLoop`
     public var eventLoop: EventLoop { return channel.eventLoop }
     /// Is the client still connected to Redis?
-    public var isConnected: Bool { return !sentQuitCommand.load() }
+    public var isConnected: Bool { return state != .closed }
 
     private let channel: Channel
     private var logger: Logger
-    private var sentQuitCommand = Atomic<Bool>(value: false)
+
+    private let _stateLock = Lock()
+    private var _state: ConnectionState
+    private var state: ConnectionState {
+        get { return _stateLock.withLock { self._state } }
+        set(newValue) { _stateLock.withLockVoid { self._state = newValue } }
+    }
 
     deinit {
-        if !sentQuitCommand.load() {
+        if isConnected {
             assertionFailure("close() was not called before deinit!")
             logger.warning("RedisConnection did not properly shutdown before deinit!")
         }
@@ -68,6 +79,7 @@ public final class RedisConnection: RedisClient {
 
         self.logger[metadataKey: loggingKeyID] = "\(UUID())"
         self.logger.debug("Connection created.")
+        self._state = .open
     }
 
     /// Sends a `QUIT` command, then closes the `Channel` this instance was initialized with.
@@ -76,10 +88,6 @@ public final class RedisConnection: RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves when the connection has been closed.
     @discardableResult
     public func close() -> EventLoopFuture<Void> {
-        // this needs to be true in order to prevent multiple close() chains, and to stop
-        // allowing commands to be sent - but we don't want to set it before we send the QUIT command
-        defer { sentQuitCommand.store(true) }
-
         guard isConnected else {
             logger.notice("Connection received more than one close() request.")
             return channel.eventLoop.makeSucceededFuture(())
@@ -94,8 +102,12 @@ public final class RedisConnection: RedisClient {
             .map { self.logger.debug("Connection closed.") }
             .recover {
                 self.logger.error("Encountered error during close(): \($0)")
-                self.sentQuitCommand.store(false)
+                self.state = .open
             }
+
+        // setting it to closed now prevents multiple close() chains, but doesn't stop the QUIT command
+        // if the connection wasn't closed, it's reset in the callback chain
+        state = .closed
 
         return result
     }
