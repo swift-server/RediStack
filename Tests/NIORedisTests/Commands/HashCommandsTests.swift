@@ -6,7 +6,7 @@ final class HashCommandsTests: XCTestCase {
 
     override func setUp() {
         do {
-            connection = try RedisConnection.connect().wait()
+            connection = try Redis.makeConnection().wait()
         } catch {
             XCTFail("Failed to create RedisConnection! \(error)")
         }

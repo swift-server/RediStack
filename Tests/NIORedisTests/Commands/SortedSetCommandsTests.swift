@@ -10,7 +10,7 @@ final class SortedSetCommandsTests: XCTestCase {
 
     override func setUp() {
         do {
-            connection = try RedisConnection.connect().wait()
+            connection = try Redis.makeConnection().wait()
 
             var dataset: [(RESPValueConvertible, Double)] = []
             for index in 1...10 {
