@@ -9,7 +9,6 @@ public func allTests() -> [XCTestCaseEntry] {
         testCase(RESPTranslatorWritingTests.allTests),
         testCase(BasicCommandsTests.allTests),
         testCase(SetCommandsTests.allTests),
-        testCase(RedisPipelineTests.allTests),
         testCase(HashCommandsTests.allTests),
         testCase(ListCommandsTests.allTests),
         testCase(SortedSetCommandsTests.allTests),

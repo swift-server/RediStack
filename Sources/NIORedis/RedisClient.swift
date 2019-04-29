@@ -36,7 +36,7 @@ private let loggingKeyID = "RedisConnection"
 /// A `RedisClient` implementation that represents an individual connection
 /// to a Redis database instance.
 ///
-/// `RedisConnection` comes with logging and a method for creating `RedisPipeline` instances.
+/// `RedisConnection` comes with logging by default.
 ///
 /// See `RedisClient`
 public final class RedisConnection: RedisClient {
@@ -49,10 +49,23 @@ public final class RedisConnection: RedisClient {
     public var eventLoop: EventLoop { return channel.eventLoop }
     /// Is the client still connected to Redis?
     public var isConnected: Bool { return state != .closed }
+    /// Controls the timing behavior of sending commands over this connection. The default is `true`.
+    ///
+    /// When set to `false`, the host will "queue" commands and determine when to send all at once,
+    /// while `true` will force each command to be sent as soon as they are "queued".
+    /// - Note: Setting this to `true` will trigger all "queued" commands to be sent.
+    public var sendCommandsImmediately: Bool {
+        get { return autoflush.load() }
+        set(newValue) {
+            if newValue { channel.flush() }
+            autoflush.store(newValue)
+        }
+    }
 
     private let channel: Channel
     private var logger: Logger
 
+    private let autoflush = Atomic<Bool>(value: true)
     private let _stateLock = Lock()
     private var _state: ConnectionState
     private var state: ConnectionState {
@@ -112,19 +125,12 @@ public final class RedisConnection: RedisClient {
         return result
     }
 
-    /// Creates a `RedisPipeline` for executing a batch of commands.
-    /// - Note: The instance is given a `Logger` with the metadata property "RedisConnection"
-    ///     that contains the unique ID of the `RedisConnection` that created it.
+    /// Sends commands to the Redis instance this connection is tied to.
     ///
-    /// - Returns: An `EventLoopFuture` resolving the `RedisPipeline` instance.
-    public func makePipeline() -> RedisPipeline {
-        var logger = Logger(label: "NIORedis.RedisPipeline")
-        logger[metadataKey: loggingKeyID] = self.logger[metadataKey: loggingKeyID]
-
-        return RedisPipeline(channel: channel, logger: logger)
-    }
-
     /// See `RedisClient.send(command:with:)`
+    ///
+    /// - Note: The timing of when commands are actually sent to Redis are controlled by
+    ///     the `sendCommandsImmediately` property.
     public func send(
         command: String,
         with arguments: [RESPValueConvertible]
@@ -148,8 +154,9 @@ public final class RedisConnection: RedisClient {
         }
         logger.debug("Sending command \"\(command)\" with \(arguments) encoded as \(args)")
 
-        _ = channel.writeAndFlush(context)
-
-        return promise.futureResult
+        guard sendCommandsImmediately else {
+            return channel.write(context).flatMap { promise.futureResult }
+        }
+        return channel.writeAndFlush(context).flatMap { promise.futureResult }
     }
 }
