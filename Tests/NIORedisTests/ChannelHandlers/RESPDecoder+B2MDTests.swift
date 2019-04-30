@@ -19,7 +19,7 @@ final class RESPDecoderByteToMessageDecoderTests: XCTestCase {
         do {
             _ = try decodeTest("&3\r\n").0
             XCTFail("Failed to properly throw error")
-        } catch { XCTAssertTrue(error is RedisError) }
+        } catch { XCTAssertTrue(error is RESPDecoder.Error) }
     }
 
     private static let completeMessages = [

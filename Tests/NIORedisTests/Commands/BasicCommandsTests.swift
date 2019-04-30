@@ -22,8 +22,10 @@ final class BasicCommandsTests: XCTestCase {
         XCTAssertNoThrow(try connection.select(database: 3).wait())
     }
 
-    func test_delete() throws {
+    func test_delete() {
+        do {
         let keys = [ #function + "1", #function + "2", #function + "3" ]
+        try connection.close().wait()
         try connection.set(keys[0], to: "value").wait()
         try connection.set(keys[1], to: "value").wait()
         try connection.set(keys[2], to: "value").wait()
@@ -36,6 +38,10 @@ final class BasicCommandsTests: XCTestCase {
 
         let third = try connection.delete([keys[1], keys[2]]).wait()
         XCTAssertEqual(third, 2)
+        }
+        catch {
+            print("failed")
+        }
     }
 
     func test_expire() throws {

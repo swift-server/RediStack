@@ -42,8 +42,8 @@ final class RESPEncoderParsingTests: XCTestCase {
     }
 
     func testError() {
-        let error = RedisError(identifier: "testError", reason: "Manual error")
-        XCTAssertTrue(testPass(input: .error(error), expected: "-\(error.description)\r\n"))
+        let error = RedisError(reason: "Manual error")
+        XCTAssertTrue(testPass(input: .error(error), expected: "-\(error.message)\r\n"))
     }
 
     func testNull() {
