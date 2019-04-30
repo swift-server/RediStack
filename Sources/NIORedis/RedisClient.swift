@@ -130,8 +130,8 @@ public final class RedisConnection: RedisClient {
         with arguments: [RESPValueConvertible]
     ) -> EventLoopFuture<RESPValue> {
         guard isConnected else {
-            logger.error("Received command when connection was closed.")
-            return channel.eventLoop.makeFailedFuture(RedisError.connectionClosed)
+            logger.error("\(NIORedisError.connectionClosed.localizedDescription)")
+            return channel.eventLoop.makeFailedFuture(NIORedisError.connectionClosed)
         }
 
         let args = arguments.map { $0.convertedToRESPValue() }
@@ -144,7 +144,7 @@ public final class RedisConnection: RedisClient {
 
         promise.futureResult.whenComplete { result in
             guard case let .failure(error) = result else { return }
-            self.logger.error("\(error)")
+            self.logger.error("\(error.localizedDescription)")
         }
         logger.debug("Sending command \"\(command)\" with \(arguments) encoded as \(args)")
 

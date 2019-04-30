@@ -1,30 +1,33 @@
 import protocol Foundation.LocalizedError
-import class Foundation.Thread
 
-/// Errors thrown while working with Redis.
-public struct RedisError: CustomDebugStringConvertible, CustomStringConvertible, LocalizedError {
-    public let description: String
-    public let debugDescription: String
+/// When working with NIORedis, several errors are thrown to indicate problems
+/// with state, assertions, or otherwise.
+public enum NIORedisError: LocalizedError {
+    case connectionClosed
+    case responseConversion(to: Any.Type)
+    case unsupportedOperation(method: StaticString, message: String)
+    case assertionFailure(message: String)
 
-    public init(
-        identifier: String,
-        reason: String,
-        file: StaticString = #file,
-        function: StaticString = #function,
-        line: UInt = #line
-    ) {
-        let name = String(describing: type(of: self))
-        description = "⚠️ [\(name).\(identifier): \(reason)]"
-        debugDescription = "⚠️ Redis Error: \(reason)\n- id: \(name).\(identifier)\n\n\(file): L\(line) - \(function)\n\n\(Thread.callStackSymbols)"
+    public var errorDescription: String? {
+        let message: String
+        switch self {
+        case .connectionClosed: message = "Connection was closed while trying to send command."
+        case let .responseConversion(type): message = "Failed to convert RESP to \(type)"
+        case let .unsupportedOperation(method, helpText): message = "\(method) - \(helpText)"
+        case let .assertionFailure(text): message = text
+        }
+        return "NIORedis: \(message)"
     }
 }
 
-extension RedisError {
-    internal static var connectionClosed: RedisError {
-        return RedisError(identifier: "connection", reason: "Connection was closed while trying to execute.")
-    }
+/// When sending commands to a Redis server, errors caught will be returned as an error message.
+/// These messages are represented by `RedisError` instances.
+public struct RedisError: LocalizedError {
+    public let message: String
 
-    internal static func respConversion<T>(to dest: T.Type) -> RedisError {
-        return RedisError(identifier: "respConversion", reason: "Failed to convert RESP to \(String(describing: dest))")
+    public var errorDescription: String? { return message }
+
+    public init(reason: String) {
+        message = "Redis: \(reason)"
     }
 }

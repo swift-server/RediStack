@@ -45,7 +45,7 @@ public final class RESPEncoder {
 
         case .error(let error):
             out.writeStaticString("-")
-            out.writeString(error.description)
+            out.writeString(error.message)
             out.writeStaticString("\r\n")
 
         case .array(let array):

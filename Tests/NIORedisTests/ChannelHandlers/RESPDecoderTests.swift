@@ -9,11 +9,11 @@ final class RESPDecoderTests: XCTestCase {
     func test_error() throws {
         XCTAssertNil(try runTest("-ERR"))
         XCTAssertNil(try runTest("-ERR\r"))
-        XCTAssertEqual(try runTest("-ERROR\r\n")?.error?.description.contains("ERROR"), true)
+        XCTAssertEqual(try runTest("-ERROR\r\n")?.error?.message.contains("ERROR"), true)
 
         let multiError: (RESPValue?, RESPValue?) = try runTest("-ERROR\r\n-OTHER ERROR\r\n")
-        XCTAssertEqual(multiError.0?.error?.description.contains("ERROR"), true)
-        XCTAssertEqual(multiError.1?.error?.description.contains("OTHER ERROR"), true)
+        XCTAssertEqual(multiError.0?.error?.message.contains("ERROR"), true)
+        XCTAssertEqual(multiError.1?.error?.message.contains("OTHER ERROR"), true)
     }
 
     func test_simpleString() throws {
@@ -191,7 +191,7 @@ extension RESPDecoderTests {
 
         XCTAssertEqual(results[0]?.string, AllData.expectedString)
         XCTAssertEqual(results[1]?.int, AllData.expectedInteger)
-        XCTAssertEqual(results[2]?.error?.description.contains(AllData.expectedError), true)
+        XCTAssertEqual(results[2]?.error?.message.contains(AllData.expectedError), true)
 
         XCTAssertEqual(results[3]?.string, AllData.expectedBulkString)
         XCTAssertEqual(results[3]?.bytes, AllData.expectedBulkString.bytes)
@@ -235,6 +235,6 @@ extension RESPDecoderTests {
 
 extension RedisError: Equatable {
     public static func == (lhs: RedisError, rhs: RedisError) -> Bool {
-        return lhs.description == rhs.description
+        return lhs.message == rhs.message
     }
 }

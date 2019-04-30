@@ -79,10 +79,10 @@ final class RESPEncoderTests: XCTestCase {
     }
 
     func testError() throws {
-        let error = RedisError(identifier: "testError", reason: "Manual error")
+        let error = RedisError(reason: "Manual error")
         let data = RESPValue.error(error)
         try runEncodePass(with: data) {
-            XCTAssertEqual($0.readableBytes, "-\(error.description)\r\n".bytes.count)
+            XCTAssertEqual($0.readableBytes, "-\(error.message)\r\n".bytes.count)
         }
         XCTAssertNoThrow(try channel.writeOutbound(data))
     }

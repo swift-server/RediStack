@@ -1,3 +1,4 @@
+import protocol Foundation.LocalizedError
 import NIO
 
 extension UInt8 {
@@ -19,6 +20,16 @@ public final class RESPDecoder {
     public enum ParsingState {
         case notYetParsed
         case parsed(RESPValue)
+    }
+
+    /// Representation of an `Swift.Error` found during RESP decoding.
+    public enum Error: LocalizedError {
+        case invalidToken
+        case arrayRecursion
+
+        public var errorDescription: String? {
+            return "RESPDecoding: \(self)"
+        }
     }
 
     public init() { }
@@ -58,9 +69,9 @@ public final class RESPDecoder {
                 let stringBuffer = parseSimpleString(&slice, &position),
                 let message = stringBuffer.getString(at: 0, length: stringBuffer.readableBytes)
             else { return .notYetParsed }
-            return .parsed(.error(RedisError(identifier: "serverSide", reason: message)))
+            return .parsed(.error(RedisError(reason: message)))
 
-        default: throw RedisError(identifier: "invalidTokenType", reason: "Unexpected error while parsing Redis RESP.")
+        default: throw Error.invalidToken
         }
     }
 }
@@ -173,9 +184,7 @@ extension RESPDecoder {
         }
 
         let values = try results.map { state -> RESPValue in
-            guard case let .parsed(value) = state else {
-                throw RedisError(identifier: "parseArray", reason: "Unexpected error while parsing RESP.")
-            }
+            guard case let .parsed(value) = state else { throw Error.arrayRecursion }
             return value
         }
         return .parsed(.array(ContiguousArray<RESPValue>(values)))

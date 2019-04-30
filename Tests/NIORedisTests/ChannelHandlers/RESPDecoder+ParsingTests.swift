@@ -96,7 +96,7 @@ final class RESPDecoderParsingTests: XCTestCase {
                 _ = try decoder.parse(from: &buffer, index: &position)
                 XCTFail("parse(at:from:) did not throw an expected error!")
             }
-            catch { XCTAssertTrue(error is RedisError) }
+            catch { XCTAssertTrue(error is RESPDecoder.Error) }
 
             return nil
         }
@@ -115,7 +115,7 @@ final class RESPDecoderParsingTests: XCTestCase {
             return data
         }
         XCTAssertNotNil(result)
-        XCTAssertEqual(result?.error?.description.contains(expectedContent), true)
+        XCTAssertEqual(result?.error?.message.contains(expectedContent), true)
     }
 
     /// See parse_Test_singleValue(input:) String

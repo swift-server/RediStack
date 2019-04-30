@@ -14,15 +14,7 @@ extension EventLoopFuture where Value == RESPValue {
     ) -> EventLoopFuture<T> where T: RESPValueConvertible
     {
         return self.flatMapThrowing {
-            guard let value = T($0) else {
-                throw RedisError(
-                    identifier: #function,
-                    reason: "Failed to convert RESP to \(String(describing: type))",
-                    file: file,
-                    function: function,
-                    line: line
-                )
-            }
+            guard let value = T($0) else { throw NIORedisError.responseConversion(to: type) }
             return value
         }
     }

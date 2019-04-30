@@ -17,7 +17,7 @@ extension RedisClient {
             let scoreItem = response[scoreIsFirst ? index : index + 1]
 
             guard let score = Double(scoreItem) else {
-                throw RedisError(identifier: #function, reason: "Unexpected response \"\(scoreItem)\"")
+                throw NIORedisError.assertionFailure(message: "Unexpected response: '\(scoreItem)'")
             }
 
             let elementIndex = scoreIsFirst ? index + 1 : index
@@ -48,9 +48,9 @@ extension RedisClient {
         options: Set<String> = []
     ) -> EventLoopFuture<Int> {
         guard !options.contains("INCR") else {
-            return self.eventLoop.makeFailedFuture(RedisError(
-                identifier: #function,
-                reason: "INCR option is unsupported. Use zincrby(_:element:in:) instead."
+            return self.eventLoop.makeFailedFuture(NIORedisError.unsupportedOperation(
+                method: #function,
+                message: "INCR option is unsupported. Use zincrby(_:element:in:) instead."
             ))
         }
 
