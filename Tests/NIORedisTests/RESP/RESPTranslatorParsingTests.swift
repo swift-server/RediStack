@@ -3,16 +3,16 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RESPDecoderParsingTests: XCTestCase {
+final class RESPTranslatorParsingTests: XCTestCase {
     private let allocator = ByteBufferAllocator()
 
     private func runParse(
         offset: Int = 1,
-        using parser: (RESPDecoder, inout Int, inout ByteBuffer) throws -> RESPValue?
+        using block: (inout Int, inout ByteBuffer) throws -> RESPValue?
     ) -> RESPValue? {
         var buffer = allocator.buffer(capacity: 30)
         var position = offset
-        do { return try parser(RESPDecoder(), &position, &buffer) }
+        do { return try block(&position, &buffer) }
         catch { return nil }
     }
 
@@ -90,13 +90,13 @@ final class RESPDecoderParsingTests: XCTestCase {
     }
 
     func testParsing_withInvalidSymbol_throws() {
-        _ = runParse(offset: 0) { decoder, position, buffer in
+        _ = runParse(offset: 0) { position, buffer in
             buffer.writeString("&3\r\n")
             do {
-                _ = try decoder.parse(from: &buffer, index: &position)
+                _ = try RESPTranslator.parseBytes(&buffer, fromIndex: &position)
                 XCTFail("parse(at:from:) did not throw an expected error!")
             }
-            catch { XCTAssertTrue(error is RESPDecoder.Error) }
+            catch { XCTAssertTrue(error is RESPTranslator.ParsingError) }
 
             return nil
         }
@@ -105,10 +105,10 @@ final class RESPDecoderParsingTests: XCTestCase {
     func testParsing_error() {
         let expectedContent = "ERR unknown command 'foobar'"
         let testString = "-\(expectedContent)\r\n"
-        let result = runParse(offset: 0) { decoder, position, buffer in
+        let result = runParse(offset: 0) { position, buffer in
             buffer.writeString(testString)
             guard
-                case let .parsed(data) = try decoder.parse(from: &buffer, index: &position),
+                case let .parsed(data) = try RESPTranslator.parseBytes(&buffer, fromIndex: &position),
                 case .error = data
             else { return nil }
 
@@ -125,9 +125,11 @@ final class RESPDecoderParsingTests: XCTestCase {
 
     /// Takes a collection of bytes representing a complete message and returns the data
     private func parseTest_singleValue(input: [UInt8]) -> RESPValue? {
-        return runParse(offset: 0) { decoder, position, buffer in
+        return runParse(offset: 0) { position, buffer in
             buffer.writeBytes(input)
-            guard case let .parsed(result)? = try? decoder.parse(from: &buffer, index: &position) else { return nil }
+            guard
+                case let .parsed(result)? = try? RESPTranslator.parseBytes(&buffer, fromIndex: &position)
+            else { return nil }
             return result
         }
     }
@@ -141,7 +143,6 @@ final class RESPDecoderParsingTests: XCTestCase {
     /// The expected pattern of messages should be [incomplete, remaining, incomplete, remaining]
     /// - Returns: The first and second decoded data
     private func parseTest_twoValues(withChunks messageChunks: [[UInt8]]) throws -> (RESPValue?, RESPValue?) {
-        let decoder = RESPDecoder()
         var buffer = allocator.buffer(capacity: messageChunks.joined().count)
 
         for chunk in messageChunks {
@@ -149,10 +150,10 @@ final class RESPDecoderParsingTests: XCTestCase {
         }
 
         var position = 0
-        let p1 = try decoder.parse(from: &buffer, index: &position)
+        let p1 = try RESPTranslator.parseBytes(&buffer, fromIndex: &position)
         buffer.moveReaderIndex(forwardBy: position)
         position = 0
-        let p2 = try decoder.parse(from: &buffer, index: &position)
+        let p2 = try RESPTranslator.parseBytes(&buffer, fromIndex: &position)
 
         guard
             case .parsed(let first) = p1,
@@ -167,7 +168,7 @@ final class RESPDecoderParsingTests: XCTestCase {
 
 // MARK: Simple String Parsing
 
-extension RESPDecoderParsingTests {
+extension RESPTranslatorParsingTests {
     func testParsing_simpleString_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestSimpleString("+OK"))
         XCTAssertNil(try parseTestSimpleString("+OK\r"))
@@ -185,17 +186,17 @@ extension RESPDecoderParsingTests {
     }
 
     func testParsing_simpleString_handlesRecursion() throws {
-        _ = runParse { decoder, position, buffer in
+        _ = runParse { position, buffer in
             let testString = "+OK\r\n+OTHER STRING\r\n"
             buffer.writeString(testString)
 
-            _ = decoder.parseSimpleString(&buffer, &position)
+            _ = RESPTranslator.parseSimpleString(&buffer, &position)
 
             XCTAssertEqual(position, 5) // position of the 2nd '+'
 
             position += 1 // "trim" next token
 
-            XCTAssertEqual(decoder.parseSimpleString(&buffer, &position), "OTHER STRING".byteBuffer)
+            XCTAssertEqual(RESPTranslator.parseSimpleString(&buffer, &position), "OTHER STRING".byteBuffer)
             XCTAssertEqual(position, 25)
 
             return nil
@@ -203,9 +204,9 @@ extension RESPDecoderParsingTests {
     }
 
     private func parseTestSimpleString(_ input: String) throws -> String? {
-        return runParse { decoder, position, buffer in
+        return runParse { position, buffer in
             buffer.writeString(input)
-            guard let string = decoder.parseSimpleString(&buffer, &position) else { return nil }
+            guard let string = RESPTranslator.parseSimpleString(&buffer, &position) else { return nil }
             return .simpleString(string)
         }?.string
     }
@@ -213,7 +214,7 @@ extension RESPDecoderParsingTests {
 
 // MARK: Integer Parsing
 
-extension RESPDecoderParsingTests {
+extension RESPTranslatorParsingTests {
     func testParsing_integer_missingEndings_returnsNil() throws {
         XCTAssertNil(try parseTestInteger(":\r"))
         XCTAssertNil(try parseTestInteger(":\n"))
@@ -227,17 +228,17 @@ extension RESPDecoderParsingTests {
     }
 
     func testParsing_integer_handlesRecursion() throws {
-        _ = runParse { decoder, position, buffer in
+        _ = runParse { position, buffer in
             let testString = ":1\r\n:300\r\n"
             buffer.writeString(testString)
 
-            _ = decoder.parseInteger(&buffer, &position)
+            _ = RESPTranslator.parseInteger(&buffer, &position)
 
             XCTAssertEqual(position, 4) // position of the next ':'
 
             position += 1 // "trim" next token
 
-            XCTAssertEqual(decoder.parseInteger(&buffer, &position), 300)
+            XCTAssertEqual(RESPTranslator.parseInteger(&buffer, &position), 300)
             XCTAssertEqual(position, 14)
 
             return nil
@@ -245,9 +246,9 @@ extension RESPDecoderParsingTests {
     }
 
     private func parseTestInteger(_ input: String) throws -> Int? {
-        return runParse { decoder, position, buffer in
+        return runParse { position, buffer in
             buffer.writeString(input)
-            guard let int = decoder.parseInteger(&buffer, &position) else { return nil }
+            guard let int = RESPTranslator.parseInteger(&buffer, &position) else { return nil }
             return .integer(int)
         }?.int
     }
@@ -255,7 +256,7 @@ extension RESPDecoderParsingTests {
 
 // MARK: BulkString Parsing
 
-extension RESPDecoderParsingTests {
+extension RESPTranslatorParsingTests {
     func testParsing_bulkString_handlesMissingEndings() throws {
         for message in ["$6", "$6\r\n", "$6\r\nabcdef", "$0\r\n"]  {
             XCTAssertNil(parseTestBulkString(message))
@@ -291,11 +292,11 @@ extension RESPDecoderParsingTests {
     }
 
     private func parseTestBulkString(_ input: [UInt8]) -> RESPValue? {
-        return runParse { decoder, position, buffer in
+        return runParse { position, buffer in
             buffer.writeBytes(input)
-            guard case let .parsed(result) = decoder.parseBulkString(&buffer, &position) else {
-                return nil
-            }
+            guard
+                case let .parsed(result) = RESPTranslator.parseBulkString(&buffer, &position)
+            else { return nil }
             return result
         }
     }
@@ -303,7 +304,7 @@ extension RESPDecoderParsingTests {
 
 // MARK: Array Parsing
 
-extension RESPDecoderParsingTests {
+extension RESPTranslatorParsingTests {
     func testParsing_array_whenNull_returnsNil() {
         let result = parseTestArray("*-1\r\n")
         XCTAssertEqual(result?.isNull, true)
@@ -345,15 +346,17 @@ extension RESPDecoderParsingTests {
     }
 
     private func parseTestArray(_ input: [UInt8]) -> RESPValue? {
-        return runParse { decoder, position, buffer in
+        return runParse { position, buffer in
             buffer.writeBytes(input)
-            guard case let .parsed(result) = try decoder.parseArray(&buffer, &position) else { return nil }
+            guard
+                case let .parsed(result) = try RESPTranslator.parseArray(&buffer, &position)
+            else { return nil }
             return result
         }
     }
 }
 
-extension RESPDecoderParsingTests {
+extension RESPTranslatorParsingTests {
     static var allTests = [
         ("testParsing_with_simpleString", testParsing_with_simpleString),
         ("testParsing_with_simpleString_multiple", testParsing_with_simpleString_multiple),

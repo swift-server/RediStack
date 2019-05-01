@@ -11,51 +11,60 @@ extension UInt8 {
     static let colon: UInt8 = 0x3A
 }
 
-/// Handles incoming byte messages from Redis and decodes them according to the RESP protocol.
+/// Provides methods for translating between byte streams and Swift types
+/// according to Redis Serialization Protocol (RESP).
 ///
-/// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
-public final class RESPDecoder {
-    /// Representation of a `RESPDecoder.parse(at:from:) result, with either a decoded `RESPValue` or an indicator
-    /// that the buffer contains an incomplete RESP message from the position provided.
-    public enum ParsingState {
-        case notYetParsed
+/// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
+public enum RESPTranslator { }
+
+// MARK: From Bytes
+
+extension RESPTranslator {
+    /// Representation of the result of a parse attempt on a byte stream.
+    /// - incomplete: The stream contains an incomplete RESP message from the position provided.
+    /// - parsed: The parsed `RESPValue`
+    public enum ParsingResult {
+        case incomplete
         case parsed(RESPValue)
     }
 
-    /// Representation of an `Swift.Error` found during RESP decoding.
-    public enum Error: LocalizedError {
+    /// Representation of a `Swift.Error` found during RESP parsing.
+    public enum ParsingError: LocalizedError {
         case invalidToken
         case arrayRecursion
 
         public var errorDescription: String? {
-            return "RESPDecoding: \(self)"
+            return "RESPTranslator: \(self)"
         }
     }
 
-    public init() { }
-
-    /// Attempts to parse the `ByteBuffer`, starting at the specified position, following the RESP specification.
+    /// Attempts to parse the `ByteBuffer`, starting at the specified position,
+    /// following the RESP specification.
+    /// - Important: As this par
     ///
     /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
     /// - Parameters:
-    ///     - buffer: The buffer that contains the bytes that need to be decoded.
-    ///     - position: The index of the buffer that should be considered the "front" to begin message parsing.
-    public func parse(from buffer: inout ByteBuffer, index position: inout Int) throws -> ParsingState {
+    ///     - buffer: The buffer that contains the bytes that need to be parsed.
+    ///     - position: The index of the buffer that should contain the first byte of the message.
+    public static func parseBytes(
+        _ buffer: inout ByteBuffer,
+        fromIndex position: inout Int
+    ) throws -> ParsingResult {
         let offset = position + buffer.readerIndex
         guard
             let token = buffer.viewBytes(at: offset, length: 1)?.first,
             var slice = buffer.getSlice(at: offset, length: buffer.readableBytes - position)
-        else { return .notYetParsed }
+        else { return .incomplete }
 
         position += 1
 
         switch token {
         case .plus:
-            guard let result = parseSimpleString(&slice, &position) else { return .notYetParsed }
+            guard let result = parseSimpleString(&slice, &position) else { return .incomplete }
             return .parsed(.simpleString(result))
 
         case .colon:
-            guard let value = parseInteger(&slice, &position) else { return .notYetParsed }
+            guard let value = parseInteger(&slice, &position) else { return .incomplete }
             return .parsed(.integer(value))
 
         case .dollar:
@@ -68,44 +77,15 @@ public final class RESPDecoder {
             guard
                 let stringBuffer = parseSimpleString(&slice, &position),
                 let message = stringBuffer.getString(at: 0, length: stringBuffer.readableBytes)
-            else { return .notYetParsed }
+            else { return .incomplete }
             return .parsed(.error(RedisError(reason: message)))
 
-        default: throw Error.invalidToken
-        }
-    }
-}
-
-extension RESPDecoder: ByteToMessageDecoder {
-    /// `ByteToMessageDecoder.InboundOut`
-    public typealias InboundOut = RESPValue
-
-    /// See `ByteToMessageDecoder.decode(context:buffer:)`
-    public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        var position = 0
-
-        switch try parse(from: &buffer, index: &position) {
-        case .notYetParsed: return .needMoreData
-        case let .parsed(value):
-            context.fireChannelRead(wrapInboundOut(value))
-            buffer.moveReaderIndex(forwardBy: position)
-            return .continue
+        default: throw ParsingError.invalidToken
         }
     }
 
-    /// See `ByteToMessageDecoder.decodeLast(context:buffer:seenEOF)`
-    public func decodeLast(
-        context: ChannelHandlerContext,
-        buffer: inout ByteBuffer,
-        seenEOF: Bool
-    ) throws -> DecodingState { return .needMoreData }
-}
-
-// MARK: Parsing
-
-extension RESPDecoder {
     /// See [https://redis.io/topics/protocol#resp-simple-strings](https://redis.io/topics/protocol#resp-simple-strings)
-    func parseSimpleString(_ buffer: inout ByteBuffer, _ position: inout Int) -> ByteBuffer? {
+    static func parseSimpleString(_ buffer: inout ByteBuffer, _ position: inout Int) -> ByteBuffer? {
         guard
             let bytes = buffer.viewBytes(at: position, length: buffer.readableBytes - position),
             let newlineIndex = bytes.firstIndex(of: .newline),
@@ -121,7 +101,7 @@ extension RESPDecoder {
     }
 
     /// See [https://redis.io/topics/protocol#resp-integers](https://redis.io/topics/protocol#resp-integers)
-    func parseInteger(_ buffer: inout ByteBuffer, _ position: inout Int) -> Int? {
+    static func parseInteger(_ buffer: inout ByteBuffer, _ position: inout Int) -> Int? {
         guard let stringBuffer = parseSimpleString(&buffer, &position) else { return nil }
         return stringBuffer.withUnsafeReadableBytes { ptr in
             Int(strtoll(ptr.bindMemory(to: Int8.self).baseAddress!, nil, 10))
@@ -129,8 +109,8 @@ extension RESPDecoder {
     }
 
     /// See [https://redis.io/topics/protocol#resp-bulk-strings](https://redis.io/topics/protocol#resp-bulk-strings)
-    func parseBulkString(_ buffer: inout ByteBuffer, _ position: inout Int) -> ParsingState {
-        guard let size = parseInteger(&buffer, &position) else { return .notYetParsed }
+    static func parseBulkString(_ buffer: inout ByteBuffer, _ position: inout Int) -> ParsingResult {
+        guard let size = parseInteger(&buffer, &position) else { return .incomplete }
 
         // Redis sends '$-1\r\n' to represent a null bulk string
         guard size > -1 else { return .parsed(.null) }
@@ -140,7 +120,7 @@ extension RESPDecoder {
         // even if the content is empty, Redis send '$0\r\n\r\n'
         let readableByteCount = buffer.readableBytes - position
         let expectedRemainingMessageSize = size + 2
-        guard readableByteCount >= expectedRemainingMessageSize else { return .notYetParsed }
+        guard readableByteCount >= expectedRemainingMessageSize else { return .incomplete }
 
         // empty bulk strings, different from null strings, are represented as .bulkString(nil)
         guard size > 0 else {
@@ -150,7 +130,7 @@ extension RESPDecoder {
         }
 
         guard let bytes = buffer.viewBytes(at: position, length: expectedRemainingMessageSize) else {
-            return .notYetParsed
+            return .incomplete
         }
 
         // move the parsing position to the newline for recursive parsing
@@ -162,31 +142,79 @@ extension RESPDecoder {
     }
 
     /// See [https://redis.io/topics/protocol#resp-arrays](https://redis.io/topics/protocol#resp-arrays)
-    func parseArray(_ buffer: inout ByteBuffer, _ position: inout Int) throws -> ParsingState {
-        guard let elementCount = parseInteger(&buffer, &position) else { return .notYetParsed }
+    static func parseArray(_ buffer: inout ByteBuffer, _ position: inout Int) throws -> ParsingResult {
+        guard let elementCount = parseInteger(&buffer, &position) else { return .incomplete }
         guard elementCount > -1 else { return .parsed(.null) } // '*-1\r\n'
         guard elementCount > 0 else { return .parsed(.array([])) } // '*0\r\n'
 
-        var results = [ParsingState](repeating: .notYetParsed, count: elementCount)
+        var results = [ParsingResult](repeating: .incomplete, count: elementCount)
         for index in 0..<elementCount {
             guard
                 var slice = buffer.getSlice(at: position, length: buffer.readableBytes - position)
-            else { return .notYetParsed }
+            else { return .incomplete }
 
             var subPosition = 0
-            let result = try parse(from: &slice, index: &subPosition)
+            let result = try parseBytes(&slice, fromIndex: &subPosition)
             switch result {
             case .parsed: results[index] = result
-            default: return .notYetParsed
+            default: return .incomplete
             }
 
             position += subPosition
         }
 
         let values = try results.map { state -> RESPValue in
-            guard case let .parsed(value) = state else { throw Error.arrayRecursion }
+            guard case let .parsed(value) = state else { throw ParsingError.arrayRecursion }
             return value
         }
         return .parsed(.array(ContiguousArray<RESPValue>(values)))
+    }
+}
+
+// MARK: To Bytes
+
+extension RESPTranslator {
+    /// Writes the `RESPValue` into the provided `ByteBuffer` following the RESP specification.
+    ///
+    /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
+    /// - Parameters:
+    ///     - value: The value to write to the buffer.
+    ///     - out: The buffer being written to.
+    public static func writeValue(_ value: RESPValue, into out: inout ByteBuffer) {
+        switch value {
+        case .simpleString(var buffer):
+            out.writeStaticString("+")
+            out.writeBuffer(&buffer)
+            out.writeStaticString("\r\n")
+
+        case .bulkString(.some(var buffer)):
+            out.writeStaticString("$")
+            out.writeString(buffer.readableBytes.description)
+            out.writeStaticString("\r\n")
+            out.writeBuffer(&buffer)
+            out.writeString("\r\n")
+
+        case .bulkString(.none):
+            out.writeStaticString("$0\r\n\r\n")
+
+        case .integer(let number):
+            out.writeStaticString(":")
+            out.writeString(number.description)
+            out.writeStaticString("\r\n")
+
+        case .null:
+            out.writeStaticString("$-1\r\n")
+
+        case .error(let error):
+            out.writeStaticString("-")
+            out.writeString(error.message)
+            out.writeStaticString("\r\n")
+
+        case .array(let array):
+            out.writeStaticString("*")
+            out.writeString(array.count.description)
+            out.writeStaticString("\r\n")
+            array.forEach { writeValue($0, into: &out) }
+        }
     }
 }

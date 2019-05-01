@@ -2,11 +2,15 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RESPDecoderTests: XCTestCase {
-    private let decoder = RESPDecoder()
-    private let allocator = ByteBufferAllocator()
+final class RedisByteDecoderTests: XCTestCase {
+    private var decoder = RedisByteDecoder()
+    private var allocator = ByteBufferAllocator()
+}
 
-    func test_error() throws {
+// MARK:  Individual Types
+
+extension RedisByteDecoderTests {
+    func testErrors() throws {
         XCTAssertNil(try runTest("-ERR"))
         XCTAssertNil(try runTest("-ERR\r"))
         XCTAssertEqual(try runTest("-ERROR\r\n")?.error?.message.contains("ERROR"), true)
@@ -16,7 +20,7 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(multiError.1?.error?.message.contains("OTHER ERROR"), true)
     }
 
-    func test_simpleString() throws {
+    func testSimpleStrings() throws {
         XCTAssertNil(try runTest("+OK"))
         XCTAssertNil(try runTest("+OK\r"))
         XCTAssertEqual(try runTest("+\r\n")?.string, "")
@@ -29,7 +33,7 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(multiSimpleString.1?.string, "OTHER STRINGS")
     }
 
-    func test_integer() throws {
+    func testIntegers() throws {
         XCTAssertNil(try runTest(":100"))
         XCTAssertNil(try runTest(":100\r"))
         XCTAssertNil(try runTest(":\r"))
@@ -43,7 +47,7 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(multiInteger.1?.int, 99)
     }
 
-    func test_bulkString() throws {
+    func testBulkStrings() throws {
         XCTAssertNil(try runTest("$0"))
         XCTAssertNil(try runTest("$0\r"))
         XCTAssertNil(try runTest("$0\r\n\r"))
@@ -72,7 +76,7 @@ final class RESPDecoderTests: XCTestCase {
         XCTAssertEqual(try runTest(rawByteInput)?.bytes, rawBytes)
     }
 
-    func test_array() throws {
+    func testArrays() throws {
         func runArrayTest(_ input: String) throws -> ContiguousArray<RESPValue>? {
             return try runTest(input)?.array
         }
@@ -150,7 +154,7 @@ final class RESPDecoderTests: XCTestCase {
 
 // MARK: All Types
 
-extension RESPDecoderTests {
+extension RedisByteDecoderTests {
     private struct AllData {
         static let expectedString = "string"
         static let expectedError = "ERROR"
@@ -171,7 +175,7 @@ extension RESPDecoderTests {
         ]
     }
 
-    func test_all() throws {
+    func testAll() throws {
         let embeddedChannel = EmbeddedChannel()
         defer { _ = try? embeddedChannel.finish() }
         let handler = ByteToMessageHandler(decoder)
@@ -222,14 +226,81 @@ extension RESPDecoderTests {
     }
 }
 
-extension RESPDecoderTests {
+// MARK: Decoding State
+
+extension RedisByteDecoderTests {
+    func test_partial_needsMoreData() throws {
+        XCTAssertEqual(try decodeTest("+OK\r"), .needMoreData)
+        XCTAssertEqual(try decodeTest("$2\r\n"), .needMoreData)
+        XCTAssertEqual(try decodeTest("*2\r\n:1\r\n"), .needMoreData)
+        XCTAssertEqual(try decodeTest("*2\r\n*1\r\n"), .needMoreData)
+        XCTAssertEqual(try decodeTest("-ERR test\r"), .needMoreData)
+        XCTAssertEqual(try decodeTest(":2"), .needMoreData)
+    }
+
+    func test_badMessage_throws() {
+        do {
+            _ = try decodeTest("&3\r\n").0
+            XCTFail("Failed to properly throw error")
+        } catch { XCTAssertTrue(error is RESPTranslator.ParsingError) }
+    }
+
+    private static let completeMessages = [
+        "+OK\r\n",
+        "$2\r\naa\r\n",
+        "*2\r\n:1\r\n:2\r\n",
+        "*2\r\n*1\r\n:1\r\n:2\r\n",
+        "-ERR test\r\n",
+        ":2\r\n"
+    ]
+
+    func test_complete_continues() throws {
+        for message in RedisByteDecoderTests.completeMessages {
+            XCTAssertEqual(try decodeTest(message), .continue)
+        }
+    }
+
+    func test_complete_movesReaderIndex() throws {
+        for message in RedisByteDecoderTests.completeMessages {
+            XCTAssertEqual(try decodeTest(message).1, message.bytes.count)
+        }
+    }
+
+    private func decodeTest(_ input: String) throws -> DecodingState {
+        var buffer = allocator.buffer(capacity: 256)
+        return try decodeTest(input, buffer: &buffer)
+    }
+
+    private func decodeTest(_ input: String) throws -> (DecodingState, Int) {
+        var buffer = allocator.buffer(capacity: 256)
+        return (try decodeTest(input, buffer: &buffer), buffer.readerIndex)
+    }
+
+    private func decodeTest(_ input: String, buffer: inout ByteBuffer) throws -> DecodingState {
+        let embeddedChannel = EmbeddedChannel()
+        defer { _ = try? embeddedChannel.finish() }
+        let handler = ByteToMessageHandler(decoder)
+        try embeddedChannel.pipeline.addHandler(handler).wait()
+        let context = try embeddedChannel.pipeline.context(handler: handler).wait()
+
+        buffer.writeString(input)
+
+        return try decoder.decode(context: context, buffer: &buffer)
+    }
+}
+
+extension RedisByteDecoderTests {
     static var allTests = [
-        ("test_error", test_error),
-        ("test_simpleString", test_simpleString),
-        ("test_integer", test_integer),
-        ("test_bulkString", test_bulkString),
-        ("test_array", test_array),
-        ("test_all", test_all),
+        ("testErrors", testErrors),
+        ("testSimpleStrings", testSimpleStrings),
+        ("testIntegers", testIntegers),
+        ("testBulkStrings", testBulkStrings),
+        ("testArrays", testArrays),
+        ("testAll", testAll),
+        ("test_partial_needsMoreData", test_partial_needsMoreData),
+        ("test_badMessage_throws", test_badMessage_throws),
+        ("test_complete_continues", test_complete_continues),
+        ("test_complete_movesReaderIndex", test_complete_movesReaderIndex),
     ]
 }
 

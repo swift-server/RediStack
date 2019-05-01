@@ -3,8 +3,8 @@ import NIO
 @testable import NIORedis
 import XCTest
 
-final class RESPEncoderParsingTests: XCTestCase {
-    private let encoder = RESPEncoder()
+final class RESPTranslatorWritingTests: XCTestCase {
+    private let encoder = RESPTranslator.self
     private let allocator = ByteBufferAllocator()
 
     func testSimpleStrings() {
@@ -57,7 +57,7 @@ final class RESPEncoderParsingTests: XCTestCase {
         comparisonBuffer.writeBytes(expected)
 
         var buffer = allocator.buffer(capacity: expected.count)
-        encoder.encode(data: input.convertedToRESPValue(), out: &buffer)
+        encoder.writeValue(input.convertedToRESPValue(), into: &buffer)
 
         return buffer == comparisonBuffer
     }
@@ -69,13 +69,13 @@ final class RESPEncoderParsingTests: XCTestCase {
         comparisonBuffer.writeString(expected)
 
         var buffer = allocator.buffer(capacity: expected.count)
-        encoder.encode(data: input.convertedToRESPValue(), out: &buffer)
+        encoder.writeValue(input.convertedToRESPValue(), into: &buffer)
 
         return buffer == comparisonBuffer
     }
 }
 
-extension RESPEncoderParsingTests {
+extension RESPTranslatorWritingTests {
     static var allTests = [
         ("testSimpleStrings", testSimpleStrings),
         ("testBulkStrings", testBulkStrings),

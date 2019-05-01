@@ -23,8 +23,8 @@ extension Redis {
                 value: 1
             )
             .channelInitializer { $0.pipeline.addHandlers([
-                MessageToByteHandler(RESPEncoder()),
-                ByteToMessageHandler(RESPDecoder()),
+                MessageToByteHandler(RedisMessageEncoder()),
+                ByteToMessageHandler(RedisByteDecoder()),
                 RedisCommandHandler()
             ])}
     }
