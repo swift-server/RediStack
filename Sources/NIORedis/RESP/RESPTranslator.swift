@@ -54,7 +54,6 @@ extension RESPTranslator {
 
     /// Attempts to parse the `ByteBuffer`, starting at the specified position,
     /// following the RESP specification.
-    /// - Important: As this par
     ///
     /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
     /// - Parameters:

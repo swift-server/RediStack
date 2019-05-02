@@ -27,7 +27,7 @@ extension Redis {
     /// Makes a new `ClientBootstrap` instance with a default Redis `Channel` pipeline
     /// for sending and receiving messages in Redis Serialization Protocol (RESP) format.
     ///
-    /// See `RESPEncoder`, `RESPDecoder`, and `CommandHandler`.
+    /// See `RedisMessageEncoder`, `RedisByteDecoder`, and `RedisCommandHandler`.
     /// - Parameter using: The `EventLoopGroup` to build the `ClientBootstrap` on.
     /// - Returns: A `ClientBootstrap` with the default configuration of a `Channel` pipeline for RESP messages.
     public static func makeDefaultClientBootstrap(using group: EventLoopGroup) -> ClientBootstrap {
