@@ -49,24 +49,30 @@ extension Redis {
 extension Redis {
     /// Makes a new connection to a Redis instance.
     ///
+    /// As soon as the connection has been opened on the host, an "AUTH" command will be sent to
+    /// Redis to authorize use of additional commands on this new connection.
+    ///
+    /// See [https://redis.io/commands/auth](https://redis.io/commands/auth)
+    ///
     /// Example:
     ///
-    ///     let elg = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+    ///     let elg = MultiThreadedEventLoopGroup(numberOfThreads: 3)
     ///     let connection = Redis.makeConnection(
     ///         to: .init(ipAddress: "127.0.0.1", port: 6379),
-    ///         using: elg
+    ///         using: elg,
+    ///         password: "my_pass"
     ///     )
     ///
     /// - Parameters:
     ///     - socket: The `SocketAddress` information of the Redis instance to connect to.
+    ///     - group: The `EventLoopGroup` to build the connection on. Default is a single threaded `EventLoopGroup`.
     ///     - password: The optional password to authorize the client with.
-    ///     - eventLoopGroup: The `EventLoopGroup` to build the connection on.
     ///     - logger: The `Logger` instance to log with.
     /// - Returns: A `RedisConnection` instance representing this new connection.
     public static func makeConnection(
         to socket: SocketAddress,
-        using group: EventLoopGroup,
-        with password: String? = nil,
+        using group: EventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 1),
+        password: String? = nil,
         logger: Logger = Logger(label: "NIORedis.RedisConnection")
     ) -> EventLoopFuture<RedisConnection> {
         let bootstrap = makeDefaultClientBootstrap(using: group)

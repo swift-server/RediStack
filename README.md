@@ -5,12 +5,13 @@
 
 # NIORedis
 
-A non-blocking Swift driver for Redis built with [SwiftNIO](https://github.com/apple/swift-nio).
+A non-blocking Swift driver for [Redis](https://redis.io/) built with [SwiftNIO](https://github.com/apple/swift-nio).
 
 This package defines everything you need to work with Redis through the [**Re**dis **S**eralization **P**rotocol (RESP)](https://redis.io/topics/protocol).
 
 * Pitch discussion: [Swift Server Forums](https://forums.swift.org/t/swiftnio-redis-client/19325)
-* Proposal: [SSWG-0004](https://github.com/swift-server/sswg/blob/56a26b50ade45d624b54abe13c7d1f88526f9bb1/proposals/0004-nio-redis.md)
+* Proposal: [SSWG-0004](https://github.com/swift-server/sswg/blob/d391da355718a8f396ef86b3563910089d5e5992/proposals/0004-nio-redis.md)
+  * [Discussion Thread](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455/)
 
 ## Installation
 
@@ -18,7 +19,7 @@ To install `NIORedis`, just add the package as a dependency in your [**Package.s
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Mordil/nio-redis.git", .upToNextMinor(from: "0.2.0")
+    .package(url: "https://github.com/Mordil/nio-redis.git", .upToNextMinor(from: "0.7.0")
 ]
 ```
 
@@ -31,9 +32,10 @@ and run the following command: `swift package resolve`
 ```swift
 import NIORedis
 
-let driver = NIORedisDriver(ownershipModel: .internal(threadCount: 2))
-
-let connection = try driver.makeConnection().wait()
+let connection = Redis.makeConnection(
+    to: try .init(ipAddress: "127.0.0.1", port: 6379),
+    password: "my_pass"
+).wait()
 
 let result = try connection.set("my_key", to: "some value")
     .flatMap { return connection.get("my_key" }
