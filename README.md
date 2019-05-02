@@ -9,9 +9,9 @@ A non-blocking Swift driver for [Redis](https://redis.io/) built with [SwiftNIO]
 
 This package defines everything you need to work with Redis through the [**Re**dis **S**eralization **P**rotocol (RESP)](https://redis.io/topics/protocol).
 
-* Pitch discussion: [Swift Server Forums](https://forums.swift.org/t/swiftnio-redis-client/19325)
-* Proposal: [SSWG-0004](https://github.com/swift-server/sswg/blob/d391da355718a8f396ef86b3563910089d5e5992/proposals/0004-nio-redis.md)
-  * [Discussion Thread](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455/)
+* Swift Server Working Group Proposal: [SSWG-0004](https://github.com/swift-server/sswg/blob/d391da355718a8f396ef86b3563910089d5e5992/proposals/0004-nio-redis.md)
+    * [Pitch thread](https://forums.swift.org/t/swiftnio-redis-client/19325) 
+    * [Discussion Thread](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455/)
 
 ## Installation
 
