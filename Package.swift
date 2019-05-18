@@ -22,10 +22,11 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
+        .package(url: "https://github.com/apple/swift-metrics.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")
     ],
     targets: [
-        .target(name: "NIORedis", dependencies: ["NIO", "Logging"]),
+        .target(name: "NIORedis", dependencies: ["NIO", "Logging", "Metrics"]),
         .testTarget(name: "NIORedisTests", dependencies: ["NIORedis", "NIO"])
     ]
 )
