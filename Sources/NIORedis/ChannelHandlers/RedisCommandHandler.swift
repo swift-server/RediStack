@@ -62,6 +62,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
             return assertionFailure("Received unexpected error while idle: \(error.localizedDescription)")
         }
         leadPromise.fail(error)
+        context.fireErrorCaught(error)
     }
 
     /// Invoked by NIO when a read has been fired from earlier in the response chain. This forwards the unwrapped

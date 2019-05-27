@@ -36,11 +36,17 @@ extension Redis {
                 ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR),
                 value: 1
             )
-            .channelInitializer { $0.pipeline.addHandlers([
-                MessageToByteHandler(RedisMessageEncoder()),
-                ByteToMessageHandler(RedisByteDecoder()),
-                RedisCommandHandler()
-            ])}
+            .channelInitializer { channel in
+                let handlers: [(ChannelHandler, String)] = [
+                    (MessageToByteHandler(RedisMessageEncoder()), "NIORedis.Outgoing"),
+                    (ByteToMessageHandler(RedisByteDecoder()), "NIORedis.Incoming"),
+                    (RedisCommandHandler(), "NIORedis.Queue")
+                ]
+                return .andAllSucceed(
+                    handlers.map { channel.pipeline.addHandler($0, name: $1) },
+                    on: group.next()
+                )
+            }
     }
 }
 
