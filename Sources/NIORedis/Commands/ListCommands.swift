@@ -117,6 +117,33 @@ extension RedisClient {
     public func rpoplpush(from source: String, to dest: String) -> EventLoopFuture<RESPValue> {
         return send(command: "RPOPLPUSH", with: [source, dest])
     }
+
+    /// Pops the last element from a source list and pushes it to a destination list, blocking until
+    /// an element is available from the source list.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the source list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpoplpush` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpoplpush](https://redis.io/commands/brpoplpush)
+    /// - Parameters:
+    ///     - source: The key of the list to pop from.
+    ///     - dest: The key of the list to push to.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns: The element popped from the source list and pushed to the destination,
+    ///     or `nil` if the timeout was reached.
+    @inlinable
+    public func brpoplpush(
+        from source: String,
+        to dest: String,
+        timeout: Int = 0
+    ) -> EventLoopFuture<RESPValue?> {
+        return send(command: "BRPOPLPUSH", with: [source, dest, timeout])
+            .map { $0.isNull ? nil: $0 }
+    }
 }
 
 // MARK: Insert
@@ -248,5 +275,118 @@ extension RedisClient {
     public func rpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
         return send(command: "RPUSHX", with: [key, element])
             .mapFromRESP()
+    }
+}
+
+// MARK: Blocking Pop
+
+extension RedisClient {
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - key: The key of the list to pop from.
+    /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
+    @inlinable
+    public func blpop(from key: String, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+        return blpop(from: [key], timeout: timeout)
+            .map { $0?.1 }
+    }
+
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func blpop(
+        from keys: [String],
+        timeout: Int = 0
+    ) -> EventLoopFuture<(String, RESPValue)?> {
+        return _bpop(command: "BLPOP", keys, timeout)
+    }
+
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - key: The key of the list to pop from.
+    /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
+    @inlinable
+    public func brpop(from key: String, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+        return brpop(from: [key], timeout: timeout)
+            .map { $0?.1 }
+    }
+
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func brpop(
+        from keys: [String],
+        timeout: Int = 0
+    ) -> EventLoopFuture<(String, RESPValue)?> {
+        return _bpop(command: "BRPOP", keys, timeout)
+    }
+
+    @usableFromInline
+    func _bpop(
+        command: String,
+        _ keys: [String],
+        _ timeout: Int
+    ) -> EventLoopFuture<(String, RESPValue)?> {
+        let args = keys as [RESPValueConvertible] + [timeout]
+        return send(command: command, with: args)
+            .flatMapThrowing {
+                guard !$0.isNull else { return nil }
+                guard let response = [RESPValue]($0) else {
+                    throw NIORedisError.responseConversion(to: [RESPValue].self)
+                }
+                assert(response.count == 2, "Unexpected response size returned!")
+                guard let key = response[0].string else {
+                    throw NIORedisError.assertionFailure(message: "Unexpected structure in response: \(response)")
+                }
+                return (key, response[1])
+            }
     }
 }
