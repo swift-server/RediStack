@@ -292,6 +292,149 @@ extension RedisClient {
     }
 }
 
+// MARK: Blocking Pop
+
+extension RedisClient {
+    /// Removes the element from a sorted set with the lowest score, blocking until an element is
+    /// available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the set.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `zpopmin` method where possible.
+    ///
+    /// See [https://redis.io/commands/bzpopmin](https://redis.io/commands/bzpopmin)
+    /// - Parameters:
+    ///     - key: The key identifying the sorted set in Redis.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     The element and its associated score that was popped from the sorted set,
+    ///     or `nil` if the timeout was reached.
+    @inlinable
+    public func bzpopmin(
+        from key: String,
+        timeout: Int = 0
+    ) -> EventLoopFuture<(Double, RESPValue)?> {
+        return bzpopmin(from: [key], timeout: timeout)
+            .map {
+                guard let response = $0 else { return nil }
+                return (response.1, response.2)
+            }
+    }
+
+    /// Removes the element from a sorted set with the lowest score, blocking until an element is
+    /// available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of sets.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `zpopmin` method where possible.
+    ///
+    /// See [https://redis.io/commands/bzpopmin](https://redis.io/commands/bzpopmin)
+    /// - Parameters:
+    ///     - keys: A list of sorted set keys in Redis.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the sorted set the element was removed from, the element itself,
+    ///     and its associated score is returned.
+    @inlinable
+    public func bzpopmin(
+        from keys: [String],
+        timeout: Int = 0
+    ) -> EventLoopFuture<(String, Double, RESPValue)?> {
+        return self._bzpop(command: "BZPOPMIN", keys, timeout)
+    }
+
+    /// Removes the element from a sorted set with the highest score, blocking until an element is
+    /// available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the set.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `zpopmax` method where possible.
+    ///
+    /// See [https://redis.io/commands/bzpopmax](https://redis.io/commands/bzpopmax)
+    /// - Parameters:
+    ///     - key: The key identifying the sorted set in Redis.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     The element and its associated score that was popped from the sorted set,
+    ///     or `nil` if the timeout was reached.
+    @inlinable
+    public func bzpopmax(
+        from key: String,
+        timeout: Int = 0
+    ) -> EventLoopFuture<(Double, RESPValue)?> {
+        return self.bzpopmax(from: [key], timeout: timeout)
+            .map {
+                guard let response = $0 else { return nil }
+                return (response.1, response.2)
+            }
+    }
+
+    /// Removes the element from a sorted set with the highest score, blocking until an element is
+    /// available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of sets.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `zpopmax` method where possible.
+    ///
+    /// See [https://redis.io/commands/bzpopmax](https://redis.io/commands/bzpopmax)
+    /// - Parameters:
+    ///     - keys: A list of sorted set keys in Redis.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the sorted set the element was removed from, the element itself,
+    ///     and its associated score is returned.
+    @inlinable
+    public func bzpopmax(
+        from keys: [String],
+        timeout: Int = 0
+    ) -> EventLoopFuture<(String, Double, RESPValue)?> {
+        return self._bzpop(command: "BZPOPMAX", keys, timeout)
+    }
+
+    @usableFromInline
+    func _bzpop(
+        command: String,
+        _ keys: [String],
+        _ timeout: Int
+    ) -> EventLoopFuture<(String, Double, RESPValue)?> {
+        let args = keys as [RESPValueConvertible] + [timeout]
+        return send(command: command, with: args)
+            // per the Redis docs,
+            // we will receive either a nil response,
+            // or an array with 3 elements in the form [Set Key, Element Score, Element Value]
+            .flatMapThrowing {
+                guard !$0.isNull else { return nil }
+                guard let response = [RESPValue]($0) else {
+                    throw NIORedisError.responseConversion(to: [RESPValue].self)
+                }
+                assert(response.count == 3, "Unexpected response size returned!")
+                guard
+                    let key = response[0].string,
+                    let score = Double(response[1])
+                else {
+                    throw NIORedisError.assertionFailure(message: "Unexpected structure in response: \(response)")
+                }
+                return (key, score, response[2])
+            }
+    }
+}
+
 // MARK: Increment
 
 extension RedisClient {

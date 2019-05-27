@@ -76,7 +76,7 @@ public final class RedisConnection: RedisClient {
         }
     }
 
-    private let channel: Channel
+    let channel: Channel
     private var logger: Logger
 
     private let autoflush = Atomic<Bool>(value: true)
