@@ -155,6 +155,26 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(results[1].1, 10)
     }
 
+    func test_bzpopmin() throws {
+        let nilMin = try connection.bzpopmin(from: #function, timeout: 1).wait()
+        XCTAssertNil(nilMin)
+
+        let min1 = try connection.bzpopmin(from: key).wait()
+        XCTAssertEqual(min1?.0, 1)
+        let min2 = try connection.bzpopmin(from: [#function, key]).wait()
+        XCTAssertEqual(min2?.0, key)
+        XCTAssertEqual(min2?.1, 2)
+
+        let blockingConnection = try Redis.makeConnection().wait()
+        let expectation = XCTestExpectation(description: "bzpopmin should never return")
+        _ = blockingConnection.bzpopmin(from: #function)
+            .always { _ in expectation.fulfill() }
+
+        let result = XCTWaiter.wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(result, .timedOut)
+        try blockingConnection.channel.close().wait()
+    }
+
     func test_zpopmax() throws {
         let min = try connection.zpopmax(from: key).wait()
         XCTAssertEqual(min?.1, 10)
@@ -165,6 +185,26 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(results.count, 2)
         XCTAssertEqual(results[0].1, 2)
         XCTAssertEqual(results[1].1, 1)
+    }
+
+    func test_bzpopmax() throws {
+        let nilMax = try connection.bzpopmax(from: #function, timeout: 1).wait()
+        XCTAssertNil(nilMax)
+
+        let max1 = try connection.bzpopmax(from: key).wait()
+        XCTAssertEqual(max1?.0, 10)
+        let max2 = try connection.bzpopmax(from: [#function, key]).wait()
+        XCTAssertEqual(max2?.0, key)
+        XCTAssertEqual(max2?.1, 9)
+
+        let blockingConnection = try Redis.makeConnection().wait()
+        let expectation = XCTestExpectation(description: "bzpopmax should never return")
+        _ = blockingConnection.bzpopmax(from: #function)
+            .always { _ in expectation.fulfill() }
+
+        let result = XCTWaiter.wait(for: [expectation], timeout: 1)
+        XCTAssertEqual(result, .timedOut)
+        try blockingConnection.channel.close().wait()
     }
 
     func test_zincrby() throws {
@@ -352,7 +392,9 @@ final class SortedSetCommandsTests: XCTestCase {
         ("test_zcount", test_zcount),
         ("test_zlexcount", test_zlexcount),
         ("test_zpopmin", test_zpopmin),
+        ("test_bzpopmin", test_bzpopmin),
         ("test_zpopmax", test_zpopmax),
+        ("test_bzpopmax", test_bzpopmax),
         ("test_zincrby", test_zincrby),
         ("test_zunionstore", test_zunionstore),
         ("test_zinterstore", test_zinterstore),
