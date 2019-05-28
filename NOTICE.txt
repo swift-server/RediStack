@@ -41,6 +41,24 @@ This product was heavily influenced by implementations from the Vapor and NozeIO
 
 ---
 
+This product contains the entire library from Apple's SwiftLog API.
+
+* LICENSE (Apache License 2.0):
+    * https://github.com/apple/swift-log/blob/master/LICENSE.txt
+* HOMEPAGE:
+    * https://github.com/apple/swift-log
+
+---
+
+This product contains the entire library from Apple's SwiftMetrics API.
+
+* LICENSE (Apache License 2.0):
+    * https://github.com/apple/swift-metrics/blob/master/LICENSE.txt
+* HOMEPAGE:
+    * https://github.com/apple/swift-metrics
+
+---
+
 This product contains the entire library and derivations of various scripts from Apple's SwiftNIO.
 
   * LICENSE (Apache License 2.0):
