@@ -1,14 +1,14 @@
 
-                            The NIORedis Project
+                            The RedisNIO Project
                             ====================
 
-Please visit the NIORedis web site for more information:
+Please visit the RedisNIO web site for more information:
 
   * https://github.com/mordil/nio-redis
 
-Copyright 2019 The NIORedis Project
+Copyright 2019 The RedisNIO Project
 
-The NIORedis Project licenses this file to you under the Apache License,
+The RedisNIO Project licenses this file to you under the Apache License,
 version 2.0 (the "License"); you may not use this file except in compliance
 with the License. You may obtain a copy of the License at:
 

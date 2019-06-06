@@ -12,10 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import Foundation
 
-import RedisNIOTests
-
-var tests = [XCTestCaseEntry]()
-tests += RedisNIOTests.allTests()
-XCTMain(tests)
+extension String {
+    /// Converts this String to a byte representation.
+    var bytes: [UInt8] { return .init(self.utf8) }
+}
