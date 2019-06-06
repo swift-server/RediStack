@@ -13,7 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import struct Foundation.UUID
+import struct Dispatch.DispatchTime
 import Logging
+import Metrics
 import NIO
 import NIOConcurrencyHelpers
 
@@ -107,6 +109,8 @@ public final class RedisConnection: RedisClient {
         self.logger[metadataKey: loggingKeyID] = "\(UUID())"
         self.logger.debug("Connection created.")
         self._state = .open
+        RedisMetrics.activeConnectionCount += 1
+        RedisMetrics.totalConnectionCount.increment()
     }
 
     /// Sends a `QUIT` command, then closes the `Channel` this instance was initialized with.
@@ -126,7 +130,10 @@ public final class RedisConnection: RedisClient {
                 self.channel.close(promise: promise)
                 return promise.futureResult
             }
-            .map { self.logger.debug("Connection closed.") }
+            .map {
+                self.logger.debug("Connection closed.")
+                RedisMetrics.activeConnectionCount -= 1
+            }
             .recover {
                 self.logger.error("Encountered error during close(): \($0)")
                 self.state = .open
@@ -162,7 +169,10 @@ public final class RedisConnection: RedisClient {
             promise: promise
         )
 
+        let startTime = DispatchTime.now().uptimeNanoseconds
         promise.futureResult.whenComplete { result in
+            let duration = DispatchTime.now().uptimeNanoseconds - startTime
+            RedisMetrics.commandRoundTripTime.recordNanoseconds(duration)
             guard case let .failure(error) = result else { return }
             self.logger.error("\(error.localizedDescription)")
         }

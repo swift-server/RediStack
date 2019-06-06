@@ -63,6 +63,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
         }
         leadPromise.fail(error)
         context.fireErrorCaught(error)
+        RedisMetrics.commandFailureCount.increment()
     }
 
     /// Invoked by NIO when a read has been fired from earlier in the response chain. This forwards the unwrapped
@@ -82,8 +83,13 @@ extension RedisCommandHandler: ChannelInboundHandler {
         assert(popped != nil)
 
         switch value {
-        case .error(let e): leadPromise.fail(e)
-        default: leadPromise.succeed(value)
+        case .error(let e):
+            leadPromise.fail(e)
+            RedisMetrics.commandFailureCount.increment()
+
+        default:
+            leadPromise.succeed(value)
+            RedisMetrics.commandSuccessCount.increment()
         }
     }
 }
