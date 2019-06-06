@@ -12,10 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Foundation
 @testable import RedisNIO
 
 extension Redis {
     static func makeConnection() throws -> EventLoopFuture<RedisConnection> {
-        return Redis.makeConnection(to: try .init(ipAddress: "127.0.0.1", port: 6379))
+        let env = ProcessInfo.processInfo.environment
+        return Redis.makeConnection(
+            to: try .makeAddressResolvingHost(env["REDIS_URL"] ?? "127.0.0.1", port: 6379),
+            password: env["REDIS_PW"]
+        )
     }
 }

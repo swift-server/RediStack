@@ -1,0 +1,51 @@
+stages:
+  - build release
+  - test
+  - docs
+
+pages:
+  stage: docs
+  only:
+    - tags
+  tags:
+    - private-xcode
+  script:
+    - "echo 'TODO #45 -- Publish API Docs'"
+
+.build:
+  stage: build release
+  tags:
+    - docker
+  script:
+    - swift build -c release -v
+
+build ubuntu-xenial:
+  extends: .build
+  image: swift:5.0-xenial
+
+build ubuntu-bionic:
+  extends: .build
+  image: swift:5.0-bionic
+
+.test:
+  stage: test
+  tags:
+    - docker
+  variables:
+    REDIS_URL: 'redis'
+    REDIS_PW: 'password'
+  services:
+  - name: redis:5
+    alias: 'redis'
+    command: ["redis-server", "--requirepass", "password"]
+  script:
+    - swift build -v
+    - swift test
+
+test ubuntu-xenial:
+  extends: .test
+  image: swift:5.0-xenial
+
+test ubuntu-bionic:
+  extends: .test
+  image: swift:5.0-bionic
