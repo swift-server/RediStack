@@ -16,7 +16,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "redis-nio",
+    name: "swift-redis-nio-client",
     products: [
         .library(name: "RedisNIO", targets: ["RedisNIO"])
     ],
