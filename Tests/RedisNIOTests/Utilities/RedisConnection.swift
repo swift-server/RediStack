@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+@testable import RedisNIO
 
-import RedisNIOTests
-
-var tests = [XCTestCaseEntry]()
-tests += RedisNIOTests.allTests()
-XCTMain(tests)
+extension Redis {
+    static func makeConnection() throws -> EventLoopFuture<RedisConnection> {
+        return Redis.makeConnection(to: try .init(ipAddress: "127.0.0.1", port: 6379))
+    }
+}
