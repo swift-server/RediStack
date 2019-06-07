@@ -23,7 +23,7 @@ pages:
           --root-url "https://mordil.gitlab.io/swift-redis-nio-client/docs/RedisNIO" \
           --module "RedisNIO" \
           --module-version "$version" \
-          --theme fullwidth \
+          --theme docs/theme \
           --xcodebuild-arguments -scheme,swift-redis-nio-client-Package \
           --sourcekitten-sourcefile "./RedisNIO.json" \
           --output "./public"

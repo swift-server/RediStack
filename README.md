@@ -1,4 +1,4 @@
-| :bell: The [GitHub repository](https://github.com/Mordil/swift-redis-nio-client) is a **read-only** mirror of the GitLab repository. For issues and merge requests, [please visit GitLab](https://gitlab.com/mordil/swift-redis-nio-client). :bell: |
+| The [GitHub repository](https://github.com/Mordil/swift-redis-nio-client) is a **read-only** mirror of the GitLab repository. For issues and merge requests, [please visit GitLab](https://gitlab.com/mordil/swift-redis-nio-client). |
 |---|
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-yellow.svg)](./LICENSE.txt)
