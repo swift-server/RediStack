@@ -8,9 +8,28 @@ pages:
   only:
     - tags
   tags:
-    - private-xcode
-  script:
-    - "echo 'TODO #45 -- Publish API Docs'"
+    - private-macOS
+  script: |
+    version=$(git describe --abbrev=0 --tags || echo "0.0.0")
+    swift build
+    sourcekitten doc --spm-module "RedisNIO" > ./RedisNIO.json
+    swift package generate-xcodeproj
+    jazzy --clean \
+          --author "Nathan Harris (Mordil)" \
+          --readme "./README.md" \
+          --author_url "https://mordil.info" \
+          --github_url "https://gitlab.com/mordil/swift-redis-nio-client" \
+          --github-file-prefix https://gitlab.com/mordil/swift-redis-nio-client/blob/$version \
+          --root-url "https://mordil.gitlab.io/swift-redis-nio-client/docs/RedisNIO" \
+          --module "RedisNIO" \
+          --module-version "$version" \
+          --theme fullwidth \
+          --xcodebuild-arguments -scheme,swift-redis-nio-client-Package \
+          --sourcekitten-sourcefile "./RedisNIO.json" \
+          --output "./public"
+  artifacts:
+    paths:
+      - public
 
 .build:
   stage: build release
