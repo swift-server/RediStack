@@ -152,3 +152,16 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
         }
     }
 }
+
+import struct Foundation.Data
+
+extension Data: RESPValueConvertible {
+    public init?(_ value: RESPValue) {
+        guard let data = value.data else { return nil }
+        self = data
+    }
+
+    public func convertedToRESPValue() -> RESPValue {
+        return .bulkString(self.byteBuffer)
+    }
+}

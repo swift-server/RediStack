@@ -24,6 +24,15 @@ extension String {
     }
 }
 
+extension Data {
+    @inline(__always)
+    var byteBuffer: ByteBuffer {
+        var buffer = RESPValue.allocator.buffer(capacity: self.count)
+        buffer.writeBytes(self)
+        return buffer
+    }
+}
+
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
 /// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
