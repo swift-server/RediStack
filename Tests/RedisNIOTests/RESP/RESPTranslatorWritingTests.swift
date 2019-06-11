@@ -64,6 +64,12 @@ final class RESPTranslatorWritingTests: XCTestCase {
         XCTAssertTrue(testPass(input: .null, expected: "$-1\r\n"))
     }
 
+    func testDataEncoding() throws {
+        let name = #function
+        let data = Data(name.bytes).convertedToRESPValue()
+        XCTAssertTrue(testPass(input: data, expected: "$\(name.count)\r\n\(name)\r\n"))
+    }
+
     private func testPass(input: RESPValue, expected: [UInt8]) -> Bool {
         let allocator = ByteBufferAllocator()
 
@@ -97,5 +103,6 @@ extension RESPTranslatorWritingTests {
         ("testArrays", testArrays),
         ("testError", testError),
         ("testNull", testNull),
+        ("testDataEncoding", testDataEncoding),
     ]
 }
