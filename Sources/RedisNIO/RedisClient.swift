@@ -176,7 +176,7 @@ public final class RedisConnection: RedisClient {
             guard case let .failure(error) = result else { return }
             self.logger.error("\(error.localizedDescription)")
         }
-        logger.debug("Sending command \"\(command)\" with \(arguments) encoded as \(args)")
+        logger.debug("Sending command \"\(command)\" with \(arguments)")
 
         guard sendCommandsImmediately else {
             return channel.write(context).flatMap { promise.futureResult }

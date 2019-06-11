@@ -81,6 +81,20 @@ extension RESPValue: ExpressibleByIntegerLiteral {
     }
 }
 
+// MARK: Custom String Convertible
+
+extension RESPValue: CustomStringConvertible {
+    public var description: String {
+        switch self {
+        case .integer, .simpleString, .bulkString: return self.string!
+        case .null: return "NULL"
+        case let .array(elements): return "[\(elements.map({ $0.description }).joined(separator: ","))]"
+        case let .error(e): return e.message
+        default: return ""
+        }
+    }
+}
+
 // MARK: Computed Values
 
 extension RESPValue {
