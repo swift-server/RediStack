@@ -90,7 +90,6 @@ extension RESPValue: CustomStringConvertible {
         case .null: return "NULL"
         case let .array(elements): return "[\(elements.map({ $0.description }).joined(separator: ","))]"
         case let .error(e): return e.message
-        default: return ""
         }
     }
 }
