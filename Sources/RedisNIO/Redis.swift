@@ -64,7 +64,7 @@ extension Redis {
     ///
     ///     let elg = MultiThreadedEventLoopGroup(numberOfThreads: 3)
     ///     let connection = Redis.makeConnection(
-    ///         to: .init(ipAddress: "127.0.0.1", port: 6379),
+    ///         to: .init(ipAddress: "127.0.0.1", port: RedisConnection.defaultPort),
     ///         using: elg,
     ///         password: "my_pass"
     ///     )
