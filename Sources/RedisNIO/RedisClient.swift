@@ -56,6 +56,8 @@ private let loggingKeyID = "RedisConnection"
 ///
 /// See `RedisClient`
 public final class RedisConnection: RedisClient {
+    public static let defaultPort = 6379
+
     private enum ConnectionState {
         case open
         case closed

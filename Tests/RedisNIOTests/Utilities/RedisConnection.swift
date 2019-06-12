@@ -19,7 +19,10 @@ extension Redis {
     static func makeConnection() throws -> EventLoopFuture<RedisConnection> {
         let env = ProcessInfo.processInfo.environment
         return Redis.makeConnection(
-            to: try .makeAddressResolvingHost(env["REDIS_URL"] ?? "127.0.0.1", port: 6379),
+            to: try .makeAddressResolvingHost(
+                env["REDIS_URL"] ?? "127.0.0.1",
+                port: RedisConnection.defaultPort
+            ),
             password: env["REDIS_PW"]
         )
     }

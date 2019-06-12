@@ -38,7 +38,7 @@ and run the following command: `swift package resolve`
 import RedisNIO
 
 let connection = Redis.makeConnection(
-    to: try .init(ipAddress: "127.0.0.1", port: 6379),
+    to: try .init(ipAddress: "127.0.0.1", port: RedisConnection.defaultPort),
     password: "my_pass"
 ).wait()
 
