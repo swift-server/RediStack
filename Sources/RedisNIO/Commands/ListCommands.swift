@@ -379,7 +379,7 @@ extension RedisClient {
         return send(command: command, with: args)
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
-                guard let response = [RESPValue]($0) else {
+                guard let response = [RESPValue](fromRESP: $0) else {
                     throw RedisNIOError.responseConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 2, "Unexpected response size returned!")

@@ -217,7 +217,7 @@ extension RedisClient {
     @inlinable
     public func hget(_ field: String, from key: String) -> EventLoopFuture<String?> {
         return send(command: "HGET", with: [key, field])
-            .map { return String($0) }
+            .map { return String(fromRESP: $0) }
     }
 
     /// Gets the values of a hash for the fields specified.

@@ -48,7 +48,7 @@ final class ListCommandsTests: XCTestCase {
 
         element = try connection.lindex(0, from: #function).wait()
         XCTAssertFalse(element.isNull)
-        XCTAssertEqual(Int(element), 10)
+        XCTAssertEqual(Int(fromRESP: element), 10)
     }
 
     func test_lset() throws {
@@ -56,7 +56,7 @@ final class ListCommandsTests: XCTestCase {
         _ = try connection.lpush([10], into: #function).wait()
         XCTAssertNoThrow(try connection.lset(index: 0, to: 30, in: #function).wait())
         let element = try connection.lindex(0, from: #function).wait()
-        XCTAssertEqual(Int(element), 30)
+        XCTAssertEqual(Int(fromRESP: element), 30)
     }
 
     func test_lrem() throws {
@@ -75,8 +75,8 @@ final class ListCommandsTests: XCTestCase {
 
         elements = try connection.lrange(within: (0, 4), from: #function).wait()
         XCTAssertEqual(elements.count, 5)
-        XCTAssertEqual(Int(elements[0]), 1)
-        XCTAssertEqual(Int(elements[4]), 5)
+        XCTAssertEqual(Int(fromRESP: elements[0]), 1)
+        XCTAssertEqual(Int(fromRESP: elements[4]), 5)
 
         elements = try connection.lrange(within: (2, 0), from: #function).wait()
         XCTAssertEqual(elements.count, 0)
@@ -93,12 +93,12 @@ final class ListCommandsTests: XCTestCase {
         _ = try connection.lpush([30], into: "second").wait()
 
         var element = try connection.rpoplpush(from: "first", to: "second").wait()
-        XCTAssertEqual(Int(element), 10)
+        XCTAssertEqual(Int(fromRESP: element), 10)
         XCTAssertEqual(try connection.llen(of: "first").wait(), 0)
         XCTAssertEqual(try connection.llen(of: "second").wait(), 2)
 
         element = try connection.rpoplpush(from: "second", to: "first").wait()
-        XCTAssertEqual(Int(element), 30)
+        XCTAssertEqual(Int(fromRESP: element), 30)
         XCTAssertEqual(try connection.llen(of: "second").wait(), 1)
     }
 
@@ -106,7 +106,7 @@ final class ListCommandsTests: XCTestCase {
         _ = try connection.lpush([10], into: "first").wait()
 
         let element = try connection.brpoplpush(from: "first", to: "second").wait() ?? .null
-        XCTAssertEqual(Int(element), 10)
+        XCTAssertEqual(Int(fromRESP: element), 10)
 
         let blockingConnection = try Redis.makeConnection().wait()
         let expectation = XCTestExpectation(description: "brpoplpush should never return")
@@ -123,13 +123,13 @@ final class ListCommandsTests: XCTestCase {
 
         _ = try connection.linsert(20, into: #function, after: 10).wait()
         var elements = try connection.lrange(within: (0, 1), from: #function)
-            .map { response in response.compactMap { Int($0) } }
+            .map { response in response.compactMap { Int(fromRESP: $0) } }
             .wait()
         XCTAssertEqual(elements, [10, 20])
 
         _ = try connection.linsert(30, into: #function, before: 10).wait()
         elements = try connection.lrange(within: (0, 2), from: #function)
-            .map { response in response.compactMap { Int($0) } }
+            .map { response in response.compactMap { Int(fromRESP: $0) } }
             .wait()
         XCTAssertEqual(elements, [30, 10, 20])
     }
@@ -142,7 +142,7 @@ final class ListCommandsTests: XCTestCase {
 
         element = try connection.lpop(from: #function).wait()
         XCTAssertFalse(element.isNull)
-        XCTAssertEqual(Int(element), 30)
+        XCTAssertEqual(Int(fromRESP: element), 30)
     }
 
     func test_blpop() throws {
@@ -151,7 +151,7 @@ final class ListCommandsTests: XCTestCase {
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()
         let pop1 = try connection.blpop(from: "first").wait() ?? .null
-        XCTAssertEqual(Int(pop1), 30)
+        XCTAssertEqual(Int(fromRESP: pop1), 30)
 
         let pop2 = try connection.blpop(from: ["fake", "first"]).wait()
         XCTAssertEqual(pop2?.0, "first")
@@ -172,7 +172,7 @@ final class ListCommandsTests: XCTestCase {
         let size = try connection.lpush([100], into: #function).wait()
         let element = try connection.lindex(0, from: #function).wait()
         XCTAssertEqual(size, 4)
-        XCTAssertEqual(Int(element), 100)
+        XCTAssertEqual(Int(fromRESP: element), 100)
     }
 
     func test_lpushx() throws {
@@ -184,7 +184,7 @@ final class ListCommandsTests: XCTestCase {
         size = try connection.lpushx(30, into: #function).wait()
         XCTAssertEqual(size, 2)
         let element = try connection.rpop(from: #function)
-            .map { return Int($0) }
+            .map { return Int(fromRESP: $0) }
             .wait()
         XCTAssertEqual(element, 10)
     }
@@ -194,7 +194,7 @@ final class ListCommandsTests: XCTestCase {
 
         let element = try connection.rpop(from: #function).wait()
         XCTAssertNotNil(element)
-        XCTAssertEqual(Int(element), 10)
+        XCTAssertEqual(Int(fromRESP: element), 10)
 
         _ = try connection.delete([#function]).wait()
 
@@ -208,7 +208,7 @@ final class ListCommandsTests: XCTestCase {
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()
         let pop1 = try connection.brpop(from: "first").wait() ?? .null
-        XCTAssertEqual(Int(pop1), 10)
+        XCTAssertEqual(Int(fromRESP: pop1), 10)
 
         let pop2 = try connection.brpop(from: ["fake", "first"]).wait()
         XCTAssertEqual(pop2?.0, "first")
@@ -229,7 +229,7 @@ final class ListCommandsTests: XCTestCase {
         let size = try connection.rpush([100], into: #function).wait()
         let element = try connection.lindex(3, from: #function).wait()
         XCTAssertEqual(size, 4)
-        XCTAssertEqual(Int(element), 100)
+        XCTAssertEqual(Int(fromRESP: element), 100)
     }
 
     func test_rpushx() throws {
@@ -241,7 +241,7 @@ final class ListCommandsTests: XCTestCase {
         size = try connection.rpushx(30, into: #function).wait()
         XCTAssertEqual(size, 2)
         let element = try connection.lpop(from: #function)
-            .map { return Int($0) }
+            .map { return Int(fromRESP: $0) }
             .wait()
         XCTAssertEqual(element, 10)
     }

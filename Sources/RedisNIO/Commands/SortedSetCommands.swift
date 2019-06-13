@@ -30,7 +30,7 @@ extension RedisClient {
         repeat {
             let scoreItem = response[scoreIsFirst ? index : index + 1]
 
-            guard let score = Double(scoreItem) else {
+            guard let score = Double(fromRESP: scoreItem) else {
                 throw RedisNIOError.assertionFailure(message: "Unexpected response: '\(scoreItem)'")
             }
 
@@ -125,7 +125,7 @@ extension RedisClient {
     @inlinable
     public func zscore(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Double?> {
         return send(command: "ZSCORE", with: [key, element])
-            .map { return Double($0) }
+            .map { return Double(fromRESP: $0) }
     }
 
     /// Incrementally iterates over all elements in a sorted set.
@@ -420,13 +420,13 @@ extension RedisClient {
             // or an array with 3 elements in the form [Set Key, Element Score, Element Value]
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
-                guard let response = [RESPValue]($0) else {
+                guard let response = [RESPValue](fromRESP: $0) else {
                     throw RedisNIOError.responseConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 3, "Unexpected response size returned!")
                 guard
                     let key = response[0].string,
-                    let score = Double(response[1])
+                    let score = Double(fromRESP: response[1])
                 else {
                     throw RedisNIOError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
