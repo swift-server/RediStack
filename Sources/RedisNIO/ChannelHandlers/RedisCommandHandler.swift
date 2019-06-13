@@ -30,7 +30,7 @@ public struct RedisCommandContext {
 }
 
 /// A `ChannelDuplexHandler` that works with `RedisCommandContext`s to send commands and forward responses.
-open class RedisCommandHandler {
+public final class RedisCommandHandler {
     /// Queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
     private var logger: Logger
