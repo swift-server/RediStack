@@ -259,7 +259,7 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(elements.count, 6)
 
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
-            .map { (value, _) in return Int(value) }
+            .map { (value, _) in return Int(fromRESP: value) }
 
         XCTAssertEqual(values[0], 2)
         XCTAssertEqual(values[1], 3)
@@ -273,7 +273,7 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(elements.count, 6)
 
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
-            .map { (value, _) in return Int(value) }
+            .map { (value, _) in return Int(fromRESP: value) }
 
         XCTAssertEqual(values[0], 9)
         XCTAssertEqual(values[1], 8)
@@ -313,14 +313,14 @@ final class SortedSetCommandsTests: XCTestCase {
 
         var elements = try connection.zrangebylex(within: ("[1", "[2"), from: #function)
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 1)
         XCTAssertEqual(elements[1], 2)
 
         elements = try connection.zrangebylex(within: ("[1", "(4"), from: #function, limitBy: (offset: 1, count: 1))
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 1)
         XCTAssertEqual(elements[0], 2)
     }
@@ -330,14 +330,14 @@ final class SortedSetCommandsTests: XCTestCase {
 
         var elements = try connection.zrevrangebylex(within: ("(2", "[4"), from: #function)
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 4)
         XCTAssertEqual(elements[1], 3)
 
         elements = try connection.zrevrangebylex(within: ("[1", "(4"), from: #function, limitBy: (offset: 1, count: 2))
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 2)
     }

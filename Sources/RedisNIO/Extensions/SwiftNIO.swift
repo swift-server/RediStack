@@ -25,10 +25,13 @@ extension EventLoopFuture where Value == RESPValue {
         file: StaticString = #function,
         function: StaticString = #function,
         line: UInt = #line
-    ) -> EventLoopFuture<T> where T: RESPValueConvertible
+    )
+        -> EventLoopFuture<T> where T: RESPValueConvertible
     {
         return self.flatMapThrowing {
-            guard let value = T($0) else { throw RedisNIOError.responseConversion(to: type) }
+            guard let value = T(fromRESP: $0) else {
+                throw RedisNIOError.responseConversion(to: type)
+            }
             return value
         }
     }

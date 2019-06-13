@@ -14,14 +14,14 @@
 
 /// Capable of converting to / from `RESPValue`.
 public protocol RESPValueConvertible {
-    init?(_ value: RESPValue)
+    init?(fromRESP value: RESPValue)
 
     /// Creates a `RESPValue` representation.
     func convertedToRESPValue() -> RESPValue
 }
 
 extension RESPValue: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         self = value
     }
 
@@ -32,7 +32,7 @@ extension RESPValue: RESPValueConvertible {
 }
 
 extension RedisError: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let error = value.error else { return nil }
         self = error
     }
@@ -44,7 +44,7 @@ extension RedisError: RESPValueConvertible {
 }
 
 extension String: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let string = value.string else { return nil }
         self = string
     }
@@ -56,7 +56,7 @@ extension String: RESPValueConvertible {
 }
 
 extension FixedWidthInteger {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         if let int = value.int {
             self = Self(int)
         } else {
@@ -84,7 +84,7 @@ extension UInt32: RESPValueConvertible {}
 extension UInt64: RESPValueConvertible {}
 
 extension Double: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let string = value.string else { return nil }
         guard let float = Double(string) else { return nil }
         self = float
@@ -97,7 +97,7 @@ extension Double: RESPValueConvertible {
 }
 
 extension Float: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let string = value.string else { return nil }
         guard let float = Float(string) else { return nil }
         self = float
@@ -121,14 +121,14 @@ extension Collection where Element: RESPValueConvertible {
 }
 
 extension Array: RESPValueConvertible where Element: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let array = value.array else { return nil }
-        self = array.compactMap { Element($0) }
+        self = array.compactMap { Element(fromRESP: $0) }
     }
 }
 
 extension ContiguousArray: RESPValueConvertible where Element: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let array = value.array else { return nil }
         self = array.compactMap(Element.init).withUnsafeBytes {
             .init(UnsafeRawBufferPointer($0).bindMemory(to: Element.self))
@@ -137,9 +137,9 @@ extension ContiguousArray: RESPValueConvertible where Element: RESPValueConverti
 }
 
 extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard !value.isNull else { return nil }
-        guard let wrapped = Wrapped(value) else { return nil }
+        guard let wrapped = Wrapped(fromRESP: value) else { return nil }
 
         self = .some(wrapped)
     }
@@ -156,7 +156,7 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
 import struct Foundation.Data
 
 extension Data: RESPValueConvertible {
-    public init?(_ value: RESPValue) {
+    public init?(fromRESP value: RESPValue) {
         guard let data = value.data else { return nil }
         self = data
     }

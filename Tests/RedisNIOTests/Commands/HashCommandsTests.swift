@@ -127,7 +127,7 @@ final class HashCommandsTests: XCTestCase {
             "second": "foo"
         ]
         _ = try connection.hmset(dataset, in: #function).wait()
-        let values = try connection.hvals(in: #function).wait().compactMap { String($0) }
+        let values = try connection.hvals(in: #function).wait().compactMap { String(fromRESP: $0) }
         XCTAssertEqual(values.count, 2)
         XCTAssertTrue(values.allSatisfy(dataset.values.contains))
     }
