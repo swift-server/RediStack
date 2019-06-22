@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import NIO
 @testable import RedisNIO
 
 extension Redis {

@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 @testable import RedisNIO
 import XCTest
 
