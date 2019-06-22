@@ -16,13 +16,13 @@ import protocol Foundation.LocalizedError
 import NIO
 
 extension UInt8 {
-    static let newline: UInt8 = 0xA
-    static let carriageReturn: UInt8 = 0xD
-    static let dollar: UInt8 = 0x24
-    static let asterisk: UInt8 = 0x2A
-    static let plus: UInt8 = 0x2B
-    static let hyphen: UInt8 = 0x2D
-    static let colon: UInt8 = 0x3A
+    static let newline = UInt8(ascii: "\n")
+    static let carriageReturn = UInt8(ascii: "\r")
+    static let dollar = UInt8(ascii: "$")
+    static let asterisk = UInt8(ascii: "*")
+    static let plus = UInt8(ascii: "+")
+    static let hyphen = UInt8(ascii: "-")
+    static let colon = UInt8(ascii: ":")
 }
 
 /// Provides methods for translating between byte streams and Swift types
