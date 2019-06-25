@@ -28,7 +28,7 @@ extension RedisClient {
     @inlinable
     public func smembers(of key: String) -> EventLoopFuture<[RESPValue]> {
         return send(command: "SMEMBERS", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Checks if the element is included in a set.
@@ -41,7 +41,7 @@ extension RedisClient {
     @inlinable
     public func sismember(_ element: RESPValueConvertible, of key: String) -> EventLoopFuture<Bool> {
         return send(command: "SISMEMBER", with: [key, element])
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -53,7 +53,7 @@ extension RedisClient {
     @inlinable
     public func scard(of key: String) -> EventLoopFuture<Int> {
         return send(command: "SCARD", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Adds elements to a set.
@@ -68,7 +68,7 @@ extension RedisClient {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
         return send(command: "SADD", with: [key] + elements)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Removes elements from a set.
@@ -83,7 +83,7 @@ extension RedisClient {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
         return send(command: "SREM", with: [key] + elements)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -100,7 +100,7 @@ extension RedisClient {
         guard count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "SPOP", with: [key, count])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Randomly selects one or more elements in a set.
@@ -119,7 +119,7 @@ extension RedisClient {
         guard count != 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "SRANDMEMBER", with: [key, count])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Moves an element from one set to another.
@@ -139,7 +139,7 @@ extension RedisClient {
         guard sourceKey != destKey else { return self.eventLoop.makeSucceededFuture(true) }
 
         return send(command: "SMOVE", with: [sourceKey, destKey, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
             .map { return $0 == 1 }
     }
 
@@ -176,7 +176,7 @@ extension RedisClient {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "SDIFF", with: keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Calculates the difference between two or more sets and stores the result.
@@ -192,7 +192,7 @@ extension RedisClient {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         return send(command: "SDIFFSTORE", with: [destination] + keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -209,7 +209,7 @@ extension RedisClient {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "SINTER", with: keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Calculates the intersetion of two or more sets and stores the result.
@@ -225,7 +225,7 @@ extension RedisClient {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         return send(command: "SINTERSTORE", with: [destination] + keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -242,7 +242,7 @@ extension RedisClient {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
         
         return send(command: "SUNION", with: keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Calculates the union of two or more sets and stores the result.
@@ -258,6 +258,6 @@ extension RedisClient {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         return send(command: "SUNIONSTORE", with: [destination] + keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }

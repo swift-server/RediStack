@@ -50,7 +50,7 @@ extension RedisClient {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
         return send(command: "HDEL", with: [key] + fields)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Checks if a hash contains the field specified.
@@ -63,7 +63,7 @@ extension RedisClient {
     @inlinable
     public func hexists(_ field: String, in key: String) -> EventLoopFuture<Bool> {
         return send(command: "HEXISTS", with: [key, field])
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -75,7 +75,7 @@ extension RedisClient {
     @inlinable
     public func hlen(of key: String) -> EventLoopFuture<Int> {
         return send(command: "HLEN", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Gets the string length of a hash field's value.
@@ -88,7 +88,7 @@ extension RedisClient {
     @inlinable
     public func hstrlen(of field: String, in key: String) -> EventLoopFuture<Int> {
         return send(command: "HSTRLEN", with: [key, field])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Gets all field names in a hash.
@@ -99,7 +99,7 @@ extension RedisClient {
     @inlinable
     public func hkeys(in key: String) -> EventLoopFuture<[String]> {
         return send(command: "HKEYS", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Gets all values stored in a hash.
@@ -110,7 +110,7 @@ extension RedisClient {
     @inlinable
     public func hvals(in key: String) -> EventLoopFuture<[RESPValue]> {
         return send(command: "HVALS", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Incrementally iterates over all fields in a hash.
@@ -156,7 +156,7 @@ extension RedisClient {
         in key: String
     ) -> EventLoopFuture<Bool> {
         return send(command: "HSET", with: [key, field, value])
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -176,7 +176,7 @@ extension RedisClient {
         in key: String
     ) -> EventLoopFuture<Bool> {
         return send(command: "HSETNX", with: [key, field, value])
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -232,7 +232,7 @@ extension RedisClient {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "HMGET", with: [key] + fields)
-            .mapFromRESP(to: [RESPValue].self)
+            .convertFromRESPValue(to: [RESPValue].self)
             .map { return $0.map(String.init) }
     }
 
@@ -244,7 +244,7 @@ extension RedisClient {
     @inlinable
     public func hgetall(from key: String) -> EventLoopFuture<[String: String]> {
         return send(command: "HGETALL", with: [key])
-            .mapFromRESP(to: [String].self)
+            .convertFromRESPValue(to: [String].self)
             .map(Self._mapHashResponse)
     }
 }
@@ -264,7 +264,7 @@ extension RedisClient {
     public func hincrby(_ amount: Int, field: String, in key: String) -> EventLoopFuture<Int> {
         /// connection.hincrby(20, field: "foo", in: "key")
         return send(command: "HINCRBY", with: [key, field, amount])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Increments a hash field's value and returns the new value.
@@ -282,6 +282,6 @@ extension RedisClient {
         T: RESPValueConvertible
     {
         return send(command: "HINCRBYFLOAT", with: [key, field, amount])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }

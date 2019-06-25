@@ -83,7 +83,7 @@ extension RedisClient {
         }
 
         return send(command: "ZADD", with: args)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Adds an element to a sorted set, assigning their score to the value provided.
@@ -112,7 +112,7 @@ extension RedisClient {
     @inlinable
     public func zcard(of key: String) -> EventLoopFuture<Int> {
         return send(command: "ZCARD", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Gets the score of the specified element in a stored set.
@@ -167,7 +167,7 @@ extension RedisClient {
     @inlinable
     public func zrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
         return send(command: "ZRANK", with: [key, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Returns the rank (index) of the specified element in a sorted set.
@@ -182,7 +182,7 @@ extension RedisClient {
     @inlinable
     public func zrevrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
         return send(command: "ZREVRANK", with: [key, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -202,7 +202,7 @@ extension RedisClient {
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
         return send(command: "ZCOUNT", with: [key, range.min, range.max])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Returns the number of elements in a sorted set whose lexiographical values are between the range specified.
@@ -219,7 +219,7 @@ extension RedisClient {
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
         return send(command: "ZLEXCOUNT", with: [key, range.min, range.max])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -287,7 +287,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .mapFromRESP(to: [RESPValue].self)
+            .convertFromRESPValue(to: [RESPValue].self)
             .flatMapThrowing { return try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
     }
 }
@@ -453,7 +453,7 @@ extension RedisClient {
         in key: String
     ) -> EventLoopFuture<Double> {
         return send(command: "ZINCRBY", with: [key, amount, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -528,7 +528,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -588,7 +588,7 @@ extension RedisClient {
         if withScores { args.append("WITHSCORES") }
 
         return send(command: command, with: args)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -657,7 +657,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -721,7 +721,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -740,7 +740,7 @@ extension RedisClient {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
         return send(command: "ZREM", with: [key] + elements)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Removes elements from a sorted set whose lexiographical values are between the range specified.
@@ -757,7 +757,7 @@ extension RedisClient {
         from key: String
     ) -> EventLoopFuture<Int> {
         return send(command: "ZREMRANGEBYLEX", with: [key, range.min, range.max])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Removes elements from a sorted set whose index is between the provided range.
@@ -773,7 +773,7 @@ extension RedisClient {
         from key: String
     ) -> EventLoopFuture<Int> {
         return send(command: "ZREMRANGEBYRANK", with: [key, range.start, range.stop])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Removes elements from a sorted set whose score is within the range specified.
@@ -789,6 +789,6 @@ extension RedisClient {
         from key: String
     ) -> EventLoopFuture<Int> {
         return send(command: "ZREMRANGEBYSCORE", with: [key, range.min, range.max])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
