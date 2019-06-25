@@ -53,10 +53,21 @@ final class StringCommandsTests: XCTestCase {
         XCTAssertEqual(try connection.mget(["empty", #function]).wait().count, 2)
     }
 
-    func test_set() {
+    func test_set() throws {
         XCTAssertNoThrow(try connection.set(#function, to: "value").wait())
+        let val = try connection.get(#function).wait()
+        XCTAssertEqual(val, "value")
     }
-
+    
+    func test_append() throws {
+        let result = "value appended"
+        XCTAssertNoThrow(try connection.append(#function, to: "value").wait())
+        let length = try connection.append(#function, to: " appended").wait()
+        XCTAssertEqual(length, result.count)
+        let val = try connection.get(#function).wait()
+        XCTAssertEqual(val, result)
+    }
+    
     func test_mset() throws {
         let data = [
             "first": 1,
@@ -137,6 +148,7 @@ final class StringCommandsTests: XCTestCase {
         ("test_get", test_get),
         ("test_mget", test_mget),
         ("test_set", test_set),
+        ("test_append", test_append),
         ("test_mset", test_mset),
         ("test_msetnx", test_msetnx),
         ("test_increment", test_increment),
