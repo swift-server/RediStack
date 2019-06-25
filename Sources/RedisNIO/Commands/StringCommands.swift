@@ -89,16 +89,16 @@ extension RedisClient {
             .map { return $0 == 1 }
     }
 
-    /// Append a value to the end of an existing entry
-    /// - Note: If the key does not exist it is created and set as an empty string, so APPEND will be similar to SET in this special case.
+    /// Append a value to the end of an existing entry.
+    /// - Note: If the key does not exist, it is created and set as an empty string, so `APPEND` will be similar to `SET` in this special case.
     ///
-    /// [https://redis.io/commands/append](https://redis.io/commands/append)
+    /// See [https://redis.io/commands/append](https://redis.io/commands/append)
     /// - Parameters:
+    ///     - value: The value to append onto the value stored at the key.
     ///     - key: The key to use to uniquely identify this value.
-    ///     - value: The value to append the key to.
-    /// - Returns: Integer with the new length of the value
+    /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
-    public func append(_ key: String, to value: RESPValueConvertible) -> EventLoopFuture<Int> {
+    public func append(_ value: RESPValueConvertible, to key: String) -> EventLoopFuture<Int> {
         return send(command: "APPEND", with: [key, value])
             .convertFromRESPValue()
     }
