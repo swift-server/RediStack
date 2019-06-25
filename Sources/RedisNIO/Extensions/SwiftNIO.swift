@@ -20,7 +20,7 @@ extension EventLoopFuture where Value == RESPValue {
     /// - Parameter to: The desired type to convert to.
     /// - Returns: An `EventLoopFuture` that resolves a value of the desired type.
     @inlinable
-    public func mapFromRESP<T>(
+    public func convertFromRESPValue<T>(
         to type: T.Type = T.self,
         file: StaticString = #function,
         function: StaticString = #function,

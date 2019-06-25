@@ -40,7 +40,7 @@ extension RedisClient {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         return send(command: "MGET", with: keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -85,7 +85,7 @@ extension RedisClient {
     @inlinable
     public func msetnx(_ operations: [String: RESPValueConvertible]) -> EventLoopFuture<Bool> {
         return _mset(command: "MSETNX", operations)
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -116,7 +116,7 @@ extension RedisClient {
     @inlinable
     public func increment(_ key: String) -> EventLoopFuture<Int> {
         return send(command: "INCR", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Increments the stored value by the amount desired .
@@ -129,7 +129,7 @@ extension RedisClient {
     @inlinable
     public func increment(_ key: String, by count: Int) -> EventLoopFuture<Int> {
         return send(command: "INCRBY", with: [key, count])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Increments the stored value by the amount desired.
@@ -144,7 +144,7 @@ extension RedisClient {
         where T: RESPValueConvertible
     {
         return send(command: "INCRBYFLOAT", with: [key, count])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -159,7 +159,7 @@ extension RedisClient {
     @inlinable
     public func decrement(_ key: String) -> EventLoopFuture<Int> {
         return send(command: "DECR", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -171,6 +171,6 @@ extension RedisClient {
     /// - Returns: The new value after the operation.
     public func decrement(_ key: String, by count: Int) -> EventLoopFuture<Int> {
         return send(command: "DECRBY", with: [key, count])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }

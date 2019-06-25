@@ -25,7 +25,7 @@ extension RedisClient {
     @inlinable
     public func llen(of key: String) -> EventLoopFuture<Int> {
         return send(command: "LLEN", with: [key])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Gets the element from a list stored at the provided index position.
@@ -73,7 +73,7 @@ extension RedisClient {
         count: Int = 0
     ) -> EventLoopFuture<Int> {
         return send(command: "LREM", with: [key, count, value])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Trims a list to only contain elements within the specified inclusive bounds of 0-based indices.
@@ -103,7 +103,7 @@ extension RedisClient {
         from key: String
     ) -> EventLoopFuture<[RESPValue]> {
         return send(command: "LRANGE", with: [key, range.startIndex, range.endIndex])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Pops the last element from a source list and pushes it to a destination list.
@@ -187,7 +187,7 @@ extension RedisClient {
         _ pivot: RESPValueConvertible
     ) -> EventLoopFuture<Int> {
         return send(command: "LINSERT", with: [key, pivotKeyword, pivot, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -217,7 +217,7 @@ extension RedisClient {
         assert(elements.count > 0, "At least 1 element should be provided.")
         
         return send(command: "LPUSH", with: [key] + elements)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
@@ -231,7 +231,7 @@ extension RedisClient {
     @inlinable
     public func lpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
         return send(command: "LPUSHX", with: [key, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 
@@ -260,7 +260,7 @@ extension RedisClient {
         assert(elements.count > 0, "At least 1 element should be provided.")
 
         return send(command: "RPUSH", with: [key] + elements)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
@@ -274,7 +274,7 @@ extension RedisClient {
     @inlinable
     public func rpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
         return send(command: "RPUSHX", with: [key, element])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 }
 

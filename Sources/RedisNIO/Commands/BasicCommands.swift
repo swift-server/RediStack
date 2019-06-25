@@ -23,7 +23,7 @@ extension RedisClient {
     @inlinable
     public func echo(_ message: String) -> EventLoopFuture<String> {
         return send(command: "ECHO", with: [message])
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Pings the server, which will respond with a message.
@@ -35,7 +35,7 @@ extension RedisClient {
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
         let arg = message != nil ? [message] : []
         return send(command: "PING", with: arg)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Select the Redis logical database having the specified zero-based numeric index.
@@ -61,7 +61,7 @@ extension RedisClient {
     public func swapDatabase(_ first: Int, with second: Int) -> EventLoopFuture<Bool> {
         /// connection.swapDatabase(index: 0, withIndex: 10)
         return send(command: "SWAPDB", with: [first, second])
-            .mapFromRESP(to: String.self)
+            .convertFromRESPValue(to: String.self)
             .map { return $0 == "OK" }
     }
 
@@ -75,7 +75,7 @@ extension RedisClient {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
         return send(command: "DEL", with: keys)
-            .mapFromRESP()
+            .convertFromRESPValue()
     }
 
     /// Sets a timeout on key. After the timeout has expired, the key will automatically be deleted.
@@ -90,7 +90,7 @@ extension RedisClient {
     public func expire(_ key: String, after deadline: TimeAmount) -> EventLoopFuture<Bool> {
         let amount = deadline.nanoseconds / 1_000_000_000
         return send(command: "EXPIRE", with: [key, amount])
-            .mapFromRESP(to: Int.self)
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
 }
@@ -142,7 +142,7 @@ extension RedisClient {
             args.append(c)
         }
 
-        let response = send(command: command, with: args).mapFromRESP(to: [RESPValue].self)
+        let response = send(command: command, with: args).convertFromRESPValue(to: [RESPValue].self)
         let position = response.flatMapThrowing { result -> Int in
             guard
                 let value = result[0].string,
@@ -154,7 +154,7 @@ extension RedisClient {
         }
         let elements = response
             .map { return $0[1] }
-            .mapFromRESP(to: resultType)
+            .convertFromRESPValue(to: resultType)
 
         return position.and(elements)
     }
