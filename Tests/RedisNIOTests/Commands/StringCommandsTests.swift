@@ -61,8 +61,8 @@ final class StringCommandsTests: XCTestCase {
     
     func test_append() throws {
         let result = "value appended"
-        XCTAssertNoThrow(try connection.append(#function, to: "value").wait())
-        let length = try connection.append(#function, to: " appended").wait()
+        XCTAssertNoThrow(try connection.append("value", to: #function).wait())
+        let length = try connection.append(" appended", to: #function).wait()
         XCTAssertEqual(length, result.count)
         let val = try connection.get(#function).wait()
         XCTAssertEqual(val, result)
