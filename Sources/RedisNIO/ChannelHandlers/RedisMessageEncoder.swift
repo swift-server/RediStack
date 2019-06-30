@@ -33,7 +33,7 @@ public final class RedisMessageEncoder: MessageToByteEncoder {
     ///
     /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol) and `RESPEncoder.encode(data:out:)`
     public func encode(data: RESPValue, out: inout ByteBuffer) throws {
-        RESPTranslator.writeValue(data, into: &out)
+        out.writeRESPValue(data)
 
         logger.debug("Encoded \(data) to \(getPrintableString(for: &out))")
     }

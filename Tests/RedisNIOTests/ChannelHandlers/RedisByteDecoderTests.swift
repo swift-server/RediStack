@@ -253,10 +253,7 @@ extension RedisByteDecoderTests {
     }
 
     func test_badMessage_throws() {
-        do {
-            _ = try decodeTest("&3\r\n").0
-            XCTFail("Failed to properly throw error")
-        } catch { XCTAssertTrue(error is RESPTranslator.ParsingError) }
+        XCTAssertThrowsError(try decodeTest("&3\r\n").0)
     }
 
     private static let completeMessages = [
