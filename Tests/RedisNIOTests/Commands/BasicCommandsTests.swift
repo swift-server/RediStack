@@ -60,14 +60,14 @@ final class BasicCommandsTests: XCTestCase {
 
     func test_expire() throws {
         try connection.set(#function, to: "value").wait()
-        let before = try connection.get(#function).wait()
-        XCTAssertNotNil(before)
-
-        let result = try connection.expire(#function, after: .nanoseconds(1)).wait()
-        XCTAssertEqual(result, true)
-
-        let after = try connection.get(#function).wait()
-        XCTAssertNil(after)
+        XCTAssertNotNil(try connection.get(#function).wait())
+        XCTAssertTrue(try connection.expire(#function, after: .nanoseconds(1)).wait())
+        XCTAssertNil(try connection.get(#function).wait())
+        
+        try connection.set(#function, to: "new value").wait()
+        XCTAssertNotNil(try connection.get(#function).wait())
+        XCTAssertTrue(try connection.expire(#function, after: .seconds(10)).wait())
+        XCTAssertNotNil(try connection.get(#function).wait())
     }
 
     func test_ping() throws {
