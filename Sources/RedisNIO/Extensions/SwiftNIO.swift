@@ -44,9 +44,9 @@ extension Channel {
     /// - Returns: An `EventLoopFuture` that resolves after all handlers have been added to the pipeline.
     public func addBaseRedisHandlers() -> EventLoopFuture<Void> {
         let handlers: [(ChannelHandler, name: String)] = [
-            (MessageToByteHandler(RedisMessageEncoder()), "RedisNIO.Outgoing"),
-            (ByteToMessageHandler(RedisByteDecoder()), "RedisNIO.Incoming"),
-            (RedisCommandHandler(), "RedisNIO.CommandQueue")
+            (MessageToByteHandler(RedisMessageEncoder()), "RedisNIO.OutgoingHandler"),
+            (ByteToMessageHandler(RedisByteDecoder()), "RedisNIO.IncomingHandler"),
+            (RedisCommandHandler(), "RedisNIO.CommandHandler")
         ]
         return .andAllSucceed(
             handlers.map { self.pipeline.addHandler($0, name: $1) },

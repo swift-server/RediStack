@@ -166,7 +166,7 @@ public final class RedisConnection: RedisClient {
         let args = arguments.map { $0.convertedToRESPValue() }
 
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
-        let context = RedisCommandContext(
+        let context = RedisCommand(
             command: .array([RESPValue(bulk: command)] + args),
             promise: promise
         )
