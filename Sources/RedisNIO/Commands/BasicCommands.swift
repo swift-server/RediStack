@@ -84,11 +84,11 @@ extension RedisClient {
     /// [https://redis.io/commands/expire](https://redis.io/commands/expire)
     /// - Parameters:
     ///     - key: The key to set the expiration on.
-    ///     - deadline: The time from now the key will expire at.
+    ///     - timeout: The time from now the key will expire at.
     /// - Returns: `true` if the expiration was set.
     @inlinable
-    public func expire(_ key: String, after deadline: TimeAmount) -> EventLoopFuture<Bool> {
-        let amount = deadline.nanoseconds / 1_000_000_000
+    public func expire(_ key: String, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
+        let amount = timeout.nanoseconds / 1_000_000_000
         return send(command: "EXPIRE", with: [key, amount])
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
