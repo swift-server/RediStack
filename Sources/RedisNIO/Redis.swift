@@ -21,35 +21,6 @@ import NIO
 /// are scoped within this namespace.
 public enum Redis { }
 
-// MARK: ClientBootstrap
-
-extension Redis {
-    /// Makes a new `ClientBootstrap` instance with a default Redis `Channel` pipeline
-    /// for sending and receiving messages in Redis Serialization Protocol (RESP) format.
-    ///
-    /// See `RedisMessageEncoder`, `RedisByteDecoder`, and `RedisCommandHandler`.
-    /// - Parameter using: The `EventLoopGroup` to build the `ClientBootstrap` on.
-    /// - Returns: A `ClientBootstrap` with the default configuration of a `Channel` pipeline for RESP messages.
-    public static func makeDefaultClientBootstrap(using group: EventLoopGroup) -> ClientBootstrap {
-        return ClientBootstrap(group: group)
-            .channelOption(
-                ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR),
-                value: 1
-            )
-            .channelInitializer { channel in
-                let handlers: [(ChannelHandler, String)] = [
-                    (MessageToByteHandler(RedisMessageEncoder()), "RedisNIO.Outgoing"),
-                    (ByteToMessageHandler(RedisByteDecoder()), "RedisNIO.Incoming"),
-                    (RedisCommandHandler(), "RedisNIO.Queue")
-                ]
-                return .andAllSucceed(
-                    handlers.map { channel.pipeline.addHandler($0, name: $1) },
-                    on: group.next()
-                )
-            }
-    }
-}
-
 // MARK: Connection Factory
 
 extension Redis {
@@ -81,9 +52,9 @@ extension Redis {
         password: String? = nil,
         logger: Logger = Logger(label: "RedisNIO.RedisConnection")
     ) -> EventLoopFuture<RedisConnection> {
-        let bootstrap = makeDefaultClientBootstrap(using: group)
+        let client = ClientBootstrap.makeRedisTCPClient(group: group)
 
-        return bootstrap.connect(to: socket)
+        return client.connect(to: socket)
             .map { return RedisConnection(channel: $0, logger: logger) }
             .flatMap { client in
                 guard let pw = password else {
