@@ -53,11 +53,11 @@ final class RedisMessageEncoderTests: XCTestCase {
         try runEncodePass(with: bs1) { XCTAssertEqual($0.readableBytes, 11) }
         XCTAssertNoThrow(try self.channel.writeOutbound(bs1))
 
-        let bs2: RESPValue = "®in§³¾"
+        let bs2: RESPValue = .init(bulk: "®in§³¾")
         try runEncodePass(with: bs2) { XCTAssertEqual($0.readableBytes, 17) }
         XCTAssertNoThrow(try self.channel.writeOutbound(bs2))
 
-        let bs3: RESPValue = ""
+        let bs3: RESPValue = .init(bulk: "")
         try runEncodePass(with: bs3) { XCTAssertEqual($0.readableBytes, 6) }
         XCTAssertNoThrow(try self.channel.writeOutbound(bs3))
     }

@@ -91,7 +91,7 @@ extension RedisByteDecoderTests {
     }
 
     func testArrays() throws {
-        func runArrayTest(_ input: String) throws -> ContiguousArray<RESPValue>? {
+        func runArrayTest(_ input: String) throws -> [RESPValue]? {
             return try runTest(input)?.array
         }
 
@@ -100,7 +100,7 @@ extension RedisByteDecoderTests {
         XCTAssertEqual(try runArrayTest("*0\r\n")?.count, 0)
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*1\r\n$3\r\nfoo\r\n"),
-            expected: ["foo"]
+            expected: [.init(bulk: "foo")]
         ))
         XCTAssertTrue(arraysAreEqual(
             try runArrayTest("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n"),
@@ -136,8 +136,8 @@ extension RedisByteDecoderTests {
     }
 
     private func arraysAreEqual(
-        _ lhs: ContiguousArray<RESPValue>?,
-        expected right: ContiguousArray<RESPValue>
+        _ lhs: [RESPValue]?,
+        expected right: [RESPValue]
     ) -> Bool {
         guard
             let left = lhs,

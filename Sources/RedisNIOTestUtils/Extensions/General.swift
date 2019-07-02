@@ -12,19 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Foundation
 import NIO
-@testable import RedisNIO
 
-extension Redis {
-    static func makeConnection() throws -> EventLoopFuture<RedisConnection> {
-        let env = ProcessInfo.processInfo.environment
-        return Redis.makeConnection(
-            to: try .makeAddressResolvingHost(
-                env["REDIS_URL"] ?? "127.0.0.1",
-                port: RedisConnection.defaultPort
-            ),
-            password: env["REDIS_PW"]
-        )
+private let allocator = ByteBufferAllocator()
+
+extension String {
+    /// The UTF-8 byte representation of the string.
+    public var bytes: [UInt8] { return .init(self.utf8) }
+    
+    /// Creates a `NIO.ByteBuffer` with the string's value written into it.
+    public var byteBuffer: ByteBuffer {
+        var buffer = allocator.buffer(capacity: self.count)
+        buffer.writeString(self)
+        return buffer
     }
 }
