@@ -1,10 +1,10 @@
 stages:
-  - build release
-  - test
-  - docs
+  - Build in Release
+  - Test
+  - Docs
 
 pages:
-  stage: docs
+  stage: Docs
   only:
     - tags
   tags:
@@ -32,22 +32,29 @@ pages:
       - public
 
 .build:
-  stage: build release
+  stage: Build in Release
   tags:
     - docker
   script:
     - swift build -c release -v
 
-build ubuntu-xenial:
+build 5.0:ubuntu-xenial:
   extends: .build
   image: swift:5.0-xenial
+build 5.1:ubuntu-xenial:
+  extends: .build
+  image: norionomura/swift:swift-5.1-branch
+build latest:ubuntu-xenial:
+  extends: .build
+  image: norionomura/swift:nightly
+  allow_failure: true
 
-build ubuntu-bionic:
+build 5.0:ubuntu-bionic:
   extends: .build
   image: swift:5.0-bionic
 
 .test:
-  stage: test
+  stage: Test
   tags:
     - docker
   variables:
@@ -61,10 +68,17 @@ build ubuntu-bionic:
     - swift build -v
     - swift test
 
-test ubuntu-xenial:
+test 5.0:ubuntu-xenial:
   extends: .test
   image: swift:5.0-xenial
+test 5.1:ubuntu-xenial:
+  extends: .test
+  image: norionomura/swift:swift-5.1-branch
+test latest:ubuntu-xenial:
+  extends: .test
+  image: norionomura/swift:nightly
+  allow_failure: true
 
-test ubuntu-bionic:
+test 5.0:ubuntu-bionic:
   extends: .test
   image: swift:5.0-bionic
