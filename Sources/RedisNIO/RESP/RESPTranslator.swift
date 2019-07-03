@@ -224,7 +224,7 @@ extension RESPTranslator {
         guard elementCount > -1 else { return .null } // '*-1\r\n'
         guard elementCount > 0 else { return .array([]) } // '*0\r\n'
         
-        var results: ContiguousArray<RESPValue> = []
+        var results: [RESPValue] = []
         results.reserveCapacity(elementCount)
         
         for _ in 0..<elementCount {

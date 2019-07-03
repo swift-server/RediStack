@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
 final class BasicCommandsTests: XCTestCase {

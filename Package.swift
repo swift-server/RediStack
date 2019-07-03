@@ -27,6 +27,7 @@ let package = Package(
     ],
     targets: [
         .target(name: "RedisNIO", dependencies: ["NIO", "Logging", "Metrics"]),
-        .testTarget(name: "RedisNIOTests", dependencies: ["RedisNIO", "NIO"])
+        .target(name: "RedisNIOTestUtils", dependencies: ["NIO", "RedisNIO"]),
+        .testTarget(name: "RedisNIOTests", dependencies: ["RedisNIO", "NIO", "RedisNIOTestUtils"])
     ]
 )

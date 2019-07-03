@@ -12,15 +12,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-/// Capable of converting to / from `RESPValue`.
+/// An object that is capable of being converted to and from `RESPValue` representations arbitrarily.
+/// - Important: When conforming your types to be sent to a Redis server, it is expected to always be stored in a `.bulkString` representation. Redis will
+/// reject any other `RESPValue` type sent to it.
+///
+/// Conforming to this protocol only provides convenience methods of translating the Swift type into a `RESPValue` representation within the driver, and references
+/// to a `RESPValueConvertible` instance should be short lived for that purpose.
+///
+/// See `RESPValue`.
 public protocol RESPValueConvertible {
+    /// Attempts to create a new instance of the conforming type based on the value represented by the `RESPValue`.
+    /// - Parameter value: The `RESPValue` representation to attempt to initialize from.
     init?(fromRESP value: RESPValue)
 
-    /// Creates a `RESPValue` representation.
+    /// Creates a `RESPValue` representation of the conforming type's value.
     func convertedToRESPValue() -> RESPValue
 }
 
 extension RESPValue: RESPValueConvertible {
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
         self = value
     }
@@ -32,9 +42,12 @@ extension RESPValue: RESPValueConvertible {
 }
 
 extension RedisError: RESPValueConvertible {
+    /// Unwraps an `.error` representation directly into a `RedisError` instance.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let error = value.error else { return nil }
-        self = error
+        guard case let .error(e) = value else { return nil }
+        self = e
     }
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
@@ -44,9 +57,27 @@ extension RedisError: RESPValueConvertible {
 }
 
 extension String: RESPValueConvertible {
+    /// Attempts to provide a UTF-8 representation of the `RESPValue` provided.
+    ///
+    /// - `.simpleString` and `.bulkString` have their bytes interpeted into a UTF-8 `String`.
+    /// - `.integer` displays the ASCII representation (e.g. 30 converts to "30")
+    /// - `.error` uses the `RedisError.message`
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let string = value.string else { return nil }
-        self = string
+        switch value {
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
+                return nil
+            }
+            self = string
+
+        case .bulkString(.none): self = ""
+        case let .integer(value): self = value.description
+        case let .error(e): self = e.message
+        default: return nil
+        }
     }
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
@@ -56,12 +87,19 @@ extension String: RESPValueConvertible {
 }
 
 extension FixedWidthInteger {
+    /// Attempts to pull an Integer value from the `RESPValue` representation.
+    ///
+    /// If the value is not an `.integer`, it will attempt to create a `String` representation to then attempt to create an Integer from.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)` and `String.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        if let int = value.int {
+        if case let .integer(int) = value {
             self = Self(int)
         } else {
-            guard let string = value.string else { return nil }
-            guard let int = Self(string) else { return nil }
+            guard
+                let string = String(fromRESP: value),
+                let int = Self(string)
+            else { return nil }
             self = Self(int)
         }
     }
@@ -84,10 +122,17 @@ extension UInt32: RESPValueConvertible {}
 extension UInt64: RESPValueConvertible {}
 
 extension Double: RESPValueConvertible {
+    /// Attempts to translate the `RESPValue` as a `Double`.
+    ///
+    /// This will only succeed if the value is a ASCII representation in a `.simpleString` or `.bulkString`, or is an `.integer`.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)` and `String.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let string = value.string else { return nil }
-        guard let float = Double(string) else { return nil }
-        self = float
+        guard
+            let string = String(fromRESP: value),
+            let double = Double(string)
+        else { return nil }
+        self = double
     }
 
     /// See `RESPValueConvertible.convertedToRESPValue()`
@@ -97,9 +142,16 @@ extension Double: RESPValueConvertible {
 }
 
 extension Float: RESPValueConvertible {
+    /// Attempts to translate the `RESPValue` as a `Float`.
+    ///
+    /// This will only succeed if the value is a ASCII representation in a `.simpleString` or `.bulkString`, or is an `.integer`.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)` and `String.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let string = value.string else { return nil }
-        guard let float = Float(string) else { return nil }
+        guard
+            let string = String(fromRESP: value),
+            let float = Float(string)
+            else { return nil }
         self = float
     }
 
@@ -110,33 +162,48 @@ extension Float: RESPValueConvertible {
 }
 
 extension Collection where Element: RESPValueConvertible {
+    /// Converts all elements into their `RESPValue` representation, storing all results into a final `.array` representation.
+    ///
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        let elements = map { $0.convertedToRESPValue() }
-        let value = elements.withUnsafeBufferPointer {
-            ContiguousArray<RESPValue>(UnsafeRawBufferPointer($0).bindMemory(to: RESPValue.self))
-        }
+        var value: [RESPValue] = []
+        value.reserveCapacity(self.count)
+        self.forEach { value.append($0.convertedToRESPValue()) }
         return .array(value)
     }
 }
 
 extension Array: RESPValueConvertible where Element: RESPValueConvertible {
+    /// Converts all elements into their Swift type, compacting non-`nil` results into a new `Array`.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let array = value.array else { return nil }
-        self = array.compactMap { Element(fromRESP: $0) }
+        guard case let .array(a) = value else { return nil }
+        self = a.compactMap(Element.init)
     }
 }
 
-extension ContiguousArray: RESPValueConvertible where Element: RESPValueConvertible {
+extension Array where Element == UInt8 {
+    /// Converts the data stored in `.simpleString` and `.bulkString` representations into a raw byte array.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let array = value.array else { return nil }
-        self = array.compactMap(Element.init).withUnsafeBytes {
-            .init(UnsafeRawBufferPointer($0).bindMemory(to: Element.self))
+        switch value {
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            guard let bytes = buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes) else { return nil }
+            self = bytes
+            
+        case .bulkString(.none): self = []
+        default: return nil
         }
     }
 }
 
 extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
+    /// Translates `.null` into `nil`, otherwise the result of `Wrapped.init(fromRESP:)`.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
         guard !value.isNull else { return nil }
         guard let wrapped = Wrapped(fromRESP: value) else { return nil }
@@ -144,7 +211,9 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
         self = .some(wrapped)
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`.
+    /// Creates a `.null` representation when `nil`, otherwise the result of `Wrapped.convertedToRESPValue()`.
+    ///
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         switch self {
         case .none: return .null
@@ -156,12 +225,22 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
 import struct Foundation.Data
 
 extension Data: RESPValueConvertible {
+    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
-        guard let data = value.data else { return nil }
-        self = data
+        switch value {
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            self = Data(buffer.readableBytesView)
+            
+        case .bulkString(.none): self = Data()
+        default: return nil
+        }
     }
 
+    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
-        return .bulkString(self.byteBuffer)
+        var buffer = RESPValue.allocator.buffer(capacity: self.count)
+        buffer.writeBytes(self)
+        return .bulkString(buffer)
     }
 }
