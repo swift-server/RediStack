@@ -82,7 +82,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
         
-        self.logger.critical("Error in channel pipeline.", metadata: ["error": .string(error.localizedDescription)])
+        self.logger.critical("Error in channel pipeline.", metadata: ["error": "\(error.localizedDescription)"])
 
         context.close(promise: nil)
     }
