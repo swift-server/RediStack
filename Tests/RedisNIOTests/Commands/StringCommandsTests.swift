@@ -13,26 +13,11 @@
 //===----------------------------------------------------------------------===//
 
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class StringCommandsTests: XCTestCase {
+final class StringCommandsTests: RedisIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
-
-    private var connection: RedisConnection!
-
-    override func setUp() {
-        do {
-            connection = try Redis.makeConnection().wait()
-        } catch {
-            XCTFail("Failed to create RedisConnection! \(error)")
-        }
-    }
-
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
-    }
 
     func test_get() throws {
         try connection.set(#function, to: "value").wait()
