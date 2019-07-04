@@ -27,7 +27,8 @@ extension RedisClient {
     /// - Returns: A list of elements found within the set.
     @inlinable
     public func smembers(of key: String) -> EventLoopFuture<[RESPValue]> {
-        return send(command: "SMEMBERS", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "SMEMBERS", with: args)
             .convertFromRESPValue()
     }
 
@@ -39,8 +40,12 @@ extension RedisClient {
     ///     - key: The key of the set to look in.
     /// - Returns: `true` if the element is in the set.
     @inlinable
-    public func sismember(_ element: RESPValueConvertible, of key: String) -> EventLoopFuture<Bool> {
-        return send(command: "SISMEMBER", with: [key, element])
+    public func sismember<Value: RESPValueConvertible>(_ element: Value, of key: String) -> EventLoopFuture<Bool> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "SISMEMBER", with: args)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
@@ -52,7 +57,8 @@ extension RedisClient {
     /// - Returns: The total count of elements in the set.
     @inlinable
     public func scard(of key: String) -> EventLoopFuture<Int> {
-        return send(command: "SCARD", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "SCARD", with: args)
             .convertFromRESPValue()
     }
 
@@ -64,10 +70,13 @@ extension RedisClient {
     ///     - key: The key of the set to insert into.
     /// - Returns: The number of elements that were added to the set.
     @inlinable
-    public func sadd(_ elements: [RESPValueConvertible], to key: String) -> EventLoopFuture<Int> {
+    public func sadd<Value: RESPValueConvertible>(_ elements: [Value], to key: String) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
+        
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
 
-        return send(command: "SADD", with: [key] + elements)
+        return send(command: "SADD", with: args)
             .convertFromRESPValue()
     }
 
@@ -79,10 +88,13 @@ extension RedisClient {
     ///     - key: The key of the set to remove from.
     /// - Returns: The number of elements that were removed from the set.
     @inlinable
-    public func srem(_ elements: [RESPValueConvertible], from key: String) -> EventLoopFuture<Int> {
+    public func srem<Value: RESPValueConvertible>(_ elements: [Value], from key: String) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
-        return send(command: "SREM", with: [key] + elements)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
+        
+        return send(command: "SREM", with: args)
             .convertFromRESPValue()
     }
 
@@ -98,8 +110,12 @@ extension RedisClient {
         assert(count >= 0, "A negative max count is nonsense.")
 
         guard count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
-
-        return send(command: "SPOP", with: [key, count])
+        
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: count)
+        ]
+        return send(command: "SPOP", with: args)
             .convertFromRESPValue()
     }
 
@@ -118,7 +134,11 @@ extension RedisClient {
     public func srandmember(from key: String, max count: Int = 1) -> EventLoopFuture<[RESPValue]> {
         guard count != 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
-        return send(command: "SRANDMEMBER", with: [key, count])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: count)
+        ]
+        return send(command: "SRANDMEMBER", with: args)
             .convertFromRESPValue()
     }
 
@@ -131,14 +151,19 @@ extension RedisClient {
     ///     - destKey: The key of the destination set.
     /// - Returns: `true` if the element was successfully removed from the source set.
     @inlinable
-    public func smove(
-        _ element: RESPValueConvertible,
+    public func smove<Value: RESPValueConvertible>(
+        _ element: Value,
         from sourceKey: String,
         to destKey: String
     ) -> EventLoopFuture<Bool> {
         guard sourceKey != destKey else { return self.eventLoop.makeSucceededFuture(true) }
 
-        return send(command: "SMOVE", with: [sourceKey, destKey, element])
+        let args: [RESPValue] = [
+            .init(bulk: sourceKey),
+            .init(bulk: destKey),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "SMOVE", with: args)
             .convertFromRESPValue()
             .map { return $0 == 1 }
     }
@@ -175,7 +200,8 @@ extension RedisClient {
     public func sdiff(of keys: [String]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
-        return send(command: "SDIFF", with: keys)
+        let args = keys.map(RESPValue.init)
+        return send(command: "SDIFF", with: args)
             .convertFromRESPValue()
     }
 
@@ -191,7 +217,10 @@ extension RedisClient {
     public func sdiffstore(as destination: String, sources keys: [String]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        return send(command: "SDIFFSTORE", with: [destination] + keys)
+        var args: [RESPValue] = [.init(bulk: destination)]
+        args.append(convertingContentsOf: keys)
+        
+        return send(command: "SDIFFSTORE", with: args)
             .convertFromRESPValue()
     }
 }
@@ -208,7 +237,8 @@ extension RedisClient {
     public func sinter(of keys: [String]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
-        return send(command: "SINTER", with: keys)
+        let args = keys.map(RESPValue.init)
+        return send(command: "SINTER", with: args)
             .convertFromRESPValue()
     }
 
@@ -224,7 +254,10 @@ extension RedisClient {
     public func sinterstore(as destination: String, sources keys: [String]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        return send(command: "SINTERSTORE", with: [destination] + keys)
+        var args: [RESPValue] = [.init(bulk: destination)]
+        args.append(convertingContentsOf: keys)
+        
+        return send(command: "SINTERSTORE", with: args)
             .convertFromRESPValue()
     }
 }
@@ -241,7 +274,8 @@ extension RedisClient {
     public func sunion(of keys: [String]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
         
-        return send(command: "SUNION", with: keys)
+        let args = keys.map(RESPValue.init)
+        return send(command: "SUNION", with: args)
             .convertFromRESPValue()
     }
 
@@ -257,7 +291,10 @@ extension RedisClient {
     public func sunionstore(as destination: String, sources keys: [String]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        return send(command: "SUNIONSTORE", with: [destination] + keys)
+        var args: [RESPValue] = [.init(bulk: destination)]
+        args.append(convertingContentsOf: keys)
+        
+        return send(command: "SUNIONSTORE", with: args)
             .convertFromRESPValue()
     }
 }

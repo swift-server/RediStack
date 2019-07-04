@@ -167,8 +167,7 @@ extension Collection where Element: RESPValueConvertible {
     /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         var value: [RESPValue] = []
-        value.reserveCapacity(self.count)
-        self.forEach { value.append($0.convertedToRESPValue()) }
+        value.append(convertingContentsOf: self)
         return .array(value)
     }
 }

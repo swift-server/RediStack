@@ -61,7 +61,8 @@ extension Redis {
                     return group.next().makeSucceededFuture(client)
                 }
 
-                return client.send(command: "AUTH", with: [pw])
+                let args = [RESPValue(bulk: pw)]
+                return client.send(command: "AUTH", with: args)
                     .map { _ in return client }
             }
     }
