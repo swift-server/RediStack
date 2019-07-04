@@ -30,7 +30,7 @@ extension Array where Element == RESPValue {
     /// Adds the elements of a collection to this array, delegating the details of how they are added to the given closure.
     ///
     /// When your closure will be doing more than a simple transform of the element value, such as when you're adding both the key _and_ value from a `KeyValuePair`,
-    /// you should set the `overestimatedCountBeingAdded` to a value you do not expect to reach in order to prevent multiple allocations from the increasing
+    /// you should set the `overestimatedCountBeingAdded` to a value you do not expect to exceed in order to prevent multiple allocations from the increasing
     /// element count.
     ///
     /// For example:
