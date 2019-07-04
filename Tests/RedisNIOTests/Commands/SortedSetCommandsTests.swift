@@ -47,20 +47,22 @@ final class SortedSetCommandsTests: XCTestCase {
     func test_zadd() throws {
         _ = try connection.send(command: "FLUSHALL").wait()
 
-        XCTAssertThrowsError(try connection.zadd([(30, 2)], to: #function, options: ["INCR"]).wait())
-
         var count = try connection.zadd([(30, 2)], to: #function).wait()
         XCTAssertEqual(count, 1)
         count = try connection.zadd([(30, 5)], to: #function).wait()
         XCTAssertEqual(count, 0)
-        count = try connection.zadd([(30, 6), (31, 0), (32, 1)], to: #function, options: ["NX"]).wait()
+        count = try connection.zadd([(30, 6), (31, 0), (32, 1)], to: #function, options: [.onlyAddNewElements]).wait()
         XCTAssertEqual(count, 2)
-        count = try connection.zadd([(32, 2), (33, 3)], to: #function, options: ["XX", "CH"]).wait()
+        count = try connection.zadd(
+            [(32, 2), (33, 3)],
+            to: #function,
+            options: [.onlyUpdateExistingElements, .returnChangedCount]
+        ).wait()
         XCTAssertEqual(count, 1)
 
-        var success = try connection.zadd((30, 7), to: #function, options: ["CH"]).wait()
+        var success = try connection.zadd((30, 7), to: #function, options: [.returnChangedCount]).wait()
         XCTAssertTrue(success)
-        success = try connection.zadd((30, 8), to: #function, options: ["NX"]).wait()
+        success = try connection.zadd((30, 8), to: #function, options: [.onlyAddNewElements]).wait()
         XCTAssertFalse(success)
     }
 
@@ -227,7 +229,7 @@ final class SortedSetCommandsTests: XCTestCase {
             as: #function+#file,
             sources: [key, #function, #file],
             weights: [3, 2, 1],
-            aggregateMethod: "MAX"
+            aggregateMethod: .max
         ).wait()
         XCTAssertEqual(unionCount, 10)
         let rank = try connection.zrank(of: 10, in: #function+#file).wait()
@@ -243,7 +245,7 @@ final class SortedSetCommandsTests: XCTestCase {
             as: #file,
             sources: [key, #function],
             weights: [3, 2],
-            aggregateMethod: "MIN"
+            aggregateMethod: .min
         ).wait()
         XCTAssertEqual(unionCount, 2)
         let rank = try connection.zrank(of: 10, in: #file).wait()

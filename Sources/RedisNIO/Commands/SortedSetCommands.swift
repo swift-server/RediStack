@@ -46,6 +46,22 @@ extension RedisClient {
 
 // MARK: General
 
+/// The supported options for the `zadd` command with Redis SortedSet types.
+/// - Important: Per Redis documentation, `.onlyUpdateExistingElements` and `.onlyAddNewElements` are mutually exclusive!
+/// - Note: `INCR` is not supported by this library in `zadd`. Use the `zincrby(:element:in:)` method instead.
+/// See [https://redis.io/commands/zadd#zadd-options-redis-302-or-greater](https://redis.io/commands/zadd#zadd-options-redis-302-or-greater)
+public enum RedisSortedSetAddOption: String {
+    /// When adding elements, any that do not already exist in the SortedSet will be ignored and the score of the existing element will be updated.
+    case onlyUpdateExistingElements = "XX"
+    /// When adding elements, any that already exist in the SortedSet will be ignored and the score of the existing element will not be updated.
+    case onlyAddNewElements = "NX"
+    /// `zadd` normally returns the number of new elements added to the set,
+    /// but this option will instead have the command return the number of elements changed.
+    ///
+    /// "Changed" in this context are new elements added, and elements that had their score updated.
+    case returnChangedCount = "CH"
+}
+
 extension RedisClient {
     /// Adds elements to a sorted set, assigning their score to the values provided.
     ///
@@ -59,28 +75,21 @@ extension RedisClient {
     public func zadd<Value: RESPValueConvertible>(
         _ elements: [(element: Value, score: Double)],
         to key: String,
-        options: Set<String> = []
+        options: Set<RedisSortedSetAddOption> = []
     ) -> EventLoopFuture<Int> {
-        guard !options.contains("INCR") else {
-            return self.eventLoop.makeFailedFuture(RedisNIOError.unsupportedOperation(
-                method: #function,
-                message: "INCR option is unsupported. Use zincrby(_:element:in:) instead."
-            ))
-        }
-
         assert(options.count <= 2, "Invalid number of options provided.")
-        assert(options.allSatisfy(["XX", "NX", "CH"].contains), "Unsupported option provided!")
         assert(
-            !(options.contains("XX") && options.contains("NX")),
-            "XX and NX options are mutually exclusive."
+            !(options.contains(.onlyAddNewElements) && options.contains(.onlyUpdateExistingElements)),
+            ".onlyAddNewElements and .onlyUpdateExistingElements options are mutually exclusive."
         )
 
         var args: [RESPValue] = [.init(bulk: key)]
-        args.append(convertingContentsOf: options)
-
-        for (element, score) in elements {
-            args.append(.init(bulk: score.description))
-            args.append(element.convertedToRESPValue())
+        args.add(contentsOf: options) { (array, option) in
+            array.append(.init(bulk: option.rawValue))
+        }
+        args.add(contentsOf: elements, overestimatedCountBeingAdded: elements.count * 2) { (array, next) in
+            array.append(.init(bulk: next.score.description))
+            array.append(next.element.convertedToRESPValue())
         }
 
         return send(command: "ZADD", with: args)
@@ -99,7 +108,7 @@ extension RedisClient {
     public func zadd<Value: RESPValueConvertible>(
         _ element: (element: Value, score: Double),
         to key: String,
-        options: Set<String> = []
+        options: Set<RedisSortedSetAddOption> = []
     ) -> EventLoopFuture<Bool> {
         return zadd([element], to: key, options: options)
             .map { return $0 == 1 }
@@ -490,6 +499,20 @@ extension RedisClient {
 
 // MARK: Intersect and Union
 
+/// The supported methods for aggregating results from the `zunionstore` or `zinterstore` commands in Redis.
+///
+/// For more information on these values, see
+/// [https://redis.io/commands/zunionstore](https://redis.io/commands/zunionstore)
+/// [https://redis.io/commands/zinterstore](https://redis.io/commands/zinterstore)
+public enum RedisSortedSetAggregateMethod: String {
+    /// Add the score of all matching elements in the source SortedSets.
+    case sum = "SUM"
+    /// Use the minimum score of the matching elements in the source SortedSets.
+    case min = "MIN"
+    /// Use the maximum score of the matching elements in the source SortedSets.
+    case max = "MAX"
+}
+
 extension RedisClient {
     /// Calculates the union of two or more sorted sets and stores the result.
     /// - Note: This operation overwrites any value stored at the destination key.
@@ -499,14 +522,14 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the union.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the union. Supported values are "SUM", "MIN", and "MAX".
+    ///     - aggregateMethod: The method of aggregating the values of the union. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zunionstore(
         as destination: String,
         sources: [String],
         weights: [Int]? = nil,
-        aggregateMethod aggregate: String? = nil
+        aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
         return _zopstore(command: "ZUNIONSTORE", sources, destination, weights, aggregate)
     }
@@ -519,14 +542,14 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the intersection.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the intersection. Supported values are "SUM", "MIN", and "MAX".
+    ///     - aggregateMethod: The method of aggregating the values of the intersection. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zinterstore(
         as destination: String,
         sources: [String],
         weights: [Int]? = nil,
-        aggregateMethod aggregate: String? = nil
+        aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
         return _zopstore(command: "ZINTERSTORE", sources, destination, weights, aggregate)
     }
@@ -537,8 +560,8 @@ extension RedisClient {
         _ sources: [String],
         _ destination: String,
         _ weights: [Int]?,
-        _ aggregate: String?) -> EventLoopFuture<Int>
-    {
+        _ aggregate: RedisSortedSetAggregateMethod?
+    ) -> EventLoopFuture<Int> {
         assert(sources.count > 0, "At least 1 source key should be provided.")
 
         var args: [RESPValue] = [
@@ -556,10 +579,8 @@ extension RedisClient {
         }
 
         if let a = aggregate {
-            assert(a == "SUM" || a == "MIN" || a == "MAX", "Aggregate method provided is unsupported.")
-
             args.append(.init(bulk: "AGGREGATE"))
-            args.append(.init(bulk: a))
+            args.append(.init(bulk: a.rawValue))
         }
 
         return send(command: command, with: args)
