@@ -27,7 +27,7 @@ final class SortedSetCommandsTests: XCTestCase {
         do {
             connection = try Redis.makeConnection().wait()
 
-            var dataset: [(RESPValueConvertible, Double)] = []
+            var dataset: [(Int, Double)] = []
             for index in 1...10 {
                 dataset.append((index, Double(index)))
             }

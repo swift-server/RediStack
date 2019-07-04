@@ -35,7 +35,7 @@ public protocol RedisClient {
     ///     - command: The command to execute.
     ///     - arguments: The arguments, if any, to be sent with the command.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
-    func send(command: String, with arguments: [RESPValueConvertible]) -> EventLoopFuture<RESPValue>
+    func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
 }
 
 extension RedisClient {
@@ -156,18 +156,19 @@ public final class RedisConnection: RedisClient {
     ///     the `sendCommandsImmediately` property.
     public func send(
         command: String,
-        with arguments: [RESPValueConvertible]
+        with arguments: [RESPValue]
     ) -> EventLoopFuture<RESPValue> {
         guard isConnected else {
             logger.error("\(RedisNIOError.connectionClosed.localizedDescription)")
             return channel.eventLoop.makeFailedFuture(RedisNIOError.connectionClosed)
         }
 
-        let args = arguments.map { $0.convertedToRESPValue() }
+        var commandParts: [RESPValue] = [.init(bulk: command)]
+        commandParts.append(contentsOf: arguments)
 
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let context = RedisCommand(
-            command: .array([RESPValue(bulk: command)] + args),
+            command: .array(commandParts),
             promise: promise
         )
 

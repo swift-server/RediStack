@@ -22,7 +22,8 @@ extension RedisClient {
     /// - Returns: The message sent with the command.
     @inlinable
     public func echo(_ message: String) -> EventLoopFuture<String> {
-        return send(command: "ECHO", with: [message])
+        let args = [RESPValue(bulk: message)]
+        return send(command: "ECHO", with: args)
             .convertFromRESPValue()
     }
 
@@ -33,8 +34,10 @@ extension RedisClient {
     /// - Returns: The provided message or Redis' default response of `"PONG"`.
     @inlinable
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
-        let arg = message != nil ? [message] : []
-        return send(command: "PING", with: arg)
+        let args: [RESPValue] = message != nil
+            ? [.init(bulk: message!)] // safe because we did a nil pre-check
+            : []
+        return send(command: "PING", with: args)
             .convertFromRESPValue()
     }
 
@@ -46,7 +49,8 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
     public func select(database index: Int) -> EventLoopFuture<Void> {
-        return send(command: "SELECT", with: [index])
+        let args = [RESPValue(bulk: index)]
+        return send(command: "SELECT", with: args)
             .map { _ in return () }
     }
 
@@ -59,8 +63,11 @@ extension RedisClient {
     /// - Returns: `true` if the swap was successful.
     @inlinable
     public func swapDatabase(_ first: Int, with second: Int) -> EventLoopFuture<Bool> {
-        /// connection.swapDatabase(index: 0, withIndex: 10)
-        return send(command: "SWAPDB", with: [first, second])
+        let args: [RESPValue] = [
+            .init(bulk: first),
+            .init(bulk: second)
+        ]
+        return send(command: "SWAPDB", with: args)
             .convertFromRESPValue(to: String.self)
             .map { return $0 == "OK" }
     }
@@ -74,7 +81,8 @@ extension RedisClient {
     public func delete(_ keys: [String]) -> EventLoopFuture<Int> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
-        return send(command: "DEL", with: keys)
+        let args = keys.map(RESPValue.init)
+        return send(command: "DEL", with: args)
             .convertFromRESPValue()
     }
 
@@ -89,7 +97,11 @@ extension RedisClient {
     @inlinable
     public func expire(_ key: String, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         let amount = timeout.nanoseconds / 1_000_000_000
-        return send(command: "EXPIRE", with: [key, amount])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: amount.description)
+        ]
+        return send(command: "EXPIRE", with: args)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
@@ -116,7 +128,7 @@ extension RedisClient {
     }
 
     @usableFromInline
-    func _scan<T>(
+    internal func _scan<T>(
         command: String,
         resultType: T.Type = T.self,
         _ key: String?,
@@ -127,19 +139,19 @@ extension RedisClient {
         where
         T: RESPValueConvertible
     {
-        var args: [RESPValueConvertible] = [pos]
+        var args: [RESPValue] = [.init(bulk: pos)]
 
         if let k = key {
-            args.insert(k, at: 0)
+            args.insert(.init(bulk: k), at: 0)
         }
 
         if let m = match {
-            args.append("match")
-            args.append(m)
+            args.append(.init(bulk: "match"))
+            args.append(.init(bulk: m))
         }
         if let c = count {
-            args.append("count")
-            args.append(c)
+            args.append(.init(bulk: "count"))
+            args.append(.init(bulk: c))
         }
 
         let response = send(command: command, with: args).convertFromRESPValue(to: [RESPValue].self)

@@ -24,7 +24,8 @@ extension RedisClient {
     /// - Returns: The number of elements in the list.
     @inlinable
     public func llen(of key: String) -> EventLoopFuture<Int> {
-        return send(command: "LLEN", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "LLEN", with: args)
             .convertFromRESPValue()
     }
 
@@ -37,7 +38,11 @@ extension RedisClient {
     /// - Returns: The element stored at index, or `.null` if out of bounds.
     @inlinable
     public func lindex(_ index: Int, from key: String) -> EventLoopFuture<RESPValue> {
-        return send(command: "LINDEX", with: [key, index])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: index)
+        ]
+        return send(command: "LINDEX", with: args)
     }
 
     /// Sets the value of an element in a list at the provided index position.
@@ -49,12 +54,17 @@ extension RedisClient {
     ///     - key: The key of the list to update.
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
-    public func lset(
+    public func lset<Value: RESPValueConvertible>(
         index: Int,
-        to value: RESPValueConvertible,
+        to value: Value,
         in key: String
     ) -> EventLoopFuture<Void> {
-        return send(command: "LSET", with: [key, index, value])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: index),
+            value.convertedToRESPValue()
+        ]
+        return send(command: "LSET", with: args)
             .map { _ in () }
     }
 
@@ -67,12 +77,17 @@ extension RedisClient {
     ///     - count: The max number of elements to remove matching the value. See Redis' documentation for more info.
     /// - Returns: The number of elements removed from the list.
     @inlinable
-    public func lrem(
-        _ value: RESPValueConvertible,
+    public func lrem<Value: RESPValueConvertible>(
+        _ value: Value,
         from key: String,
         count: Int = 0
     ) -> EventLoopFuture<Int> {
-        return send(command: "LREM", with: [key, count, value])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: count),
+            value.convertedToRESPValue()
+        ]
+        return send(command: "LREM", with: args)
             .convertFromRESPValue()
     }
 
@@ -86,7 +101,12 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
     public func ltrim(_ key: String, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
-        return send(command: "LTRIM", with: [key, start, stop])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: start),
+            .init(bulk: stop)
+        ]
+        return send(command: "LTRIM", with: args)
             .map { _ in () }
     }
 
@@ -102,7 +122,12 @@ extension RedisClient {
         within range: (startIndex: Int, endIndex: Int),
         from key: String
     ) -> EventLoopFuture<[RESPValue]> {
-        return send(command: "LRANGE", with: [key, range.startIndex, range.endIndex])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.startIndex),
+            .init(bulk: range.endIndex)
+        ]
+        return send(command: "LRANGE", with: args)
             .convertFromRESPValue()
     }
 
@@ -115,7 +140,11 @@ extension RedisClient {
     /// - Returns: The element that was moved.
     @inlinable
     public func rpoplpush(from source: String, to dest: String) -> EventLoopFuture<RESPValue> {
-        return send(command: "RPOPLPUSH", with: [source, dest])
+        let args: [RESPValue] = [
+            .init(bulk: source),
+            .init(bulk: dest)
+        ]
+        return send(command: "RPOPLPUSH", with: args)
     }
 
     /// Pops the last element from a source list and pushes it to a destination list, blocking until
@@ -141,7 +170,12 @@ extension RedisClient {
         to dest: String,
         timeout: Int = 0
     ) -> EventLoopFuture<RESPValue?> {
-        return send(command: "BRPOPLPUSH", with: [source, dest, timeout])
+        let args: [RESPValue] = [
+            .init(bulk: source),
+            .init(bulk: dest),
+            .init(bulk: timeout)
+        ]
+        return send(command: "BRPOPLPUSH", with: args)
             .map { $0.isNull ? nil: $0 }
     }
 }
@@ -158,9 +192,11 @@ extension RedisClient {
     ///     - pivot: The value of the element to insert before.
     /// - Returns: The size of the list after the insert, or -1 if an element matching the pivot value was not found.
     @inlinable
-    public func linsert<T>(_ element: T, into key: String, before pivot: T) -> EventLoopFuture<Int>
-        where T: RESPValueConvertible
-    {
+    public func linsert<Value: RESPValueConvertible>(
+        _ element: Value,
+        into key: String,
+        before pivot: Value
+    ) -> EventLoopFuture<Int> {
         return _linsert(pivotKeyword: "BEFORE", element, key, pivot)
     }
 
@@ -173,20 +209,28 @@ extension RedisClient {
     ///     - pivot: The value of the element to insert after.
     /// - Returns: The size of the list after the insert, or -1 if an element matching the pivot value was not found.
     @inlinable
-    public func linsert<T>(_ element: T, into key: String, after pivot: T) -> EventLoopFuture<Int>
-        where T: RESPValueConvertible
-    {
+    public func linsert<Value: RESPValueConvertible>(
+        _ element: Value,
+        into key: String,
+        after pivot: Value
+    ) -> EventLoopFuture<Int> {
         return _linsert(pivotKeyword: "AFTER", element, key, pivot)
     }
 
     @usableFromInline
-    func _linsert(
+    func _linsert<Value: RESPValueConvertible>(
         pivotKeyword: String,
-        _ element: RESPValueConvertible,
+        _ element: Value,
         _ key: String,
-        _ pivot: RESPValueConvertible
+        _ pivot: Value
     ) -> EventLoopFuture<Int> {
-        return send(command: "LINSERT", with: [key, pivotKeyword, pivot, element])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: pivotKeyword),
+            pivot.convertedToRESPValue(),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "LINSERT", with: args)
             .convertFromRESPValue()
     }
 }
@@ -201,7 +245,8 @@ extension RedisClient {
     /// - Returns: The element that was popped from the list, or `.null`.
     @inlinable
     public func lpop(from key: String) -> EventLoopFuture<RESPValue> {
-        return send(command: "LPOP", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "LPOP", with: args)
     }
 
     /// Pushes all of the provided elements into a list.
@@ -213,10 +258,13 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpush(_ elements: [RESPValueConvertible], into key: String) -> EventLoopFuture<Int> {
+    public func lpush<Value: RESPValueConvertible>(_ elements: [Value], into key: String) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
         
-        return send(command: "LPUSH", with: [key] + elements)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
+        
+        return send(command: "LPUSH", with: args)
             .convertFromRESPValue()
     }
 
@@ -229,8 +277,12 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
-        return send(command: "LPUSHX", with: [key, element])
+    public func lpushx<Value: RESPValueConvertible>(_ element: Value, into key: String) -> EventLoopFuture<Int> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "LPUSHX", with: args)
             .convertFromRESPValue()
     }
 }
@@ -245,7 +297,8 @@ extension RedisClient {
     /// - Returns: The element that was popped from the list, else `.null`.
     @inlinable
     public func rpop(from key: String) -> EventLoopFuture<RESPValue> {
-        return send(command: "RPOP", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "RPOP", with: args)
     }
 
     /// Pushes all of the provided elements into a list.
@@ -256,10 +309,13 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpush(_ elements: [RESPValueConvertible], into key: String) -> EventLoopFuture<Int> {
+    public func rpush<Value: RESPValueConvertible>(_ elements: [Value], into key: String) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
 
-        return send(command: "RPUSH", with: [key] + elements)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
+        
+        return send(command: "RPUSH", with: args)
             .convertFromRESPValue()
     }
 
@@ -272,8 +328,12 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpushx(_ element: RESPValueConvertible, into key: String) -> EventLoopFuture<Int> {
-        return send(command: "RPUSHX", with: [key, element])
+    public func rpushx<Value: RESPValueConvertible>(_ element: Value, into key: String) -> EventLoopFuture<Int> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "RPUSHX", with: args)
             .convertFromRESPValue()
     }
 }
@@ -375,7 +435,9 @@ extension RedisClient {
         _ keys: [String],
         _ timeout: Int
     ) -> EventLoopFuture<(String, RESPValue)?> {
-        let args = keys as [RESPValueConvertible] + [timeout]
+        var args = keys.map(RESPValue.init)
+        args.append(.init(bulk: timeout))
+        
         return send(command: command, with: args)
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }

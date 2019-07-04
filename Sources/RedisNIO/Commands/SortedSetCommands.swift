@@ -56,8 +56,8 @@ extension RedisClient {
     ///     - options: A set of options defined by Redis for this command to execute under.
     /// - Returns: The number of elements added to the sorted set.
     @inlinable
-    public func zadd(
-        _ elements: [(element: RESPValueConvertible, score: Double)],
+    public func zadd<Value: RESPValueConvertible>(
+        _ elements: [(element: Value, score: Double)],
         to key: String,
         options: Set<String> = []
     ) -> EventLoopFuture<Int> {
@@ -75,11 +75,12 @@ extension RedisClient {
             "XX and NX options are mutually exclusive."
         )
 
-        var args: [RESPValueConvertible] = [key] + options.map { $0 }
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: options)
 
         for (element, score) in elements {
-            args.append(score)
-            args.append(element)
+            args.append(.init(bulk: score.description))
+            args.append(element.convertedToRESPValue())
         }
 
         return send(command: "ZADD", with: args)
@@ -95,8 +96,8 @@ extension RedisClient {
     ///     - options: A set of options defined by Redis for this command to execute under.
     /// - Returns: `true` if the element was added or score was updated in the sorted set.
     @inlinable
-    public func zadd(
-        _ element: (element: RESPValueConvertible, score: Double),
+    public func zadd<Value: RESPValueConvertible>(
+        _ element: (element: Value, score: Double),
         to key: String,
         options: Set<String> = []
     ) -> EventLoopFuture<Bool> {
@@ -111,7 +112,8 @@ extension RedisClient {
     /// - Returns: The number of elements in the sorted set.
     @inlinable
     public func zcard(of key: String) -> EventLoopFuture<Int> {
-        return send(command: "ZCARD", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "ZCARD", with: args)
             .convertFromRESPValue()
     }
 
@@ -123,8 +125,12 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The score of the element provided, or `nil` if the element is not found in the set or the set does not exist.
     @inlinable
-    public func zscore(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Double?> {
-        return send(command: "ZSCORE", with: [key, element])
+    public func zscore<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Double?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZSCORE", with: args)
             .map { return Double(fromRESP: $0) }
     }
 
@@ -165,8 +171,12 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
-        return send(command: "ZRANK", with: [key, element])
+    public func zrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZRANK", with: args)
             .convertFromRESPValue()
     }
 
@@ -180,8 +190,12 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrevrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
-        return send(command: "ZREVRANK", with: [key, element])
+    public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZREVRANK", with: args)
             .convertFromRESPValue()
     }
 }
@@ -201,7 +215,12 @@ extension RedisClient {
         of key: String,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZCOUNT", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZCOUNT", with: args)
             .convertFromRESPValue()
     }
 
@@ -218,7 +237,12 @@ extension RedisClient {
         of key: String,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZLEXCOUNT", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZLEXCOUNT", with: args)
             .convertFromRESPValue()
     }
 }
@@ -278,12 +302,12 @@ extension RedisClient {
         _ count: Int?,
         _ key: String
     ) -> EventLoopFuture<[(RESPValue, Double)]> {
-        var args: [RESPValueConvertible] = [key]
+        var args: [RESPValue] = [.init(bulk: key)]
 
         if let c = count {
             guard c != 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
-            args.append(c)
+            args.append(.init(bulk: c))
         }
 
         return send(command: command, with: args)
@@ -413,7 +437,9 @@ extension RedisClient {
         _ keys: [String],
         _ timeout: Int
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
-        let args = keys as [RESPValueConvertible] + [timeout]
+        var args = keys.map(RESPValue.init)
+        args.append(.init(bulk: timeout))
+        
         return send(command: command, with: args)
             // per the Redis docs,
             // we will receive either a nil response,
@@ -447,12 +473,17 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The new score of the element.
     @inlinable
-    public func zincrby(
+    public func zincrby<Value: RESPValueConvertible>(
         _ amount: Double,
-        element: RESPValueConvertible,
+        element: Value,
         in key: String
     ) -> EventLoopFuture<Double> {
-        return send(command: "ZINCRBY", with: [key, amount, element])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: amount.description),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZINCRBY", with: args)
             .convertFromRESPValue()
     }
 }
@@ -510,21 +541,25 @@ extension RedisClient {
     {
         assert(sources.count > 0, "At least 1 source key should be provided.")
 
-        var args: [RESPValueConvertible] = [destination, sources.count] + sources
+        var args: [RESPValue] = [
+            .init(bulk: destination),
+            .init(bulk: sources.count)
+        ]
+        args.append(convertingContentsOf: sources)
 
         if let w = weights {
             assert(w.count > 0, "When passing a value for 'weights', at least 1 value should be provided.")
             assert(w.count <= sources.count, "Weights should be no larger than the amount of source keys.")
 
-            args.append("WEIGHTS")
-            args.append(contentsOf: w)
+            args.append(.init(bulk: "WEIGHTS"))
+            args.append(convertingContentsOf: w)
         }
 
         if let a = aggregate {
             assert(a == "SUM" || a == "MIN" || a == "MAX", "Aggregate method provided is unsupported.")
 
-            args.append("AGGREGATE")
-            args.append(a)
+            args.append(.init(bulk: "AGGREGATE"))
+            args.append(.init(bulk: a))
         }
 
         return send(command: command, with: args)
@@ -583,9 +618,13 @@ extension RedisClient {
         _ stop: Int,
         _ withScores: Bool
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, start, stop]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: start),
+            .init(bulk: stop)
+        ]
 
-        if withScores { args.append("WITHSCORES") }
+        if withScores { args.append(.init(bulk: "WITHSCORES")) }
 
         return send(command: command, with: args)
             .convertFromRESPValue()
@@ -647,13 +686,17 @@ extension RedisClient {
         _ withScores: Bool,
         _ limit: (offset: Int, count: Int)?
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, range.min, range.max]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
 
-        if withScores { args.append("WITHSCORES") }
+        if withScores { args.append(.init(bulk: "WITHSCORES")) }
 
         if let l = limit {
-            args.append("LIMIT")
-            args.append([l.offset, l.count])
+            args.append(.init(bulk: "LIMIT"))
+            args.append(convertingContentsOf: [l.offset, l.count])
         }
 
         return send(command: command, with: args)
@@ -713,11 +756,17 @@ extension RedisClient {
         _ range: (min: String, max: String),
         _ limit: (offset: Int, count: Int)?
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, range.min, range.max]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
 
         if let l = limit {
-            args.append("LIMIT")
-            args.append(contentsOf: [l.offset, l.count])
+            args.reserveCapacity(6) // 3 above, plus 3 being added
+            args.append(.init(bulk: "LIMIT"))
+            args.append(.init(bulk: l.offset))
+            args.append(.init(bulk: l.count))
         }
 
         return send(command: command, with: args)
@@ -736,10 +785,13 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The number of elements removed from the set.
     @inlinable
-    public func zrem(_ elements: [RESPValueConvertible], from key: String) -> EventLoopFuture<Int> {
+    public func zrem<Value: RESPValueConvertible>(_ elements: [Value], from key: String) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
-        return send(command: "ZREM", with: [key] + elements)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
+        
+        return send(command: "ZREM", with: args)
             .convertFromRESPValue()
     }
 
@@ -756,7 +808,12 @@ extension RedisClient {
         within range: (min: String, max: String),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYLEX", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZREMRANGEBYLEX", with: args)
             .convertFromRESPValue()
     }
 
@@ -772,7 +829,12 @@ extension RedisClient {
         within range: (start: Int, stop: Int),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYRANK", with: [key, range.start, range.stop])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.start),
+            .init(bulk: range.stop)
+        ]
+        return send(command: "ZREMRANGEBYRANK", with: args)
             .convertFromRESPValue()
     }
 
@@ -788,7 +850,12 @@ extension RedisClient {
         within range: (min: String, max: String),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYSCORE", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZREMRANGEBYSCORE", with: args)
             .convertFromRESPValue()
     }
 }
