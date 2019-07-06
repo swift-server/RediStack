@@ -31,7 +31,7 @@ extension RedisClient {
             let scoreItem = response[scoreIsFirst ? index : index + 1]
 
             guard let score = Double(fromRESP: scoreItem) else {
-                throw RedisNIOError.assertionFailure(message: "Unexpected response: '\(scoreItem)'")
+                throw RedisClientError.assertionFailure(message: "Unexpected response: '\(scoreItem)'")
             }
 
             let elementIndex = scoreIsFirst ? index + 1 : index
@@ -456,14 +456,14 @@ extension RedisClient {
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
                 guard let response = [RESPValue](fromRESP: $0) else {
-                    throw RedisNIOError.responseConversion(to: [RESPValue].self)
+                    throw RedisClientError.failedRESPConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 3, "Unexpected response size returned!")
                 guard
                     let key = response[0].string,
                     let score = Double(fromRESP: response[1])
                 else {
-                    throw RedisNIOError.assertionFailure(message: "Unexpected structure in response: \(response)")
+                    throw RedisClientError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
                 return (key, score, response[2])
             }

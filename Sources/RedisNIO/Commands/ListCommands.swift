@@ -442,11 +442,11 @@ extension RedisClient {
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
                 guard let response = [RESPValue](fromRESP: $0) else {
-                    throw RedisNIOError.responseConversion(to: [RESPValue].self)
+                    throw RedisClientError.failedRESPConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 2, "Unexpected response size returned!")
                 guard let key = response[0].string else {
-                    throw RedisNIOError.assertionFailure(message: "Unexpected structure in response: \(response)")
+                    throw RedisClientError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
                 return (key, response[1])
             }

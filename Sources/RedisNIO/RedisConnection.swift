@@ -183,7 +183,7 @@ extension RedisConnection {
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
         guard self.isConnected else {
-            let error = RedisNIOError.connectionClosed
+            let error = RedisClientError.connectionClosed
             logger.warning("\(error.localizedDescription)")
             return self.channel.eventLoop.makeFailedFuture(error)
         }

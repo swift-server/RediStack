@@ -30,7 +30,7 @@ extension EventLoopFuture where Value == RESPValue {
     {
         return self.flatMapThrowing {
             guard let value = T(fromRESP: $0) else {
-                throw RedisNIOError.responseConversion(to: type)
+                throw RedisClientError.failedRESPConversion(to: type)
             }
             return value
         }
