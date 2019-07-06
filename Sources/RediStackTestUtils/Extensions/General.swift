@@ -12,10 +12,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-import XCTest
+import NIO
 
-import RediStackTests
+private let allocator = ByteBufferAllocator()
 
-var tests = [XCTestCaseEntry]()
-tests += RediStackTests.allTests()
-XCTMain(tests)
+extension String {
+    /// The UTF-8 byte representation of the string.
+    public var bytes: [UInt8] { return .init(self.utf8) }
+    
+    /// Creates a `NIO.ByteBuffer` with the string's value written into it.
+    public var byteBuffer: ByteBuffer {
+        var buffer = allocator.buffer(capacity: self.count)
+        buffer.writeString(self)
+        return buffer
+    }
+}
