@@ -193,8 +193,8 @@ extension RedisConnection {
         
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let command = RedisCommand(
-            command: .array(message),
-            promise: promise
+            message: .array(message),
+            responsePromise: promise
         )
         
         let startTime = DispatchTime.now().uptimeNanoseconds
@@ -254,8 +254,8 @@ extension RedisConnection {
     private func sendQuitCommand() -> EventLoopFuture<Void> {
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let command = RedisCommand(
-            command: .array([RESPValue(bulk: "QUIT")]),
-            promise: promise
+            message: .array([RESPValue(bulk: "QUIT")]),
+            responsePromise: promise
         )
         
         logger.debug("Sending QUIT command.")

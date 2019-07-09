@@ -18,17 +18,16 @@ import NIO
 
 /// The `NIO.ChannelOutboundHandler.OutboundIn` type for `RedisCommandHandler`.
 ///
-/// This holds the command and its arguments stored as a single `RESPValue` to be sent to Redis,
-/// and an `NIO.EventLoopPromise` to be fulfilled when a response has been received.
+/// This holds the full command message to be sent to Redis, and an `NIO.EventLoopPromise` to be fulfilled when a response has been received.
 /// - Important: This struct has _reference semantics_ due to the retention of the `NIO.EventLoopPromise`.
 public struct RedisCommand {
-    /// A command keyword and its arguments stored as a single `RESPValue.array`.
-    public let command: RESPValue
-    /// A promise to be fulfilled with the sent command's response from Redis.
+    /// A message waiting to be sent to Redis. A full message contains a command keyword and its arguments stored as a single `RESPValue.array`.
+    public let message: RESPValue
+    /// A promise to be fulfilled with the sent message's response from Redis.
     public let responsePromise: EventLoopPromise<RESPValue>
 
-    public init(command: RESPValue, promise: EventLoopPromise<RESPValue>) {
-        self.command = command
+    public init(message: RESPValue, responsePromise promise: EventLoopPromise<RESPValue>) {
+        self.message = message
         self.responsePromise = promise
     }
 }
@@ -130,7 +129,7 @@ extension RedisCommandHandler: ChannelOutboundHandler {
         let commandContext = self.unwrapOutboundIn(data)
         self.commandResponseQueue.append(commandContext.responsePromise)
         context.write(
-            self.wrapOutboundOut(commandContext.command),
+            self.wrapOutboundOut(commandContext.message),
             promise: promise
         )
     }
