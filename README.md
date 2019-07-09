@@ -67,6 +67,12 @@ print(result) // Optional("some value")
 
 The docs for the latest tagged release are always available at https://mordil.gitlab.io/swift-redi-stack.
 
+## Questions
+
+For bugs or feature requests, file a new [issue](https://gitlab.com/mordil/swift-redi-stack/issues).
+
+For all other support requests, please email [support@redistack.info](mailto:support@redistack.info).
+
 ## Changelog
 
 [SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://gitlab.com/Mordil/swift-redi-stack/-/releases).
