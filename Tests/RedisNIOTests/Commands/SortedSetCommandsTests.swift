@@ -14,20 +14,18 @@
 
 import NIO
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class SortedSetCommandsTests: XCTestCase {
+final class SortedSetCommandsTests: RedisIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
-
-    private var connection: RedisConnection!
 
     private var key: String { return SortedSetCommandsTests.testKey }
 
     override func setUp() {
+        super.setUp()
         do {
-            connection = try Redis.makeConnection().wait()
-
-            var dataset: [(RESPValueConvertible, Double)] = []
+            var dataset: [(Int, Double)] = []
             for index in 1...10 {
                 dataset.append((index, Double(index)))
             }
@@ -38,29 +36,25 @@ final class SortedSetCommandsTests: XCTestCase {
         }
     }
 
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
-    }
-
     func test_zadd() throws {
         _ = try connection.send(command: "FLUSHALL").wait()
-
-        XCTAssertThrowsError(try connection.zadd([(30, 2)], to: #function, options: ["INCR"]).wait())
 
         var count = try connection.zadd([(30, 2)], to: #function).wait()
         XCTAssertEqual(count, 1)
         count = try connection.zadd([(30, 5)], to: #function).wait()
         XCTAssertEqual(count, 0)
-        count = try connection.zadd([(30, 6), (31, 0), (32, 1)], to: #function, options: ["NX"]).wait()
+        count = try connection.zadd([(30, 6), (31, 0), (32, 1)], to: #function, options: [.onlyAddNewElements]).wait()
         XCTAssertEqual(count, 2)
-        count = try connection.zadd([(32, 2), (33, 3)], to: #function, options: ["XX", "CH"]).wait()
+        count = try connection.zadd(
+            [(32, 2), (33, 3)],
+            to: #function,
+            options: [.onlyUpdateExistingElements, .returnChangedCount]
+        ).wait()
         XCTAssertEqual(count, 1)
 
-        var success = try connection.zadd((30, 7), to: #function, options: ["CH"]).wait()
+        var success = try connection.zadd((30, 7), to: #function, options: [.returnChangedCount]).wait()
         XCTAssertTrue(success)
-        success = try connection.zadd((30, 8), to: #function, options: ["NX"]).wait()
+        success = try connection.zadd((30, 8), to: #function, options: [.onlyAddNewElements]).wait()
         XCTAssertFalse(success)
     }
 
@@ -166,14 +160,16 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(min2?.0, key)
         XCTAssertEqual(min2?.1, 2)
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "bzpopmin should never return")
         _ = blockingConnection.bzpopmin(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_zpopmax() throws {
@@ -198,14 +194,16 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(max2?.0, key)
         XCTAssertEqual(max2?.1, 9)
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "bzpopmax should never return")
         _ = blockingConnection.bzpopmax(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_zincrby() throws {
@@ -227,7 +225,7 @@ final class SortedSetCommandsTests: XCTestCase {
             as: #function+#file,
             sources: [key, #function, #file],
             weights: [3, 2, 1],
-            aggregateMethod: "MAX"
+            aggregateMethod: .max
         ).wait()
         XCTAssertEqual(unionCount, 10)
         let rank = try connection.zrank(of: 10, in: #function+#file).wait()
@@ -243,7 +241,7 @@ final class SortedSetCommandsTests: XCTestCase {
             as: #file,
             sources: [key, #function],
             weights: [3, 2],
-            aggregateMethod: "MIN"
+            aggregateMethod: .min
         ).wait()
         XCTAssertEqual(unionCount, 2)
         let rank = try connection.zrank(of: 10, in: #file).wait()
@@ -259,7 +257,7 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(elements.count, 6)
 
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
-            .map { (value, _) in return Int(value) }
+            .map { (value, _) in return Int(fromRESP: value) }
 
         XCTAssertEqual(values[0], 2)
         XCTAssertEqual(values[1], 3)
@@ -273,7 +271,7 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(elements.count, 6)
 
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
-            .map { (value, _) in return Int(value) }
+            .map { (value, _) in return Int(fromRESP: value) }
 
         XCTAssertEqual(values[0], 9)
         XCTAssertEqual(values[1], 8)
@@ -313,14 +311,14 @@ final class SortedSetCommandsTests: XCTestCase {
 
         var elements = try connection.zrangebylex(within: ("[1", "[2"), from: #function)
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 1)
         XCTAssertEqual(elements[1], 2)
 
         elements = try connection.zrangebylex(within: ("[1", "(4"), from: #function, limitBy: (offset: 1, count: 1))
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 1)
         XCTAssertEqual(elements[0], 2)
     }
@@ -330,14 +328,14 @@ final class SortedSetCommandsTests: XCTestCase {
 
         var elements = try connection.zrevrangebylex(within: ("(2", "[4"), from: #function)
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 4)
         XCTAssertEqual(elements[1], 3)
 
         elements = try connection.zrevrangebylex(within: ("[1", "(4"), from: #function, limitBy: (offset: 1, count: 2))
             .wait()
-            .map { Int($0) }
+            .map { Int(fromRESP: $0) }
         XCTAssertEqual(elements.count, 2)
         XCTAssertEqual(elements[0], 2)
     }

@@ -21,18 +21,19 @@ import NIO
 public final class RedisByteDecoder: ByteToMessageDecoder {
     /// `ByteToMessageDecoder.InboundOut`
     public typealias InboundOut = RESPValue
+    
+    private let parser: RESPTranslator
+    
+    public init() {
+        self.parser = RESPTranslator()
+    }
 
     /// See `ByteToMessageDecoder.decode(context:buffer:)`
     public func decode(context: ChannelHandlerContext, buffer: inout ByteBuffer) throws -> DecodingState {
-        var position = 0
-
-        switch try RESPTranslator.parseBytes(&buffer, fromIndex: &position) {
-        case .incomplete: return .needMoreData
-        case let .parsed(value):
-            context.fireChannelRead(wrapInboundOut(value))
-            buffer.moveReaderIndex(forwardBy: position)
-            return .continue
-        }
+        guard let value = try self.parser.parseBytes(from: &buffer) else { return .needMoreData }
+        
+        context.fireChannelRead(wrapInboundOut(value))
+        return .continue
     }
 
     /// See `ByteToMessageDecoder.decodeLast(context:buffer:seenEOF)`

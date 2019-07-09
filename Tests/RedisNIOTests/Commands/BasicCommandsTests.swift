@@ -13,33 +13,16 @@
 //===----------------------------------------------------------------------===//
 
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class BasicCommandsTests: XCTestCase {
-    private var connection: RedisConnection!
-
-    override func setUp() {
-        do {
-            connection = try Redis.makeConnection().wait()
-        } catch {
-            XCTFail("Failed to create RedisConnection! \(error)")
-        }
-    }
-
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
-    }
-
+final class BasicCommandsTests: RedisIntegrationTestCase {
     func test_select() {
         XCTAssertNoThrow(try connection.select(database: 3).wait())
     }
 
-    func test_delete() {
-        do {
+    func test_delete() throws {
         let keys = [ #function + "1", #function + "2", #function + "3" ]
-        try connection.close().wait()
         try connection.set(keys[0], to: "value").wait()
         try connection.set(keys[1], to: "value").wait()
         try connection.set(keys[2], to: "value").wait()
@@ -52,22 +35,18 @@ final class BasicCommandsTests: XCTestCase {
 
         let third = try connection.delete([keys[1], keys[2]]).wait()
         XCTAssertEqual(third, 2)
-        }
-        catch {
-            print("failed")
-        }
     }
 
     func test_expire() throws {
         try connection.set(#function, to: "value").wait()
-        let before = try connection.get(#function).wait()
-        XCTAssertNotNil(before)
-
-        let result = try connection.expire(#function, after: .nanoseconds(1)).wait()
-        XCTAssertEqual(result, true)
-
-        let after = try connection.get(#function).wait()
-        XCTAssertNil(after)
+        XCTAssertNotNil(try connection.get(#function).wait())
+        XCTAssertTrue(try connection.expire(#function, after: .nanoseconds(1)).wait())
+        XCTAssertNil(try connection.get(#function).wait())
+        
+        try connection.set(#function, to: "new value").wait()
+        XCTAssertNotNil(try connection.get(#function).wait())
+        XCTAssertTrue(try connection.expire(#function, after: .seconds(10)).wait())
+        XCTAssertNotNil(try connection.get(#function).wait())
     }
 
     func test_ping() throws {

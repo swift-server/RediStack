@@ -13,25 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class HashCommandsTests: XCTestCase {
-    private var connection: RedisConnection!
-
-    override func setUp() {
-        do {
-            connection = try Redis.makeConnection().wait()
-        } catch {
-            XCTFail("Failed to create RedisConnection! \(error)")
-        }
-    }
-
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
-    }
-
+final class HashCommandsTests: RedisIntegrationTestCase {
     func test_hset() throws {
         var result = try connection.hset("test", to: "\(#line)", in: #function).wait()
         XCTAssertTrue(result)
@@ -127,7 +112,7 @@ final class HashCommandsTests: XCTestCase {
             "second": "foo"
         ]
         _ = try connection.hmset(dataset, in: #function).wait()
-        let values = try connection.hvals(in: #function).wait().compactMap { String($0) }
+        let values = try connection.hvals(in: #function).wait().compactMap { String(fromRESP: $0) }
         XCTAssertEqual(values.count, 2)
         XCTAssertTrue(values.allSatisfy(dataset.values.contains))
     }

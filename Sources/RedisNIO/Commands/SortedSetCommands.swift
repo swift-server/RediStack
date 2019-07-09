@@ -30,7 +30,7 @@ extension RedisClient {
         repeat {
             let scoreItem = response[scoreIsFirst ? index : index + 1]
 
-            guard let score = Double(scoreItem) else {
+            guard let score = Double(fromRESP: scoreItem) else {
                 throw RedisNIOError.assertionFailure(message: "Unexpected response: '\(scoreItem)'")
             }
 
@@ -46,6 +46,22 @@ extension RedisClient {
 
 // MARK: General
 
+/// The supported options for the `zadd` command with Redis SortedSet types.
+/// - Important: Per Redis documentation, `.onlyUpdateExistingElements` and `.onlyAddNewElements` are mutually exclusive!
+/// - Note: `INCR` is not supported by this library in `zadd`. Use the `zincrby(:element:in:)` method instead.
+/// See [https://redis.io/commands/zadd#zadd-options-redis-302-or-greater](https://redis.io/commands/zadd#zadd-options-redis-302-or-greater)
+public enum RedisSortedSetAddOption: String {
+    /// When adding elements, any that do not already exist in the SortedSet will be ignored and the score of the existing element will be updated.
+    case onlyUpdateExistingElements = "XX"
+    /// When adding elements, any that already exist in the SortedSet will be ignored and the score of the existing element will not be updated.
+    case onlyAddNewElements = "NX"
+    /// `zadd` normally returns the number of new elements added to the set,
+    /// but this option will instead have the command return the number of elements changed.
+    ///
+    /// "Changed" in this context are new elements added, and elements that had their score updated.
+    case returnChangedCount = "CH"
+}
+
 extension RedisClient {
     /// Adds elements to a sorted set, assigning their score to the values provided.
     ///
@@ -56,30 +72,24 @@ extension RedisClient {
     ///     - options: A set of options defined by Redis for this command to execute under.
     /// - Returns: The number of elements added to the sorted set.
     @inlinable
-    public func zadd(
-        _ elements: [(element: RESPValueConvertible, score: Double)],
+    public func zadd<Value: RESPValueConvertible>(
+        _ elements: [(element: Value, score: Double)],
         to key: String,
-        options: Set<String> = []
+        options: Set<RedisSortedSetAddOption> = []
     ) -> EventLoopFuture<Int> {
-        guard !options.contains("INCR") else {
-            return self.eventLoop.makeFailedFuture(RedisNIOError.unsupportedOperation(
-                method: #function,
-                message: "INCR option is unsupported. Use zincrby(_:element:in:) instead."
-            ))
-        }
-
         assert(options.count <= 2, "Invalid number of options provided.")
-        assert(options.allSatisfy(["XX", "NX", "CH"].contains), "Unsupported option provided!")
         assert(
-            !(options.contains("XX") && options.contains("NX")),
-            "XX and NX options are mutually exclusive."
+            !(options.contains(.onlyAddNewElements) && options.contains(.onlyUpdateExistingElements)),
+            ".onlyAddNewElements and .onlyUpdateExistingElements options are mutually exclusive."
         )
 
-        var args: [RESPValueConvertible] = [key] + options.map { $0 }
-
-        for (element, score) in elements {
-            args.append(score)
-            args.append(element)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.add(contentsOf: options) { (array, option) in
+            array.append(.init(bulk: option.rawValue))
+        }
+        args.add(contentsOf: elements, overestimatedCountBeingAdded: elements.count * 2) { (array, next) in
+            array.append(.init(bulk: next.score.description))
+            array.append(next.element.convertedToRESPValue())
         }
 
         return send(command: "ZADD", with: args)
@@ -95,10 +105,10 @@ extension RedisClient {
     ///     - options: A set of options defined by Redis for this command to execute under.
     /// - Returns: `true` if the element was added or score was updated in the sorted set.
     @inlinable
-    public func zadd(
-        _ element: (element: RESPValueConvertible, score: Double),
+    public func zadd<Value: RESPValueConvertible>(
+        _ element: (element: Value, score: Double),
         to key: String,
-        options: Set<String> = []
+        options: Set<RedisSortedSetAddOption> = []
     ) -> EventLoopFuture<Bool> {
         return zadd([element], to: key, options: options)
             .map { return $0 == 1 }
@@ -111,7 +121,8 @@ extension RedisClient {
     /// - Returns: The number of elements in the sorted set.
     @inlinable
     public func zcard(of key: String) -> EventLoopFuture<Int> {
-        return send(command: "ZCARD", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "ZCARD", with: args)
             .convertFromRESPValue()
     }
 
@@ -123,9 +134,13 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The score of the element provided, or `nil` if the element is not found in the set or the set does not exist.
     @inlinable
-    public func zscore(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Double?> {
-        return send(command: "ZSCORE", with: [key, element])
-            .map { return Double($0) }
+    public func zscore<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Double?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZSCORE", with: args)
+            .map { return Double(fromRESP: $0) }
     }
 
     /// Incrementally iterates over all elements in a sorted set.
@@ -165,8 +180,12 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
-        return send(command: "ZRANK", with: [key, element])
+    public func zrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZRANK", with: args)
             .convertFromRESPValue()
     }
 
@@ -180,8 +199,12 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrevrank(of element: RESPValueConvertible, in key: String) -> EventLoopFuture<Int?> {
-        return send(command: "ZREVRANK", with: [key, element])
+    public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZREVRANK", with: args)
             .convertFromRESPValue()
     }
 }
@@ -201,7 +224,12 @@ extension RedisClient {
         of key: String,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZCOUNT", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZCOUNT", with: args)
             .convertFromRESPValue()
     }
 
@@ -218,7 +246,12 @@ extension RedisClient {
         of key: String,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZLEXCOUNT", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZLEXCOUNT", with: args)
             .convertFromRESPValue()
     }
 }
@@ -278,12 +311,12 @@ extension RedisClient {
         _ count: Int?,
         _ key: String
     ) -> EventLoopFuture<[(RESPValue, Double)]> {
-        var args: [RESPValueConvertible] = [key]
+        var args: [RESPValue] = [.init(bulk: key)]
 
         if let c = count {
             guard c != 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
-            args.append(c)
+            args.append(.init(bulk: c))
         }
 
         return send(command: command, with: args)
@@ -413,20 +446,22 @@ extension RedisClient {
         _ keys: [String],
         _ timeout: Int
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
-        let args = keys as [RESPValueConvertible] + [timeout]
+        var args = keys.map(RESPValue.init)
+        args.append(.init(bulk: timeout))
+        
         return send(command: command, with: args)
             // per the Redis docs,
             // we will receive either a nil response,
             // or an array with 3 elements in the form [Set Key, Element Score, Element Value]
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
-                guard let response = [RESPValue]($0) else {
+                guard let response = [RESPValue](fromRESP: $0) else {
                     throw RedisNIOError.responseConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 3, "Unexpected response size returned!")
                 guard
                     let key = response[0].string,
-                    let score = Double(response[1])
+                    let score = Double(fromRESP: response[1])
                 else {
                     throw RedisNIOError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
@@ -447,17 +482,36 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The new score of the element.
     @inlinable
-    public func zincrby(
+    public func zincrby<Value: RESPValueConvertible>(
         _ amount: Double,
-        element: RESPValueConvertible,
+        element: Value,
         in key: String
     ) -> EventLoopFuture<Double> {
-        return send(command: "ZINCRBY", with: [key, amount, element])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: amount.description),
+            element.convertedToRESPValue()
+        ]
+        return send(command: "ZINCRBY", with: args)
             .convertFromRESPValue()
     }
 }
 
 // MARK: Intersect and Union
+
+/// The supported methods for aggregating results from the `zunionstore` or `zinterstore` commands in Redis.
+///
+/// For more information on these values, see
+/// [https://redis.io/commands/zunionstore](https://redis.io/commands/zunionstore)
+/// [https://redis.io/commands/zinterstore](https://redis.io/commands/zinterstore)
+public enum RedisSortedSetAggregateMethod: String {
+    /// Add the score of all matching elements in the source SortedSets.
+    case sum = "SUM"
+    /// Use the minimum score of the matching elements in the source SortedSets.
+    case min = "MIN"
+    /// Use the maximum score of the matching elements in the source SortedSets.
+    case max = "MAX"
+}
 
 extension RedisClient {
     /// Calculates the union of two or more sorted sets and stores the result.
@@ -468,14 +522,14 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the union.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the union. Supported values are "SUM", "MIN", and "MAX".
+    ///     - aggregateMethod: The method of aggregating the values of the union. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zunionstore(
         as destination: String,
         sources: [String],
         weights: [Int]? = nil,
-        aggregateMethod aggregate: String? = nil
+        aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
         return _zopstore(command: "ZUNIONSTORE", sources, destination, weights, aggregate)
     }
@@ -488,14 +542,14 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the intersection.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the intersection. Supported values are "SUM", "MIN", and "MAX".
+    ///     - aggregateMethod: The method of aggregating the values of the intersection. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zinterstore(
         as destination: String,
         sources: [String],
         weights: [Int]? = nil,
-        aggregateMethod aggregate: String? = nil
+        aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
         return _zopstore(command: "ZINTERSTORE", sources, destination, weights, aggregate)
     }
@@ -506,25 +560,27 @@ extension RedisClient {
         _ sources: [String],
         _ destination: String,
         _ weights: [Int]?,
-        _ aggregate: String?) -> EventLoopFuture<Int>
-    {
+        _ aggregate: RedisSortedSetAggregateMethod?
+    ) -> EventLoopFuture<Int> {
         assert(sources.count > 0, "At least 1 source key should be provided.")
 
-        var args: [RESPValueConvertible] = [destination, sources.count] + sources
+        var args: [RESPValue] = [
+            .init(bulk: destination),
+            .init(bulk: sources.count)
+        ]
+        args.append(convertingContentsOf: sources)
 
         if let w = weights {
             assert(w.count > 0, "When passing a value for 'weights', at least 1 value should be provided.")
             assert(w.count <= sources.count, "Weights should be no larger than the amount of source keys.")
 
-            args.append("WEIGHTS")
-            args.append(contentsOf: w)
+            args.append(.init(bulk: "WEIGHTS"))
+            args.append(convertingContentsOf: w)
         }
 
         if let a = aggregate {
-            assert(a == "SUM" || a == "MIN" || a == "MAX", "Aggregate method provided is unsupported.")
-
-            args.append("AGGREGATE")
-            args.append(a)
+            args.append(.init(bulk: "AGGREGATE"))
+            args.append(.init(bulk: a.rawValue))
         }
 
         return send(command: command, with: args)
@@ -583,9 +639,13 @@ extension RedisClient {
         _ stop: Int,
         _ withScores: Bool
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, start, stop]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: start),
+            .init(bulk: stop)
+        ]
 
-        if withScores { args.append("WITHSCORES") }
+        if withScores { args.append(.init(bulk: "WITHSCORES")) }
 
         return send(command: command, with: args)
             .convertFromRESPValue()
@@ -647,13 +707,17 @@ extension RedisClient {
         _ withScores: Bool,
         _ limit: (offset: Int, count: Int)?
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, range.min, range.max]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
 
-        if withScores { args.append("WITHSCORES") }
+        if withScores { args.append(.init(bulk: "WITHSCORES")) }
 
         if let l = limit {
-            args.append("LIMIT")
-            args.append([l.offset, l.count])
+            args.append(.init(bulk: "LIMIT"))
+            args.append(convertingContentsOf: [l.offset, l.count])
         }
 
         return send(command: command, with: args)
@@ -713,11 +777,17 @@ extension RedisClient {
         _ range: (min: String, max: String),
         _ limit: (offset: Int, count: Int)?
     ) -> EventLoopFuture<[RESPValue]> {
-        var args: [RESPValueConvertible] = [key, range.min, range.max]
+        var args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
 
         if let l = limit {
-            args.append("LIMIT")
-            args.append(contentsOf: [l.offset, l.count])
+            args.reserveCapacity(6) // 3 above, plus 3 being added
+            args.append(.init(bulk: "LIMIT"))
+            args.append(.init(bulk: l.offset))
+            args.append(.init(bulk: l.count))
         }
 
         return send(command: command, with: args)
@@ -736,10 +806,13 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The number of elements removed from the set.
     @inlinable
-    public func zrem(_ elements: [RESPValueConvertible], from key: String) -> EventLoopFuture<Int> {
+    public func zrem<Value: RESPValueConvertible>(_ elements: [Value], from key: String) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
-        return send(command: "ZREM", with: [key] + elements)
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: elements)
+        
+        return send(command: "ZREM", with: args)
             .convertFromRESPValue()
     }
 
@@ -756,7 +829,12 @@ extension RedisClient {
         within range: (min: String, max: String),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYLEX", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZREMRANGEBYLEX", with: args)
             .convertFromRESPValue()
     }
 
@@ -772,7 +850,12 @@ extension RedisClient {
         within range: (start: Int, stop: Int),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYRANK", with: [key, range.start, range.stop])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.start),
+            .init(bulk: range.stop)
+        ]
+        return send(command: "ZREMRANGEBYRANK", with: args)
             .convertFromRESPValue()
     }
 
@@ -788,7 +871,12 @@ extension RedisClient {
         within range: (min: String, max: String),
         from key: String
     ) -> EventLoopFuture<Int> {
-        return send(command: "ZREMRANGEBYSCORE", with: [key, range.min, range.max])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: range.min),
+            .init(bulk: range.max)
+        ]
+        return send(command: "ZREMRANGEBYSCORE", with: args)
             .convertFromRESPValue()
     }
 }

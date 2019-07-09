@@ -15,25 +15,15 @@
 import struct Foundation.Data
 import NIO
 
-extension String {
-    @inline(__always)
-    var byteBuffer: ByteBuffer {
-        var buffer = RESPValue.allocator.buffer(capacity: self.count)
-        buffer.writeString(self)
-        return buffer
-    }
-}
-
-extension Data {
-    @inline(__always)
-    var byteBuffer: ByteBuffer {
-        var buffer = RESPValue.allocator.buffer(capacity: self.count)
-        buffer.writeBytes(self)
-        return buffer
-    }
-}
-
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
+///
+/// This enum representation should be used only as a temporary intermediate representation of values, and should be sent to a Redis server or converted to Swift
+/// types as soon as possible.
+///
+/// Redis servers expect a single message packed into an `.array`, with all elements being `.bulkString` representations of values. As such, all initializers
+/// convert to `.bulkString` representations, as well as default conformances for `RESPValueConvertible`.
+///
+/// Each case of this type is a different listing in the RESP specification, and several computed properties are available to consistently convert values into Swift types.
 ///
 /// See: [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public enum RESPValue {
@@ -42,105 +32,83 @@ public enum RESPValue {
     case bulkString(ByteBuffer?)
     case error(RedisError)
     case integer(Int)
-    case array(ContiguousArray<RESPValue>)
+    case array([RESPValue])
 
-    fileprivate static let allocator = ByteBufferAllocator()
+    /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString` and `.bulkString` representations directly, if needed.
+    static let allocator = ByteBufferAllocator()
 
-    /// Initializes a `bulkString` by converting the provided string input.
-    public init(bulk value: String? = nil) {
-        self = .bulkString(value?.byteBuffer)
+    /// Initializes a `bulkString` value.
+    /// - Parameter value: The `String` to store in a `.bulkString` representation.
+    public init(bulk value: String) {
+        var buffer = RESPValue.allocator.buffer(capacity: value.count)
+        buffer.writeString(value)
+        self = .bulkString(buffer)
     }
 
+    /// Initializes a `bulkString` value.
+    /// - Parameter value: The `Int` value to store in a `.bulkString` representation.
     public init(bulk value: Int) {
-        self = .bulkString(value.description.byteBuffer)
+        self.init(bulk: value.description)
     }
 
-    public init(_ source: RESPValueConvertible) {
-        self = source.convertedToRESPValue()
-    }
-}
-
-// MARK: Expressible by Literals
-
-extension RESPValue: ExpressibleByStringLiteral {
-    /// Initializes a bulk string from a String literal
-    public init(stringLiteral value: String) {
-        self = .bulkString(value.byteBuffer)
-    }
-}
-
-extension RESPValue: ExpressibleByArrayLiteral {
-    /// Initializes an array from an Array literal
-    public init(arrayLiteral elements: RESPValue...) {
-        self = .array(.init(elements))
-    }
-}
-
-extension RESPValue: ExpressibleByNilLiteral {
-    /// Initializes null from a nil literal
-    public init(nilLiteral: ()) {
-        self = .null
-    }
-}
-
-extension RESPValue: ExpressibleByIntegerLiteral {
-    /// Initializes an integer from an integer literal
-    public init(integerLiteral value: Int) {
-        self = .integer(value)
+    /// Stores the representation determined by the `RESPValueConvertible` value.
+    /// - Important: If you are sending this value to a Redis server, the type should be convertible to a `.bulkString`.
+    /// - Parameter value: The value that needs to be converted and stored in `RESPValue` format.
+    public init<Value: RESPValueConvertible>(_ value: Value) {
+        self = value.convertedToRESPValue()
     }
 }
 
 // MARK: Custom String Convertible
 
 extension RESPValue: CustomStringConvertible {
+    /// See `CustomStringConvertible.description`
     public var description: String {
         switch self {
-        case .integer, .simpleString, .bulkString: return self.string!
+        case let .simpleString(buffer),
+             let .bulkString(.some(buffer)):
+            guard let value = String(fromRESP: self) else { return "\(buffer)" } // default to ByteBuffer's representation
+            return value
+
+        // .integer, .error, and .bulkString(.none) conversions to String always succeed
+        case .integer,
+             .bulkString(.none):
+            return String(fromRESP: self)!
+            
         case .null: return "NULL"
-        case let .array(elements): return "[\(elements.map({ $0.description }).joined(separator: ","))]"
         case let .error(e): return e.message
+        case let .array(elements): return "[\(elements.map({ $0.description }).joined(separator: ","))]"
         }
     }
 }
 
-// MARK: Computed Values
+// MARK: Unwrapped Values
 
 extension RESPValue {
-    /// The `ByteBuffer` storage for either `.simpleString` or `.bulkString` representations.
+    /// The unwrapped value for `.array` representations.
+    /// - Note: This is a shorthand for `Array<RESPValue>.init(fromRESP:)`
+    public var array: [RESPValue]? { return [RESPValue](fromRESP: self) }
+
+    /// The unwrapped value as an `Int`.
+    /// - Note: This is a shorthand for `Int(fromRESP:)`.
+    public var int: Int? { return Int(fromRESP: self) }
+
+    /// Returns `true` if the unwrapped value is `.null`.
+    public var isNull: Bool {
+        guard case .null = self else { return false }
+        return true
+    }
+
+    /// The unwrapped `RedisError` that was returned from Redis.
+    /// - Note: This is a shorthand for `RedisError(fromRESP:)`.
+    public var error: RedisError? { return RedisError(fromRESP: self) }
+
+    /// The unwrapped `NIO.ByteBuffer` for `.simpleString` or `.bulkString` representations.
     public var byteBuffer: ByteBuffer? {
         switch self {
         case let .simpleString(buffer),
              let .bulkString(.some(buffer)): return buffer
-        default: return nil
-        }
-    }
 
-    /// The storage value for `array` representations.
-    public var array: ContiguousArray<RESPValue>? {
-        guard case .array(let array) = self else { return nil }
-        return array
-    }
-
-    /// The storage value for `integer` representations.
-    public var int: Int? {
-        switch self {
-        case let .integer(value): return value
-        default: return nil
-        }
-    }
-
-    /// Returns `true` if the value represents a `null` value from Redis.
-    public var isNull: Bool {
-        switch self {
-        case .null: return true
-        default: return false
-        }
-    }
-
-    /// The error returned from Redis.
-    public var error: RedisError? {
-        switch self {
-        case .error(let error): return error
         default: return nil
         }
     }
@@ -149,56 +117,15 @@ extension RESPValue {
 // MARK: Conversion Values
 
 extension RESPValue {
-    /// The `RESPValue` converted to a `String`.
-    /// - Important: This will always return `nil` from `.error`, `.null`, and `array` cases.
-    /// - Note: This creates a `String` using UTF-8 encoding.
-    public var string: String? {
-        switch self {
-        case let .integer(value): return value.description
-        case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
-            return buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes)
-
-        case .bulkString(.none): return ""
-        default: return nil
-        }
-    }
-
-    /// The raw bytes of the `RESPValue` representation.
-    /// - Important: This will always return `nil` from `.error` and `.null` cases.
-    public var bytes: [UInt8]? {
-        switch self {
-        case let .integer(value): return withUnsafeBytes(of: value, RESPValue.copyMemory)
-        case let .array(values): return values.withUnsafeBytes(RESPValue.copyMemory)
-        case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
-            return buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes)
-
-        case .bulkString(.none): return []
-        default: return nil
-        }
-    }
-
-    public var data: Data? {
-        switch self {
-        case let .integer(value): return withUnsafeBytes(of: value, RESPValue.copyMemory)
-        case let .array(values): return values.withUnsafeBytes(RESPValue.copyMemory)
-        case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
-            return buffer.withUnsafeReadableBytes(RESPValue.copyMemory)
-
-        case .bulkString(.none): return Data()
-        default: return nil
-        }
-    }
-
-    // SR-9604
-    @inline(__always)
-    private static func copyMemory(_ ptr: UnsafeRawBufferPointer) -> Data {
-        return Data(UnsafeRawBufferPointer(ptr).bindMemory(to: UInt8.self))
-    }
-    @inline(__always)
-    private static func copyMemory(_ ptr: UnsafeRawBufferPointer) -> [UInt8]? {
-        return Array<UInt8>(UnsafeRawBufferPointer(ptr).bindMemory(to: UInt8.self))
-    }
+    /// The value as a UTF-8 `String` representation.
+    /// - Note: This is a shorthand for `String.init(fromRESP:)`.
+    public var string: String? { return String(fromRESP: self) }
+    
+    /// The data stored in either a `.simpleString` or `.bulkString` represented as `Foundation.Data` instead of `NIO.ByteBuffer`.
+    /// - Note: This is a shorthand for `Data.init(fromRESP:)`.
+    public var data: Data? { return Data(fromRESP: self) }
+    
+    /// The raw bytes stored in the `.simpleString` or `.bulkString` representations.
+    /// - Note: This is a shorthand for `Array<UInt8>.init(fromRESP:)`.
+    public var bytes: [UInt8]? { return [UInt8](fromRESP: self) }
 }

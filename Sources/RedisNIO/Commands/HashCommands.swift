@@ -18,7 +18,7 @@ import NIO
 
 extension RedisClient {
     @usableFromInline
-    static func _mapHashResponse(_ values: [String]) -> [String: String] {
+    internal static func _mapHashResponse(_ values: [String]) -> [String: String] {
         guard values.count > 0 else { return [:] }
 
         var result: [String: String] = [:]
@@ -48,8 +48,11 @@ extension RedisClient {
     @inlinable
     public func hdel(_ fields: [String], from key: String) -> EventLoopFuture<Int> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
+        
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: fields)
 
-        return send(command: "HDEL", with: [key] + fields)
+        return send(command: "HDEL", with: args)
             .convertFromRESPValue()
     }
 
@@ -62,7 +65,11 @@ extension RedisClient {
     /// - Returns: `true` if the hash contains the field, `false` if either the key or field do not exist.
     @inlinable
     public func hexists(_ field: String, in key: String) -> EventLoopFuture<Bool> {
-        return send(command: "HEXISTS", with: [key, field])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field)
+        ]
+        return send(command: "HEXISTS", with: args)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
@@ -74,7 +81,8 @@ extension RedisClient {
     /// - Returns: The number of fields in the hash, or `0` if the key doesn't exist.
     @inlinable
     public func hlen(of key: String) -> EventLoopFuture<Int> {
-        return send(command: "HLEN", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "HLEN", with: args)
             .convertFromRESPValue()
     }
 
@@ -87,7 +95,11 @@ extension RedisClient {
     /// - Returns: The string length of the hash field's value, or `0` if the field or hash do not exist.
     @inlinable
     public func hstrlen(of field: String, in key: String) -> EventLoopFuture<Int> {
-        return send(command: "HSTRLEN", with: [key, field])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field)
+        ]
+        return send(command: "HSTRLEN", with: args)
             .convertFromRESPValue()
     }
 
@@ -98,7 +110,8 @@ extension RedisClient {
     /// - Returns: A list of field names stored within the hash.
     @inlinable
     public func hkeys(in key: String) -> EventLoopFuture<[String]> {
-        return send(command: "HKEYS", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "HKEYS", with: args)
             .convertFromRESPValue()
     }
 
@@ -109,7 +122,8 @@ extension RedisClient {
     /// - Returns: A list of all values stored in a hash.
     @inlinable
     public func hvals(in key: String) -> EventLoopFuture<[RESPValue]> {
-        return send(command: "HVALS", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "HVALS", with: args)
             .convertFromRESPValue()
     }
 
@@ -150,12 +164,17 @@ extension RedisClient {
     ///     - key: The key that holds the hash.
     /// - Returns: `true` if the hash was created, `false` if it was updated.
     @inlinable
-    public func hset(
+    public func hset<Value: RESPValueConvertible>(
         _ field: String,
-        to value: RESPValueConvertible,
+        to value: Value,
         in key: String
     ) -> EventLoopFuture<Bool> {
-        return send(command: "HSET", with: [key, field, value])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field),
+            value.convertedToRESPValue()
+        ]
+        return send(command: "HSET", with: args)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
@@ -170,12 +189,17 @@ extension RedisClient {
     ///     - key: The key that holds the hash.
     /// - Returns: `true` if the hash was created.
     @inlinable
-    public func hsetnx(
+    public func hsetnx<Value: RESPValueConvertible>(
         _ field: String,
-        to value: RESPValueConvertible,
+        to value: Value,
         in key: String
     ) -> EventLoopFuture<Bool> {
-        return send(command: "HSETNX", with: [key, field, value])
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field),
+            value.convertedToRESPValue()
+        ]
+        return send(command: "HSETNX", with: args)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
@@ -188,18 +212,19 @@ extension RedisClient {
     ///     - key: The key that holds the hash.
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
-    public func hmset(
-        _ fields: [String: RESPValueConvertible],
+    public func hmset<Value: RESPValueConvertible>(
+        _ fields: [String: Value],
         in key: String
     ) -> EventLoopFuture<Void> {
         assert(fields.count > 0, "At least 1 key-value pair should be specified")
 
-        let args: [RESPValueConvertible] = fields.reduce(into: [], { (result, element) in
-            result.append(element.key)
-            result.append(element.value)
-        })
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.add(contentsOf: fields, overestimatedCountBeingAdded: fields.count * 2) { (array, element) in
+            array.append(.init(bulk: element.key))
+            array.append(element.value.convertedToRESPValue())
+        }
         
-        return send(command: "HMSET", with: [key] + args)
+        return send(command: "HMSET", with: args)
             .map { _ in () }
     }
 }
@@ -216,8 +241,12 @@ extension RedisClient {
     /// - Returns: The value of the hash field, or `nil` if either the key or field does not exist.
     @inlinable
     public func hget(_ field: String, from key: String) -> EventLoopFuture<String?> {
-        return send(command: "HGET", with: [key, field])
-            .map { return String($0) }
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field)
+        ]
+        return send(command: "HGET", with: args)
+            .map { return String(fromRESP: $0) }
     }
 
     /// Gets the values of a hash for the fields specified.
@@ -230,8 +259,11 @@ extension RedisClient {
     @inlinable
     public func hmget(_ fields: [String], from key: String) -> EventLoopFuture<[String?]> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
+        
+        var args: [RESPValue] = [.init(bulk: key)]
+        args.append(convertingContentsOf: fields)
 
-        return send(command: "HMGET", with: [key] + fields)
+        return send(command: "HMGET", with: args)
             .convertFromRESPValue(to: [RESPValue].self)
             .map { return $0.map(String.init) }
     }
@@ -243,7 +275,8 @@ extension RedisClient {
     /// - Returns: A key-value pair list of fields and their values.
     @inlinable
     public func hgetall(from key: String) -> EventLoopFuture<[String: String]> {
-        return send(command: "HGETALL", with: [key])
+        let args = [RESPValue(bulk: key)]
+        return send(command: "HGETALL", with: args)
             .convertFromRESPValue(to: [String].self)
             .map(Self._mapHashResponse)
     }
@@ -262,9 +295,7 @@ extension RedisClient {
     /// - Returns: The new value of the hash field.
     @inlinable
     public func hincrby(_ amount: Int, field: String, in key: String) -> EventLoopFuture<Int> {
-        /// connection.hincrby(20, field: "foo", in: "key")
-        return send(command: "HINCRBY", with: [key, field, amount])
-            .convertFromRESPValue()
+        return _hincr(command: "HINCRBY", amount, field, key)
     }
 
     /// Increments a hash field's value and returns the new value.
@@ -276,12 +307,27 @@ extension RedisClient {
     ///     - key: The key of the hash the field is stored in.
     /// - Returns: The new value of the hash field.
     @inlinable
-    public func hincrbyfloat<T>(_ amount: T, field: String, in key: String) -> EventLoopFuture<T>
+    public func hincrbyfloat<Value>(_ amount: Value, field: String, in key: String) -> EventLoopFuture<Value>
         where
-        T: BinaryFloatingPoint,
-        T: RESPValueConvertible
+        Value: BinaryFloatingPoint,
+        Value: RESPValueConvertible
     {
-        return send(command: "HINCRBYFLOAT", with: [key, field, amount])
+        return _hincr(command: "HINCRBYFLOAT", amount, field, key)
+    }
+    
+    @usableFromInline
+    internal func _hincr<Value: RESPValueConvertible>(
+        command: String,
+        _ amount: Value,
+        _ field: String,
+        _ key: String
+    ) -> EventLoopFuture<Value> {
+        let args: [RESPValue] = [
+            .init(bulk: key),
+            .init(bulk: field),
+            amount.convertedToRESPValue()
+        ]
+        return send(command: command, with: args)
             .convertFromRESPValue()
     }
 }

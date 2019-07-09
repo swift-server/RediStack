@@ -19,14 +19,14 @@ public func allTests() -> [XCTestCaseEntry] {
     return [
         testCase(RedisByteDecoderTests.allTests),
         testCase(RedisMessageEncoderTests.allTests),
-        testCase(RESPTranslatorParsingTests.allTests),
-        testCase(RESPTranslatorWritingTests.allTests),
+        testCase(RESPTranslatorTests.allTests),
         testCase(BasicCommandsTests.allTests),
         testCase(SetCommandsTests.allTests),
         testCase(HashCommandsTests.allTests),
         testCase(ListCommandsTests.allTests),
         testCase(SortedSetCommandsTests.allTests),
-        testCase(StringCommandsTests.allTests)
+        testCase(StringCommandsTests.allTests),
+        testCase(RedisConnectionTests.allTests)
     ]
 }
 #endif
