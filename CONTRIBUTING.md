@@ -14,8 +14,26 @@ Please ensure to specify the following:
   * For example, are you running in Docker? How are you connecting to it through Docker? What version of Docker?
   * OS version and output of `uname -a`
   * Swift version or output of `swift --version`
+
+## Development
+
+### Git Workflow
+
+`master` is always the development branch.
+
+For **minor** or **patch** SemVer changes, create a branch off of the tagged commit.
+
+### Environment Setup
+
+It is highly recommended to use [Docker](https://docker.com) to install Redis locally.
+
+```bash
+docker run -d -p 6379:6379 --name redis redis:5
+```
+
+Otherwise, install Redis directly on your machine from [Redis.io](https://redis.io/download).
   
-## Submitting a Pull Request
+### Submitting a Pull Request
   
 A great PR that is likely to be merged quickly is:
   

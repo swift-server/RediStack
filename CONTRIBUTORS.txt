@@ -10,6 +10,7 @@ needs to be listed here.
 ### Contributors
 
 - Nathan Harris <nathan@mordil.info>
+- Ondrej Rafaj <ondrej.rafaj@gmail.com>
 - tanner0101 <me@tanner.xyz>
 
 **Updating this list**
