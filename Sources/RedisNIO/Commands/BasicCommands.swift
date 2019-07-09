@@ -160,7 +160,7 @@ extension RedisClient {
                 let value = result[0].string,
                 let position = Int(value)
             else {
-                throw RedisNIOError.assertionFailure(message: "Unexpected value in response: \(result[0])")
+                throw RedisClientError.assertionFailure(message: "Unexpected value in response: \(result[0])")
             }
             return position
         }

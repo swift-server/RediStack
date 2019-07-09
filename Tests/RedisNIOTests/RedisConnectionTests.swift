@@ -42,7 +42,7 @@ final class RedisConnectionTests: RedisIntegrationTestCase {
             _ = try self.connection.ping().wait()
             XCTFail("ping() should throw when connection is closed.")
         } catch {
-            XCTAssertTrue(error is RedisNIOError)
+            XCTAssertTrue(error is RedisClientError)
         }
     }
     
