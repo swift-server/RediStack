@@ -13,25 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class ListCommandsTests: XCTestCase {
-    private var connection: RedisConnection!
-
-    override func setUp() {
-        do {
-            connection = try Redis.makeConnection().wait()
-        } catch {
-            XCTFail("Failed to create RedisConnection! \(error)")
-        }
-    }
-
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
-    }
-
+final class ListCommandsTests: RedisIntegrationTestCase {
     func test_llen() throws {
         var length = try connection.llen(of: #function).wait()
         XCTAssertEqual(length, 0)
@@ -108,14 +93,16 @@ final class ListCommandsTests: XCTestCase {
         let element = try connection.brpoplpush(from: "first", to: "second").wait() ?? .null
         XCTAssertEqual(Int(fromRESP: element), 10)
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "brpoplpush should never return")
         _ = blockingConnection.bzpopmin(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_linsert() throws {
@@ -156,14 +143,16 @@ final class ListCommandsTests: XCTestCase {
         let pop2 = try connection.blpop(from: ["fake", "first"]).wait()
         XCTAssertEqual(pop2?.0, "first")
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "blpop should never return")
         _ = blockingConnection.bzpopmin(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_lpush() throws {
@@ -213,14 +202,16 @@ final class ListCommandsTests: XCTestCase {
         let pop2 = try connection.brpop(from: ["fake", "first"]).wait()
         XCTAssertEqual(pop2?.0, "first")
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "brpop should never return")
         _ = blockingConnection.bzpopmin(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_rpush() throws {

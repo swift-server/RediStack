@@ -14,19 +14,17 @@
 
 import NIO
 @testable import RedisNIO
+import RedisNIOTestUtils
 import XCTest
 
-final class SortedSetCommandsTests: XCTestCase {
+final class SortedSetCommandsTests: RedisIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
-
-    private var connection: RedisConnection!
 
     private var key: String { return SortedSetCommandsTests.testKey }
 
     override func setUp() {
+        super.setUp()
         do {
-            connection = try Redis.makeConnection().wait()
-
             var dataset: [(Int, Double)] = []
             for index in 1...10 {
                 dataset.append((index, Double(index)))
@@ -36,12 +34,6 @@ final class SortedSetCommandsTests: XCTestCase {
         } catch {
             XCTFail("Failed to create RedisConnection! \(error)")
         }
-    }
-
-    override func tearDown() {
-        _ = try? connection.send(command: "FLUSHALL").wait()
-        try? connection.close().wait()
-        connection = nil
     }
 
     func test_zadd() throws {
@@ -168,14 +160,16 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(min2?.0, key)
         XCTAssertEqual(min2?.1, 2)
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "bzpopmin should never return")
         _ = blockingConnection.bzpopmin(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_zpopmax() throws {
@@ -200,14 +194,16 @@ final class SortedSetCommandsTests: XCTestCase {
         XCTAssertEqual(max2?.0, key)
         XCTAssertEqual(max2?.1, 9)
 
-        let blockingConnection = try Redis.makeConnection().wait()
+        let blockingConnection = try self.makeNewConnection()
         let expectation = XCTestExpectation(description: "bzpopmax should never return")
         _ = blockingConnection.bzpopmax(from: #function)
-            .always { _ in expectation.fulfill() }
+            .always { _ in
+                expectation.fulfill()
+                blockingConnection.close()
+            }
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
-        try blockingConnection.channel.close().wait()
     }
 
     func test_zincrby() throws {

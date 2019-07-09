@@ -24,7 +24,7 @@ To install **RedisNIO**, just add the package as a dependency in your [**Package
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/Mordil/swift-redis-nio-client.git", from: "1.0.0-alpha.1")
+    .package(url: "https://github.com/Mordil/swift-redis-nio-client.git", from: "1.0.0-alpha.4")
 ]
 ```
 
@@ -32,18 +32,20 @@ and run the following command: `swift package resolve`
 
 ## :zap: Getting Started
 
-**RedisNIO** is ready to use right after installation.
+**RedisNIO** is quick to use - all you need is an [`EventLoop`](https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html) from **SwiftNIO**.
 
 ```swift
+import NIO
 import RedisNIO
 
-let connection = Redis.makeConnection(
+let eventLoop: EventLoop = ...
+let connection = RedisConnection.connect(
     to: try .init(ipAddress: "127.0.0.1", port: RedisConnection.defaultPort),
-    password: "my_pass"
+    on: eventLoop
 ).wait()
 
 let result = try connection.set("my_key", to: "some value")
-    .flatMap { return connection.get("my_key" }
+    .flatMap { return connection.get("my_key") }
     .wait()
 
 print(result) // Optional("some value")
