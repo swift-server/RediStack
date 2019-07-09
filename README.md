@@ -6,21 +6,21 @@
 [![Swift](https://img.shields.io/badge/Swift-5.0-brightgreen.svg?colorA=orange&colorB=4E4E4E)](https://swift.org)
 [![Redis](https://img.shields.io/badge/Redis-5-brightgreen.svg?colorA=red&colorB=4E4E4E)](https://redis.io/download)
 
-# Swift Redis NIO Client
+# Swift RediStack
 
 A non-blocking Swift client for [Redis](https://redis.io/) built on top of [SwiftNIO](https://github.com/apple/swift-nio).
 
 This package defines everything you need to work with Redis through the [**Re**dis **S**eralization **P**rotocol (RESP)](https://redis.io/topics/protocol).
 
-**RedisNIO** is part of the [Swift on Server Working Group](https://github.com/swift-server/sswg) ecosystem.
+**RediStack** is part of the [Swift on Server Working Group](https://github.com/swift-server/sswg) ecosystem.
 
 | Proposal | Pitch | Discussion | Review | Vote |
 |----------|-------|------------|--------|------|
-| [SSWG-0004](https://github.com/swift-server/sswg/blob/master/proposals/0004-nio-redis.md) | [2019-01-07](https://forums.swift.org/t/swiftnio-redis-client/19325) | [2019-04-01](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455) | **TBD** | **TBD** |
+| [SSWG-0004](https://github.com/swift-server/sswg/blob/master/proposals/0004-nio-redis.md) | [2019-01-07](https://forums.swift.org/t/swiftnio-redis-client/19325) | [2019-04-01](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455) | [2019-06-09](https://forums.swift.org/t/feedback-redisnio-a-nio-based-redis-driver/25521) | [2019-06-27](https://forums.swift.org/t/june-27th-2019/26580) |
 
 ## :package: Installation
 
-To install **RedisNIO**, just add the package as a dependency in your [**Package.swift**](https://github.com/apple/swift-package-manager/blob/master/Documentation/PackageDescriptionV4.md#dependencies)
+To install **RediStack**, just add the package as a dependency in your [**Package.swift**](https://github.com/apple/swift-package-manager/blob/master/Documentation/PackageDescriptionV4.md#dependencies)
 
 ```swift
 dependencies: [
@@ -32,11 +32,11 @@ and run the following command: `swift package resolve`
 
 ## :zap: Getting Started
 
-**RedisNIO** is quick to use - all you need is an [`EventLoop`](https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html) from **SwiftNIO**.
+**RediStack** is quick to use - all you need is an [`EventLoop`](https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html) from **SwiftNIO**.
 
 ```swift
 import NIO
-import RedisNIO
+import RediStack
 
 let eventLoop: EventLoop = ...
 let connection = RedisConnection.connect(
@@ -59,7 +59,7 @@ The latest version's docs are always available at https://mordil.gitlab.io/swift
 
 ## :construction: Contributing
 
-Check out [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to help with **RedisNIO**.
+Check out [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to help with **RediStack**.
 
 It is highly recommended to use [Docker](https://docker.com) to install Redis locally.
 
