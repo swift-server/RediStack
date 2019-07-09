@@ -47,45 +47,43 @@ extension RedisClient {
 // MARK: General
 
 /// The supported options for the `zadd` command with Redis SortedSet types.
-/// - Important: Per Redis documentation, `.onlyUpdateExistingElements` and `.onlyAddNewElements` are mutually exclusive!
-/// - Note: `INCR` is not supported by this library in `zadd`. Use the `zincrby(:element:in:)` method instead.
+///
 /// See [https://redis.io/commands/zadd#zadd-options-redis-302-or-greater](https://redis.io/commands/zadd#zadd-options-redis-302-or-greater)
 public enum RedisSortedSetAddOption: String {
     /// When adding elements, any that do not already exist in the SortedSet will be ignored and the score of the existing element will be updated.
     case onlyUpdateExistingElements = "XX"
     /// When adding elements, any that already exist in the SortedSet will be ignored and the score of the existing element will not be updated.
     case onlyAddNewElements = "NX"
-    /// `zadd` normally returns the number of new elements added to the set,
-    /// but this option will instead have the command return the number of elements changed.
-    ///
-    /// "Changed" in this context are new elements added, and elements that had their score updated.
-    case returnChangedCount = "CH"
 }
 
 extension RedisClient {
     /// Adds elements to a sorted set, assigning their score to the values provided.
+    /// - Note: `INCR` is not supported by this library in `zadd`. Use the `zincrby(:element:in:)` method instead.
     ///
     /// See [https://redis.io/commands/zadd](https://redis.io/commands/zadd)
     /// - Parameters:
     ///     - elements: A list of elements and their score to add to the sorted set.
     ///     - key: The key of the sorted set.
-    ///     - options: A set of options defined by Redis for this command to execute under.
-    /// - Returns: The number of elements added to the sorted set.
+    ///     - option: An option for modifying the behavior of the command.
+    ///     - returnChangedCount: `zadd` normally returns the number of new elements added to the set,
+    ///         but setting this to `true` will instead have the command return the number of elements changed.
+    ///
+    ///         "Changed" in this context are new elements added, and elements that had their score updated.
+    /// - Returns: The number of elements added to the sorted set, unless `returnChangedCount` was set to `true`.
     @inlinable
     public func zadd<Value: RESPValueConvertible>(
         _ elements: [(element: Value, score: Double)],
         to key: String,
-        options: Set<RedisSortedSetAddOption> = []
+        option: RedisSortedSetAddOption? = nil,
+        returnChangedCount: Bool = false
     ) -> EventLoopFuture<Int> {
-        assert(options.count <= 2, "Invalid number of options provided.")
-        assert(
-            !(options.contains(.onlyAddNewElements) && options.contains(.onlyUpdateExistingElements)),
-            ".onlyAddNewElements and .onlyUpdateExistingElements options are mutually exclusive."
-        )
-
         var args: [RESPValue] = [.init(bulk: key)]
-        args.add(contentsOf: options) { (array, option) in
-            array.append(.init(bulk: option.rawValue))
+        
+        if let opt = option {
+            args.append(.init(bulk: opt.rawValue))
+        }
+        if returnChangedCount {
+            args.append(.init(bulk: "CH"))
         }
         args.add(contentsOf: elements, overestimatedCountBeingAdded: elements.count * 2) { (array, next) in
             array.append(.init(bulk: next.score.description))
@@ -102,15 +100,20 @@ extension RedisClient {
     /// - Parameters:
     ///     - element: The element and its score to add to the sorted set.
     ///     - key: The key of the sorted set.
-    ///     - options: A set of options defined by Redis for this command to execute under.
-    /// - Returns: `true` if the element was added or score was updated in the sorted set.
+    ///     - option: An option for modifying the behavior of the command.
+    ///     - returnChangedCount: `zadd` normally returns the number of new elements added to the set,
+    ///         but setting this to `true` will instead have the command return the number of elements changed.
+    ///
+    ///         "Changed" in this context are new elements added, and elements that had their score updated.
+    /// - Returns: `true` if the element was added or score was updated in the sorted set, depending on the `option` and `returnChangedCount` settings set.
     @inlinable
     public func zadd<Value: RESPValueConvertible>(
         _ element: (element: Value, score: Double),
         to key: String,
-        options: Set<RedisSortedSetAddOption> = []
+        option: RedisSortedSetAddOption? = nil,
+        returnChangedCount: Bool = false
     ) -> EventLoopFuture<Bool> {
-        return zadd([element], to: key, options: options)
+        return zadd([element], to: key, option: option, returnChangedCount: returnChangedCount)
             .map { return $0 == 1 }
     }
 
