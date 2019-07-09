@@ -65,7 +65,7 @@ print(result) // Optional("some value")
 
 ## Documentation
 
-The docs for the latest tagged release are always available at https://mordil.gitlab.io/swift-redi-stack.
+The docs for the latest tagged release are always available at [docs.redistack.info](http://docs.redistack.info).
 
 ## Questions
 
