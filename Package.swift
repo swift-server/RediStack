@@ -18,7 +18,8 @@ import PackageDescription
 let package = Package(
     name: "redi-stack",
     products: [
-        .library(name: "RediStack", targets: ["RediStack"])
+        .library(name: "RediStack", targets: ["RediStack"]),
+        .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
