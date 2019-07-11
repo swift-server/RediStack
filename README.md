@@ -28,7 +28,9 @@ The table below lists the major releases alongside their compatible language, de
 
 ### Supported Operating Systems
 
-**RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases). See the [test matrix below for more details](#language-and-platform-test-matrix).
+**RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases).
+
+See the [test matrix below for more details](#language-and-platform-test-matrix).
 
 ## Installing
 
@@ -79,18 +81,18 @@ For all other support requests, please email [support@redistack.info](mailto:sup
 
 ## Contributing
 
-Check out [CONTRIBUTING.md](CONTRIBUTING.md) for more information on how to help with **RediStack**.
+Check out [CONTRIBUTING.md](https://gitlab.com/Mordil/swift-redi-stack/blob/master/CONTRIBUTING.md) for more information on how to help with **RediStack**.
 
 ## Contributors
 
-Check out [CONTRIBUTORS.txt](CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
+Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/swift-redi-stack/blob/master/CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
 
 ## Swift on Server Ecosystem
 
 **RediStack** is part of the [Swift on Server Working Group](https://github.com/swift-server/sswg) ecosystem - currently recommended as [**Sandbox Maturity**](https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level).
 
 | Proposal | Pitch | Discussion | Review | Vote |
-|----------|-------|------------|--------|------|
+|:---:|:---:|:---:|:---:|:---:|
 | [SSWG-0004](https://github.com/swift-server/sswg/blob/master/proposals/0004-nio-redis.md) | [2019-01-07](https://forums.swift.org/t/swiftnio-redis-client/19325) | [2019-04-01](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455) | [2019-06-09](https://forums.swift.org/t/feedback-redisnio-a-nio-based-redis-driver/25521) | [2019-06-27](https://forums.swift.org/t/june-27th-2019/26580) |
 
 ## Language and Platform Test Matrix
