@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class BasicCommandsTests: RedisIntegrationTestCase {
+final class BasicCommandsTests: RediStackIntegrationTestCase {
     func test_select() {
         XCTAssertNoThrow(try connection.select(database: 3).wait())
     }

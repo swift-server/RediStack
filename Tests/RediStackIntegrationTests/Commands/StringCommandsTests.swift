@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class StringCommandsTests: RedisIntegrationTestCase {
+final class StringCommandsTests: RediStackIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
 
     func test_get() throws {

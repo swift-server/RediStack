@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class RedisConnectionTests: RedisIntegrationTestCase {
+final class RedisConnectionTests: RediStackIntegrationTestCase {
     static let expectedLogsMessage = "The following log(s) in this test are expected."
     
     func test_unexpectedChannelClose() throws {

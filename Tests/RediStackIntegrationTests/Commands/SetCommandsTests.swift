@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class SetCommandsTests: RedisIntegrationTestCase {
+final class SetCommandsTests: RediStackIntegrationTestCase {
     func test_sadd() throws {
         var insertCount = try connection.sadd([1, 2, 3], to: #function).wait()
         XCTAssertEqual(insertCount, 3)

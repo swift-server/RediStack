@@ -20,6 +20,19 @@ import XCTest
 ///
 /// See `RedisConnection.connect(to:port:)` to understand how connections are made.
 open class RedisIntegrationTestCase: XCTestCase {
+    /// An overridable value of the Redis instance's hostname to connect to for the test suite(s).
+    ///
+    /// The default value is `RedisConnection.defaultHostname`
+    ///
+    /// This is especially useful to override if you build on Linux & macOS where Redis might be installed locally vs. through Docker.
+    open var redisHostname: String { return RedisConnection.defaultHostname }
+    
+    /// The port to connect over to Redis, defaulting to `RedisConnection.defaultPort`.
+    open var redisPort: Int { return RedisConnection.defaultPort }
+    
+    /// The password to use to connect to Redis. Default is `nil` - no password authentication.
+    open var redisPassword: String? { return nil }
+    
     public var connection: RedisConnection!
     
     private let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
@@ -67,6 +80,11 @@ open class RedisIntegrationTestCase: XCTestCase {
     /// See `RedisConnection.connect(to:port:)`
     /// - Returns: The new `RediStack.RedisConnection`.
     public func makeNewConnection() throws -> RedisConnection {
-        return try RedisConnection.connect(on: eventLoopGroup.next()).wait()
+        return try RedisConnection.connect(
+            on: eventLoopGroup.next(),
+            host: self.redisHostname,
+            port: self.redisPort,
+            password: self.redisPassword
+        ).wait()
     }
 }

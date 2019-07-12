@@ -17,6 +17,9 @@ import NIO
 import RediStack
 
 extension RedisConnection {
+    /// A default hostname of `localhost` to try and connect to Redis at.
+    public static let defaultHostname = "localhost"
+    
     /// Creates a connection intended for tests using `REDIS_URL` and `REDIS_PW` environment variables if available.
     ///
     /// The default URL is `127.0.0.1` while the default port is `RedisConnection.defaultPort`.
@@ -28,11 +31,10 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the new connection.
     public static func connect(
         on eventLoop: EventLoop,
-        port: Int = RedisConnection.defaultPort
+        host: String = RedisConnection.defaultHostname,
+        port: Int = RedisConnection.defaultPort,
+        password: String? = nil
     ) -> EventLoopFuture<RedisConnection> {
-        let env = ProcessInfo.processInfo.environment
-        let host = env["REDIS_URL"] ?? "127.0.0.1"
-        
         let address: SocketAddress
         do {
             address = try SocketAddress.makeAddressResolvingHost(host, port: port)
@@ -40,6 +42,6 @@ extension RedisConnection {
             return eventLoop.makeFailedFuture(error)
         }
         
-        return RedisConnection.connect(to: address, on: eventLoop, password: env["REDIS_PW"])
+        return RedisConnection.connect(to: address, on: eventLoop, password: password)
     }
 }
