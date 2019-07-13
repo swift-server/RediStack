@@ -115,7 +115,7 @@ public final class RedisConnection: RedisClient {
     /// When set to `true`, the buffer will be drained as soon as commands are added.
     /// - Important: Even when set to `true`, the host machine may still choose to delay sending commands.
     /// - Note: Setting this to `true` will immediately drain the buffer.
-    var sendCommandsImmediately: Bool {
+    public var sendCommandsImmediately: Bool {
         get { return autoflush.load() }
         set(newValue) {
             if newValue { self.channel.flush() }
