@@ -108,11 +108,11 @@ receive regular unit testing (either in development, or with CI).
 
 ## License
 
-[Apache 2.0](./LICENSE.txt)
+[Apache 2.0](https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt)
 
 Copyright (c) 2019-present, Nathan Harris (@mordil)
 
-_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](./NOTICE.txt)_
+_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](https://gitlab.com/Mordil/swift-redi-stack/blob/master/NOTICE.txt)_
 
 _**Redis** is a registered trademark of **Redis Labs**. Any use of their trademark is under the established [trademark guidelines](https://redis.io/topics/trademark) and does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
 
