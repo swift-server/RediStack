@@ -236,23 +236,4 @@ final class ListCommandsTests: RedisIntegrationTestCase {
             .wait()
         XCTAssertEqual(element, 10)
     }
-
-    static var allTests = [
-        ("test_llen", test_llen),
-        ("test_lindex", test_lindex),
-        ("test_lset", test_lset),
-        ("test_lrem", test_lrem),
-        ("test_lrange", test_lrange),
-        ("test_rpoplpush", test_rpoplpush),
-        ("test_brpoplpush", test_brpoplpush),
-        ("test_linsert", test_linsert),
-        ("test_lpop", test_lpop),
-        ("test_blpop", test_blpop),
-        ("test_lpush", test_lpush),
-        ("test_lpushx", test_lpushx),
-        ("test_rpop", test_rpop),
-        ("test_brpop", test_brpop),
-        ("test_rpush", test_rpush),
-        ("test_rpushx", test_rpushx),
-    ]
 }

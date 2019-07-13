@@ -381,32 +381,4 @@ final class SortedSetCommandsTests: RedisIntegrationTestCase {
         count = try connection.zremrangebyscore(within: ("-inf", "+inf"), from: key).wait()
         XCTAssertEqual(count, 5)
     }
-
-    static var allTests = [
-        ("test_zadd", test_zadd),
-        ("test_zcard", test_zcard),
-        ("test_zscore", test_zscore),
-        ("test_zscan", test_zscan),
-        ("test_zrank", test_zrank),
-        ("test_zrevrank", test_zrevrank),
-        ("test_zcount", test_zcount),
-        ("test_zlexcount", test_zlexcount),
-        ("test_zpopmin", test_zpopmin),
-        ("test_bzpopmin", test_bzpopmin),
-        ("test_zpopmax", test_zpopmax),
-        ("test_bzpopmax", test_bzpopmax),
-        ("test_zincrby", test_zincrby),
-        ("test_zunionstore", test_zunionstore),
-        ("test_zinterstore", test_zinterstore),
-        ("test_zrange", test_zrange),
-        ("test_zrevrange", test_zrevrange),
-        ("test_zrangebyscore", test_zrangebyscore),
-        ("test_zrevrangebyscore", test_zrevrangebyscore),
-        ("test_zrangebylex", test_zrangebylex),
-        ("test_zrevrangebylex", test_zrevrangebylex),
-        ("test_zrem", test_zrem),
-        ("test_zremrangebylex", test_zremrangebylex),
-        ("test_zremrangebyrank", test_zremrangebyrank),
-        ("test_zremrangebyscore", test_zremrangebyscore),
-    ]
 }

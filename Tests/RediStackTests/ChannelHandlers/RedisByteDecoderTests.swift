@@ -300,21 +300,6 @@ extension RedisByteDecoderTests {
     }
 }
 
-extension RedisByteDecoderTests {
-    static var allTests = [
-        ("testErrors", testErrors),
-        ("testSimpleStrings", testSimpleStrings),
-        ("testIntegers", testIntegers),
-        ("testBulkStrings", testBulkStrings),
-        ("testArrays", testArrays),
-        ("testAll", testAll),
-        ("test_partial_needsMoreData", test_partial_needsMoreData),
-        ("test_badMessage_throws", test_badMessage_throws),
-        ("test_complete_continues", test_complete_continues),
-        ("test_complete_movesReaderIndex", test_complete_movesReaderIndex),
-    ]
-}
-
 extension RedisError: Equatable {
     public static func == (lhs: RedisError, rhs: RedisError) -> Bool {
         return lhs.message == rhs.message

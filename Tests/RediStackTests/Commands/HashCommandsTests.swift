@@ -160,22 +160,4 @@ final class HashCommandsTests: RedisIntegrationTestCase {
         XCTAssertGreaterThanOrEqual(fields.count, 1)
         XCTAssertLessThanOrEqual(fields.count, 7)
     }
-
-    static var allTests = [
-        ("test_hset", test_hset),
-        ("test_hmset", test_hmset),
-        ("test_hsetnx", test_hsetnx),
-        ("test_hget", test_hget),
-        ("test_hmget", test_hmget),
-        ("test_hgetall", test_hgetall),
-        ("test_hdel", test_hdel),
-        ("test_hexists", test_hexists),
-        ("test_hlen", test_hlen),
-        ("test_hstrlen", test_hstrlen),
-        ("test_hkeys", test_hkeys),
-        ("test_hvals", test_hvals),
-        ("test_hincrby", test_hincrby),
-        ("test_hincrbyfloat", test_hincrbyfloat),
-        ("test_hscan", test_hscan),
-    ]
 }

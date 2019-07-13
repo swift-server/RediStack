@@ -45,10 +45,4 @@ final class RedisConnectionTests: RedisIntegrationTestCase {
             XCTAssertTrue(error is RedisClientError)
         }
     }
-    
-    static var allTests = [
-        ("test_unexpectedChannelClose", test_unexpectedChannelClose),
-        ("test_callingCloseMultipleTimes", test_callingCloseMultipleTimes),
-        ("test_sendingCommandAfterClosing", test_sendingCommandAfterClosing),
-    ]
 }

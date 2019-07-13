@@ -113,14 +113,3 @@ final class RedisMessageEncoderTests: XCTestCase {
         validation(buffer)
     }
 }
-
-extension RedisMessageEncoderTests {
-    static var allTests = [
-        ("testSimpleStrings", testSimpleStrings),
-        ("testBulkStrings", testBulkStrings),
-        ("testIntegers", testIntegers),
-        ("testArrays", testArrays),
-        ("testError", testError),
-        ("testNull", testNull),
-    ]
-}

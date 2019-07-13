@@ -111,14 +111,4 @@ final class BasicCommandsTests: RedisIntegrationTestCase {
         XCTAssertGreaterThanOrEqual(keys.count, 1)
         XCTAssertLessThanOrEqual(keys.count, 7)
     }
-
-    static var allTests = [
-        ("test_select", test_select),
-        ("test_expire", test_expire),
-        ("test_delete", test_delete),
-        ("test_ping", test_ping),
-        ("test_echo", test_echo),
-        ("test_swapDatabase", test_swapDatabase),
-        ("test_scan", test_scan),
-    ]
 }

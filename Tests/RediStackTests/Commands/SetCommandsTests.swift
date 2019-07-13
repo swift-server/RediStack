@@ -252,22 +252,4 @@ final class SetCommandsTests: RedisIntegrationTestCase {
         XCTAssertGreaterThanOrEqual(results.count, 1)
         XCTAssertLessThanOrEqual(results.count, 3)
     }
-
-    static var allTests = [
-        ("test_sadd", test_sadd),
-        ("test_smembers", test_smembers),
-        ("test_sismember", test_sismember),
-        ("test_scard", test_scard),
-        ("test_srem", test_srem),
-        ("test_spop", test_spop),
-        ("test_srandmember", test_srandmember),
-        ("test_sdiff", test_sdiff),
-        ("test_sdiffstore", test_sdiffstore),
-        ("test_sinter", test_sinter),
-        ("test_sinterstore", test_sinterstore),
-        ("test_smove", test_smove),
-        ("test_sunion", test_sunion),
-        ("test_sunionstore", test_sunionstore),
-        ("test_sscan", test_sscan),
-    ]
 }

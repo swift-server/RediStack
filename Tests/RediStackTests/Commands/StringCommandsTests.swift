@@ -128,18 +128,4 @@ final class StringCommandsTests: RedisIntegrationTestCase {
         result = try connection.decrement(#function, by: 0).wait()
         XCTAssertEqual(result, 7)
     }
-
-    static var allTests = [
-        ("test_get", test_get),
-        ("test_mget", test_mget),
-        ("test_set", test_set),
-        ("test_append", test_append),
-        ("test_mset", test_mset),
-        ("test_msetnx", test_msetnx),
-        ("test_increment", test_increment),
-        ("test_incrementBy", test_incrementBy),
-        ("test_incrementByFloat", test_incrementByFloat),
-        ("test_decrement", test_decrement),
-        ("test_decrementBy", test_decrementBy),
-    ]
 }
