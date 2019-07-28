@@ -37,12 +37,16 @@ public enum RedisClientError: LocalizedError {
 }
 
 /// If something goes wrong with a command within Redis, it will respond with an error that is captured and represented by instances of this type.
-public struct RedisError: LocalizedError {
+public struct RedisError: LocalizedError, Equatable {
     public let message: String
 
     public var errorDescription: String? { return message }
 
     public init(reason: String) {
         message = "Redis: \(reason)"
+    }
+    
+    public static func == (lhs: RedisError, rhs: RedisError) -> Bool {
+        return lhs.message == rhs.message
     }
 }

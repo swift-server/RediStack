@@ -299,9 +299,3 @@ extension RedisByteDecoderTests {
         return try decoder.decode(context: context, buffer: &buffer)
     }
 }
-
-extension RedisError: Equatable {
-    public static func == (lhs: RedisError, rhs: RedisError) -> Bool {
-        return lhs.message == rhs.message
-    }
-}
