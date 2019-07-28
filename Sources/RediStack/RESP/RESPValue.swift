@@ -129,3 +129,19 @@ extension RESPValue {
     /// - Note: This is a shorthand for `Array<UInt8>.init(fromRESP:)`.
     public var bytes: [UInt8]? { return [UInt8](fromRESP: self) }
 }
+
+// MARK: Equatable
+
+extension RESPValue: Equatable {
+    public static func == (lhs: RESPValue, rhs: RESPValue) -> Bool {
+        switch (lhs, rhs) {
+        case (.bulkString(let lhs), .bulkString(let rhs)): return lhs == rhs
+        case (.simpleString(let lhs), .simpleString(let rhs)): return lhs == rhs
+        case (.integer(let lhs), .integer(let rhs)): return lhs == rhs
+        case (.error(let lhs), .error(let rhs)): return lhs.message == rhs.message
+        case (.array(let lhs), .array(let rhs)): return lhs == rhs
+        case (.null, .null): return true
+        default: return false
+        }
+    }
+}
