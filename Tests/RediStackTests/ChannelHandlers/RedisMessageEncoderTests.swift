@@ -14,6 +14,7 @@
 
 import NIO
 @testable import RediStack
+import RediStackTestUtils
 import XCTest
 
 final class RedisMessageEncoderTests: XCTestCase {
