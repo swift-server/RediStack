@@ -17,7 +17,7 @@ import NIO
 import RediStackTestUtils
 import XCTest
 
-final class SortedSetCommandsTests: RedisIntegrationTestCase {
+final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
 
     private var key: String { return SortedSetCommandsTests.testKey }

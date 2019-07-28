@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class HashCommandsTests: RedisIntegrationTestCase {
+final class HashCommandsTests: RediStackIntegrationTestCase {
     func test_hset() throws {
         var result = try connection.hset("test", to: "\(#line)", in: #function).wait()
         XCTAssertTrue(result)

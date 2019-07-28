@@ -16,7 +16,7 @@
 import RediStackTestUtils
 import XCTest
 
-final class ListCommandsTests: RedisIntegrationTestCase {
+final class ListCommandsTests: RediStackIntegrationTestCase {
     func test_llen() throws {
         var length = try connection.llen(of: #function).wait()
         XCTAssertEqual(length, 0)
