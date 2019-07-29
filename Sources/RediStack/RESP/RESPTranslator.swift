@@ -102,11 +102,15 @@ extension RESPTranslator {
     /// [https://www.gitlab.com/mordil/swift-redis-nio-client/issues](https://www.gitlab.com/mordil/swift-redis-nio-client/issues)
     public enum ParsingError: LocalizedError {
         case invalidToken
+        case invalidBulkStringSize
+        case bulkStringSizeMismatch
         
         /// See `LocalizedError.errorDescription`
         public var errorDescription: String? {
             switch self {
             case .invalidToken: return "Cannot parse RESP: Invalid Token"
+            case .invalidBulkStringSize: return "Cannot parse RESP Bulk String: Received invalid size."
+            case .bulkStringSizeMismatch: return "Cannot parse RESP Bulk String: Declared Size and Content Size do not match."
             }
         }
     }
@@ -133,7 +137,7 @@ extension RESPTranslator {
             result = .integer(value)
             
         case .dollar:
-            result = self.parseBulkString(from: &copy)
+            result = try self.parseBulkString(from: &copy)
             break
             
         case .asterisk:
@@ -187,8 +191,19 @@ extension RESPTranslator {
     }
     
     /// See [https://redis.io/topics/protocol#resp-bulk-strings](https://redis.io/topics/protocol#resp-bulk-strings)
-    internal func parseBulkString(from buffer: inout ByteBuffer) -> RESPValue? {
-        guard let size = self.parseInteger(from: &buffer) else { return nil }
+    internal func parseBulkString(from buffer: inout ByteBuffer) throws -> RESPValue? {
+        let startingReaderIndex = buffer.readerIndex
+        
+        guard let size = self.parseInteger(from: &buffer) else {
+            // if the reader index changed, that means that a valid string parse happened, but it's not a number.
+            guard startingReaderIndex == buffer.readerIndex else {
+                throw ParsingError.invalidBulkStringSize
+            }
+            return nil
+        }
+        
+        // only -1 is the only valid negative value for a size
+        guard size >= -1 else { throw ParsingError.invalidBulkStringSize }
         
         // Redis sends '$-1\r\n' to represent a null bulk string
         guard size > -1 else { return .null }
@@ -199,8 +214,10 @@ extension RESPTranslator {
         let expectedRemainingMessageSize = size + 2
         guard buffer.readableBytes >= expectedRemainingMessageSize else { return nil }
         
-        // sanity check assert that the position of the newline ending is the remaining size
-        assert(buffer.getBytes(at: expectedRemainingMessageSize + buffer.readerIndex - 1, length: 1)?.first == .newline)
+        // sanity check that the declared content size matches the actual size.
+        guard
+            buffer.viewBytes(at: buffer.readerIndex + expectedRemainingMessageSize - 1, length: 1)?.first == .newline
+        else { throw ParsingError.bulkStringSizeMismatch }
         
         // empty content bulk strings are different from null, and represented as .bulkString(nil)
         guard size > 0 else {

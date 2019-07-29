@@ -104,6 +104,14 @@ fileprivate extension ByteBuffer {
 // MARK: Parse
 
 extension RESPTranslatorTests {
+    func testParsing_invalidToken() {
+        var buffer = self.allocator.buffer(capacity: 128)
+        buffer.writeString("!!!!")
+        XCTAssertThrowsError(try self.parser.parseBytes(from: &buffer)) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidToken)
+        }
+    }
+    
     func testParsing_invalidSymbols() {
         let testRESP = "&3\r\n"
         var buffer = allocator.buffer(capacity: testRESP.count)
@@ -337,6 +345,33 @@ extension RESPTranslatorTests {
 // MARK: Bulk Strings
 
 extension RESPTranslatorTests {
+    func testParsing_bulkString_sizeMismatch() {
+        var buffer = self.allocator.buffer(capacity: 128)
+        buffer.writeString("$2\r\ntoo long\r\n")
+        buffer.mimicTokenParse()
+        XCTAssertThrowsError(try self.parser.parseBulkString(from: &buffer)) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .bulkStringSizeMismatch)
+        }
+    }
+    
+    func testParsing_bulkString_invalidNegativeSize() {
+        var buffer = self.allocator.buffer(capacity: 128)
+        buffer.writeString("$-4\r\nwhat\r\n")
+        buffer.mimicTokenParse()
+        XCTAssertThrowsError(try self.parser.parseBulkString(from: &buffer)) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidBulkStringSize)
+        }
+    }
+    
+    func testParsing_bulkString_SizeIsNaN() {
+        var buffer = self.allocator.buffer(capacity: 128)
+        buffer.writeString("$FOO\r\nwhat\r\n")
+        buffer.mimicTokenParse()
+        XCTAssertThrowsError(try self.parser.parseBulkString(from: &buffer)) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidBulkStringSize)
+        }
+    }
+    
     func testParsing_bulkString_missingEndings() {
         for message in ["$6", "$6\r\n", "$6\r\nabcdef", "$0\r\n"] {
             XCTAssertNil(bulkStringParseTest(inputRESP: message))
@@ -374,11 +409,11 @@ extension RESPTranslatorTests {
         buffer.writeString(testString)
         
         buffer.mimicTokenParse()
-        let first = parser.parseBulkString(from: &buffer)
+        let first = try? parser.parseBulkString(from: &buffer)
         XCTAssertEqual(buffer.readerIndex, 6) // position of the 2nd '$'
         
         buffer.mimicTokenParse()
-        let second = parser.parseBulkString(from: &buffer)
+        let second = try? parser.parseBulkString(from: &buffer)
         XCTAssertEqual(buffer.readerIndex, 17)
         
         XCTAssertEqual(first?.string, "")
@@ -395,7 +430,7 @@ extension RESPTranslatorTests {
 
         buffer.mimicTokenParse()
         
-        guard let result = parser.parseBulkString(from: &buffer) else { return nil }
+        guard let result = try? parser.parseBulkString(from: &buffer) else { return nil }
         return result
     }
 }
