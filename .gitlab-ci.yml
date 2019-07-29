@@ -1,6 +1,6 @@
 stages:
-  - Build in Release
   - Test
+  - Build in Release
   - Docs
 
 pages:
@@ -39,6 +39,8 @@ pages:
     - docker
   script:
     - swift build -c release -v
+  only:
+    - master
 
 build 5.0:ubuntu-xenial:
   extends: .build
