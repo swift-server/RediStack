@@ -63,6 +63,8 @@ extension RedisByteDecoderTests {
         ("test_complete_continues", test_complete_continues),
         ("test_complete_movesReaderIndex", test_complete_movesReaderIndex),
         ("test_partial_needsMoreData", test_partial_needsMoreData),
+        ("test_validatesBasicAssumptions_withNonStringRepresentables", test_validatesBasicAssumptions_withNonStringRepresentables),
+        ("test_validatesBasicAssumptions", test_validatesBasicAssumptions),
         ("testAll", testAll),
         ("testArrays", testArrays),
         ("testBulkStrings", testBulkStrings),
