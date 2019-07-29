@@ -39,16 +39,21 @@ public enum RESPValue {
 
     /// Initializes a `bulkString` value.
     /// - Parameter value: The `String` to store in a `.bulkString` representation.
-    public init(bulk value: String) {
-        var buffer = RESPValue.allocator.buffer(capacity: value.count)
-        buffer.writeString(value)
+    public init(bulk value: String?) {
+        guard let unwrappedValue = value else {
+            self = .bulkString(nil)
+            return
+        }
+        
+        var buffer = RESPValue.allocator.buffer(capacity: unwrappedValue.count)
+        buffer.writeString(unwrappedValue)
         self = .bulkString(buffer)
     }
 
     /// Initializes a `bulkString` value.
     /// - Parameter value: The `Int` value to store in a `.bulkString` representation.
-    public init(bulk value: Int) {
-        self.init(bulk: value.description)
+    public init<Value: FixedWidthInteger>(bulk value: Value?) {
+        self.init(bulk: value?.description)
     }
 
     /// Stores the representation determined by the `RESPValueConvertible` value.
