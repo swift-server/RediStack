@@ -37,6 +37,7 @@ extension RESPTranslatorTests {
         XCTAssertTrue(writingTestPass(input: .bulkString(buffer), expected: "$5\r\n".bytes + bytes + "\r\n".bytes))
         XCTAssertTrue(writingTestPass(input: .init(bulk: "®in§³¾"), expected: "$10\r\n®in§³¾\r\n"))
         XCTAssertTrue(writingTestPass(input: .init(bulk: ""), expected: "$0\r\n\r\n"))
+        XCTAssertTrue(writingTestPass(input: .init(bulk: Optional<Int>.none), expected: "$0\r\n\r\n"))
     }
     
     func testWriting_integers() {
