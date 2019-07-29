@@ -29,7 +29,9 @@ let package = Package(
     targets: [
         .target(name: "RediStack", dependencies: ["NIO", "Logging", "Metrics"]),
         .target(name: "RediStackTestUtils", dependencies: ["NIO", "RediStack"]),
-        .testTarget(name: "RediStackTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils"]),
+        .testTarget(name: "RediStackTests", dependencies: [
+            "RediStack", "NIO", "RediStackTestUtils", "NIOTestUtils"
+        ]),
         .testTarget(name: "RediStackIntegrationTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils"])
     ]
 )

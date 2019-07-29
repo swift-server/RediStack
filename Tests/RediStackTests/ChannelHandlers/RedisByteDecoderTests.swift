@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
+import NIOTestUtils
 @testable import RediStack
 import XCTest
 
@@ -297,5 +298,78 @@ extension RedisByteDecoderTests {
         buffer.writeString(input)
 
         return try decoder.decode(context: context, buffer: &buffer)
+    }
+}
+
+// MARK: ByteToMessageDecoderVerifier
+
+extension RedisByteDecoderTests {
+    func test_validatesBasicAssumptions() throws {
+        let inputExpectedOutputPairs: [(String, [RedisByteDecoder.InboundOut])] = [
+            (":1000\r\n:1000\r\n", [.integer(1000), .integer(1000)]),
+            (":0\r\n", [.integer(0)]),
+            ("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n",
+             [.array([.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)])]),
+            ("+👩🏼‍✈️\r\n++\r\n", [.simpleString("👩🏼‍✈️".byteBuffer), .simpleString("+".byteBuffer)]),
+            ("*2\r\n:1\r\n:2\r\n", [.array([.integer(1), .integer(2)])]),
+            ("*2\r\n*1\r\n:1\r\n:2\r\n", [.array([.array([.integer(1)]), .integer(2)])]),
+            ("-ERR test\r\n", [.error(.init(reason: "ERR test"))]),
+            ("$2\r\n\r\n\r\n$1\r\n\r\r\n", [.bulkString("\r\n".byteBuffer), .bulkString("\r".byteBuffer)]),
+            ("$-1\r\n", [.null]),
+            (":00000\r\n:\(Int.max)\r\n:\(Int.min)\r\n", [.integer(0), .integer(Int.max), .integer(Int.min)]),
+        ]
+        XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
+            stringInputOutputPairs: inputExpectedOutputPairs,
+            decoderFactory: RedisByteDecoder.init
+        ))
+    }
+    
+    func test_validatesBasicAssumptions_withNonStringRepresentables() throws {
+        var buffer = self.allocator.buffer(capacity: 128)
+        var incompleteUTF8CodeUnitsAsSimpleAndBulkString: (ByteBuffer, [RESPValue]) {
+            buffer.clear()
+            var expectedBuffer1 = buffer
+            var expectedBuffer2 = buffer
+            buffer.writeString("+")
+            // UTF8 2 byte sequence with only 1 byte present
+            expectedBuffer1.writeInteger(0b110_10101, as: UInt8.self)
+            buffer.writeBytes(expectedBuffer1.readableBytesView)
+            buffer.writeString("\r\n")
+            buffer.writeString("$2\r\n")
+            // UTF8 3 byte sequence with only 2 bytes present
+            expectedBuffer2.writeInteger(0b1110_1010, as: UInt8.self)
+            expectedBuffer2.writeInteger(0b10_101010, as: UInt8.self)
+            buffer.writeBytes(expectedBuffer2.readableBytesView)
+            buffer.writeString("\r\n")
+            return (buffer, [.simpleString(expectedBuffer1), .bulkString(expectedBuffer2)])
+        }
+        var boms: (ByteBuffer, [RESPValue]) {
+            buffer.clear()
+            var expectedBuffer1 = buffer
+            var expectedBuffer2 = buffer
+            buffer.writeString("+")
+            // UTF16 LE BOM
+            expectedBuffer1.writeInteger(0xff, as: UInt8.self)
+            expectedBuffer1.writeInteger(0xfe, as: UInt8.self)
+            buffer.writeBytes(expectedBuffer1.readableBytesView)
+            buffer.writeString("\r\n")
+            buffer.writeString("$4\r\n")
+            // UTF32 BE BOM
+            expectedBuffer2.writeInteger(0x00, as: UInt8.self)
+            expectedBuffer2.writeInteger(0x00, as: UInt8.self)
+            expectedBuffer2.writeInteger(0xFE, as: UInt8.self)
+            expectedBuffer2.writeInteger(0xFF, as: UInt8.self)
+            buffer.writeBytes(expectedBuffer2.readableBytesView)
+            buffer.writeString("\r\n")
+            return (buffer, [.simpleString(expectedBuffer1), .bulkString(expectedBuffer2)])
+        }
+        let inputExpectedOutputPairs: [(ByteBuffer, [RedisByteDecoder.InboundOut])] = [
+            incompleteUTF8CodeUnitsAsSimpleAndBulkString,
+            boms,
+        ]
+        XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
+            inputOutputPairs: inputExpectedOutputPairs,
+            decoderFactory: RedisByteDecoder.init
+        ))
     }
 }
