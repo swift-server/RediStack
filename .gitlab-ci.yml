@@ -67,17 +67,20 @@ build 5.1ubuntu-bionic:
   variables:
     REDIS_URL: 'redis'
     REDIS_PW: 'password'
+    SANITIZER_ARG: '--sanitize=thread'
   services:
   - name: redis:5
     alias: 'redis'
     command: ["redis-server", "--requirepass", "password"]
   script:
     - swift build -v
-    - swift test
+    - swift test $SANITIZER_ARG
 
 test 5.0:ubuntu-xenial:
   extends: .test
   image: swift:5.0-xenial
+  variables:
+    SANITIZER_ARG: ''
 test 5.1:ubuntu-xenial:
   extends: .test
   image: swift:5.1-xenial
@@ -89,6 +92,8 @@ test latest:ubuntu-xenial:
 test 5.0:ubuntu-bionic:
   extends: .test
   image: swift:5.0-bionic
+  variables:
+    SANITIZER_ARG: ''
 test 5.1:ubuntu-bionic:
   extends: .test
   image: swift:5.1-bionic

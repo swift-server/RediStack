@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Metrics
+import NIOConcurrencyHelpers
 
 /// The system funnel for all `Metrics` interactions from the Redis library.
 ///
@@ -38,14 +39,8 @@ public struct RedisMetrics {
         }
     }
 
-    private static let activeConnectionCountGauge = Gauge(label: .activeConnectionCount)
-    /// The current number of connections this library has active.
-    /// - Note: Changing this number will update the `Metrics.Gauge` stored for recording the new value.
-    public static var activeConnectionCount: Int = 0 {
-        didSet {
-            activeConnectionCountGauge.record(activeConnectionCount)
-        }
-    }
+    /// The wrapped `Metrics.Gauge` maintaining the current number of connections this library has active.
+    public static var activeConnectionCount = ActiveConnectionGauge()
     /// The `Metrics.Counter` that retains the number of connections made since application startup.
     public static let totalConnectionCount = Counter(label: .totalConnectionCount)
     /// The `Metrics.Counter` that retains the number of commands that successfully returned from Redis
@@ -59,6 +54,31 @@ public struct RedisMetrics {
     public static let commandRoundTripTime = Timer(label: .commandRoundTripTime)
 
     private init() { }
+}
+
+/// A specialized wrapper class for working with `Metrics.Gauge` objects for the purpose of an incrementing or decrementing count of active Redis connections.
+public class ActiveConnectionGauge {
+    private let gauge = Gauge(label: .activeConnectionCount)
+    private let count = Atomic<Int>(value: 0)
+    
+    /// The number of the connections that are currently reported as active.
+    var currentCount: Int { return count.load() }
+    
+    internal init() { }
+    
+    /// Increments the current count by the amount specified.
+    /// - Parameter amount: The number to increase the current count by. Default is `1`.
+    public func increment(by amount: Int = 1) {
+        _ = self.count.add(amount)
+        self.gauge.record(self.count.load())
+    }
+    
+    /// Decrements the current count by the amount specified.
+    /// - Parameter amount: The number to decrease the current count by. Default is `1`.
+    public func decrement(by amount: Int = 1) {
+        _ = self.count.sub(amount)
+        self.gauge.record(self.count.load())
+    }
 }
 
 extension Metrics.Counter {
