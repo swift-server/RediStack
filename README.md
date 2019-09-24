@@ -103,7 +103,7 @@ receive regular unit testing (either in development, or with CI).
 | Swift Version | macOS Mojave | Ubuntu 16.04 (Xenial) | Ubuntu 18.04 (Bionic) |
 |---|:---:|:---:|:---:|
 | 5.0 | X | X | X |
-| 5.1 | X | X |  |
+| 5.1 | X | X | X |
 | Trunk | X | X | |
 
 ## License
