@@ -148,7 +148,7 @@ public final class RedisConnection: RedisClient {
         self.logger[metadataKey: loggingKeyID] = "\(UUID())"
         self._state = .open
         self.logger.debug("Connection created.")
-        RedisMetrics.activeConnectionCount += 1
+        RedisMetrics.activeConnectionCount.increment()
         RedisMetrics.totalConnectionCount.increment()
         
         // attach a callback to the channel to capture situations where the channel might be closed out from under
@@ -160,7 +160,7 @@ public final class RedisConnection: RedisClient {
             
             self.state = .closed
             self.logger.warning("Channel was closed unexpectedly.")
-            RedisMetrics.activeConnectionCount -= 1
+            RedisMetrics.activeConnectionCount.decrement()
         }
     }
     
@@ -243,7 +243,7 @@ extension RedisConnection {
         notification.whenSuccess {
             self.state = .closed
             self.logger.debug("Connection closed.")
-            RedisMetrics.activeConnectionCount -= 1
+            RedisMetrics.activeConnectionCount.decrement()
         }
         
         return notification
