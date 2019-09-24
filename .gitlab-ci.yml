@@ -47,7 +47,7 @@ build 5.0:ubuntu-xenial:
   image: swift:5.0-xenial
 build 5.1:ubuntu-xenial:
   extends: .build
-  image: norionomura/swift:swift-5.1-branch
+  image: swift:5.1-xenial
 build latest:ubuntu-xenial:
   extends: .build
   image: norionomura/swift:nightly
@@ -56,6 +56,9 @@ build latest:ubuntu-xenial:
 build 5.0:ubuntu-bionic:
   extends: .build
   image: swift:5.0-bionic
+build 5.1ubuntu-bionic:
+  extends: .build
+  image: swift:5.1-bionic
 
 .test:
   stage: Test
@@ -77,7 +80,7 @@ test 5.0:ubuntu-xenial:
   image: swift:5.0-xenial
 test 5.1:ubuntu-xenial:
   extends: .test
-  image: norionomura/swift:swift-5.1-branch
+  image: swift:5.1-xenial
 test latest:ubuntu-xenial:
   extends: .test
   image: norionomura/swift:nightly
@@ -86,3 +89,6 @@ test latest:ubuntu-xenial:
 test 5.0:ubuntu-bionic:
   extends: .test
   image: swift:5.0-bionic
+test 5.1:ubuntu-bionic:
+  extends: .test
+  image: swift:5.1-bionic
