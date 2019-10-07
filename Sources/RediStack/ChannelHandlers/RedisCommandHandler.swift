@@ -76,8 +76,6 @@ extension RedisCommandHandler: ChannelInboundHandler {
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
         let queue = self.commandResponseQueue
         
-        assert(queue.count > 0, "Received unexpected error while idle: \(error.localizedDescription)")
-        
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
         
@@ -95,7 +93,6 @@ extension RedisCommandHandler: ChannelInboundHandler {
         let value = self.unwrapInboundIn(data)
 
         guard let leadPromise = self.commandResponseQueue.popFirst() else {
-            assertionFailure("Read triggered with an empty promise queue! Ignoring: \(value)")
             self.logger.critical("Read triggered with no promise waiting in the queue!")
             return
         }
