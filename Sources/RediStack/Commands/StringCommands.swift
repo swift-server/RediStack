@@ -18,17 +18,30 @@ import NIO
 
 extension RedisClient {
     /// Get the value of a key.
-    /// - Note: This operation only works with string values.
-    ///     The `EventLoopFuture` will fail with a `RedisError` if the value is not a string, such as a Set.
     ///
     /// [https://redis.io/commands/get](https://redis.io/commands/get)
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: The string value stored at the key provided, otherwise `nil` if the key does not exist.
     @inlinable
     public func get(_ key: String) -> EventLoopFuture<String?> {
+        return self.get(key, as: String.self)
+    }
+    
+    /// Get the value of a key, converting it to the desired type.
+    ///
+    /// [https://redis.io/commands/get](https://redis.io/commands/get)
+    /// - Parameters:
+    ///     - key: The key to fetch the value from.
+    ///     - type: The desired type to convert the stored data to.
+    /// - Returns: The converted value stored at the key provided, otherwise `nil` if the key does not exist or fails the conversion.
+    @inlinable
+    public func get<StoredType: RESPValueConvertible>(
+        _ key: String,
+        as type: StoredType.Type
+    ) -> EventLoopFuture<StoredType?> {
         let args = [RESPValue(bulk: key)]
         return send(command: "GET", with: args)
-            .map { return $0.string }
+            .map { return StoredType(fromRESP: $0) }
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.

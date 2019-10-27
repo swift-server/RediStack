@@ -21,8 +21,12 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
 
     func test_get() throws {
         try connection.set(#function, to: "value").wait()
-        let result = try connection.get(#function).wait()
-        XCTAssertEqual(result, "value")
+        let r1 = try connection.get(#function).wait()
+        XCTAssertEqual(r1, "value")
+        
+        try connection.set(#function, to: 30).wait()
+        let r2 = try connection.get(#function, as: Int.self).wait()
+        XCTAssertEqual(r2, 30)
     }
 
     func test_mget() throws {
