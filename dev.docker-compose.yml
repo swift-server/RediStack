@@ -1,0 +1,15 @@
+version: "3.5"
+
+services:
+  redis:
+    image: redis:5.0
+    container_name: "redis"
+    ports:
+      - "0.0.0.0:6379:6379"
+    restart: always
+    volumes:
+      - "redi-stack:/data"
+
+volumes:
+  redi-stack:
+    name: redi-stack
