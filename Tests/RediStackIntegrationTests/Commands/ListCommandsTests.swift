@@ -140,7 +140,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         let pop1 = try connection.blpop(from: "first").wait() ?? .null
         XCTAssertEqual(Int(fromRESP: pop1), 30)
 
-        let pop2 = try connection.blpop(from: ["fake", "first"]).wait()
+        let pop2 = try connection.blpop(from: "fake", "first").wait()
         XCTAssertEqual(pop2?.0, "first")
 
         let blockingConnection = try self.makeNewConnection()
@@ -158,7 +158,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     func test_lpush() throws {
         _ = try connection.rpush([10, 20, 30], into: #function).wait()
 
-        let size = try connection.lpush([100], into: #function).wait()
+        let size = try connection.lpush(100, into: #function).wait()
         let element = try connection.lindex(0, from: #function).wait()
         XCTAssertEqual(size, 4)
         XCTAssertEqual(Int(fromRESP: element), 100)
@@ -199,7 +199,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         let pop1 = try connection.brpop(from: "first").wait() ?? .null
         XCTAssertEqual(Int(fromRESP: pop1), 10)
 
-        let pop2 = try connection.brpop(from: ["fake", "first"]).wait()
+        let pop2 = try connection.brpop(from: "fake", "first").wait()
         XCTAssertEqual(pop2?.0, "first")
 
         let blockingConnection = try self.makeNewConnection()
@@ -217,7 +217,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     func test_rpush() throws {
         _ = try connection.lpush([10, 20, 30], into: #function).wait()
 
-        let size = try connection.rpush([100], into: #function).wait()
+        let size = try connection.rpush(100, into: #function).wait()
         let element = try connection.lindex(3, from: #function).wait()
         XCTAssertEqual(size, 4)
         XCTAssertEqual(Int(fromRESP: element), 100)

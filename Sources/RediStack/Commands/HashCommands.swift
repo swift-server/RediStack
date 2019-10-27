@@ -55,6 +55,18 @@ extension RedisClient {
         return send(command: "HDEL", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Removes the specified fields from a hash.
+    ///
+    /// See [https://redis.io/commands/hdel](https://redis.io/commands/hdel)
+    /// - Parameters:
+    ///     - fields: The list of field names that should be removed from the hash.
+    ///     - key: The key of the hash to delete from.
+    /// - Returns: The number of fields that were deleted.
+    @inlinable
+    public func hdel(_ fields: String..., from key: String) -> EventLoopFuture<Int> {
+        return self.hdel(fields, from: key)
+    }
 
     /// Checks if a hash contains the field specified.
     ///
@@ -266,6 +278,18 @@ extension RedisClient {
         return send(command: "HMGET", with: args)
             .convertFromRESPValue(to: [RESPValue].self)
             .map { return $0.map(String.init) }
+    }
+    
+    /// Gets the values of a hash for the fields specified.
+    ///
+    /// See [https://redis.io/commands/hmget](https://redis.io/commands/hmget)
+    /// - Parameters:
+    ///     - fields: A list of field names to get values for.
+    ///     - key: The key of the hash being accessed.
+    /// - Returns: A list of values in the same order as the `fields` argument. Non-existent fields return `nil` values.
+    @inlinable
+    public func hmget(_ fields: String..., from key: String) -> EventLoopFuture<[String?]> {
+        return self.hmget(fields, from: key)
     }
 
     /// Returns all the fields and values stored in a hash.

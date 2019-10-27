@@ -43,7 +43,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(count, 1)
         count = try connection.zadd([(30, 5)], to: #function).wait()
         XCTAssertEqual(count, 0)
-        count = try connection.zadd([(30, 6), (31, 0), (32, 1)], to: #function, option: .onlyAddNewElements).wait()
+        count = try connection.zadd((30, 6), (31, 0), (32, 1), to: #function, option: .onlyAddNewElements).wait()
         XCTAssertEqual(count, 2)
         count = try connection.zadd(
             [(32, 2), (33, 3)],
@@ -342,12 +342,12 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zrem() throws {
-        var count = try connection.zrem([1], from: key).wait()
+        var count = try connection.zrem(1, from: key).wait()
         XCTAssertEqual(count, 1)
         count = try connection.zrem([1], from: key).wait()
         XCTAssertEqual(count, 0)
 
-        count = try connection.zrem([2, 3, 4, 5], from: key).wait()
+        count = try connection.zrem(2, 3, 4, 5, from: key).wait()
         XCTAssertEqual(count, 4)
         count = try connection.zrem([5, 6, 7], from: key).wait()
         XCTAssertEqual(count, 2)
