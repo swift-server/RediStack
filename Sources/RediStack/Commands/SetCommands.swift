@@ -79,6 +79,18 @@ extension RedisClient {
         return send(command: "SADD", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Adds elements to a set.
+    ///
+    /// See [https://redis.io/commands/sadd](https://redis.io/commands/sadd)
+    /// - Parameters:
+    ///     - elements: The values to add to the set.
+    ///     - key: The key of the set to insert into.
+    /// - Returns: The number of elements that were added to the set.
+    @inlinable
+    public func sadd<Value: RESPValueConvertible>(_ elements: Value..., to key: String) -> EventLoopFuture<Int> {
+        return self.sadd(elements, to: key)
+    }
 
     /// Removes elements from a set.
     ///
@@ -96,6 +108,18 @@ extension RedisClient {
         
         return send(command: "SREM", with: args)
             .convertFromRESPValue()
+    }
+    
+    /// Removes elements from a set.
+    ///
+    /// See [https://redis.io/commands/srem](https://redis.io/commands/srem)
+    /// - Parameters:
+    ///     - elements: The values to remove from the set.
+    ///     - key: The key of the set to remove from.
+    /// - Returns: The number of elements that were removed from the set.
+    @inlinable
+    public func srem<Value: RESPValueConvertible>(_ elements: Value..., from key: String) -> EventLoopFuture<Int> {
+        return self.srem(elements, from: key)
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -204,6 +228,16 @@ extension RedisClient {
         return send(command: "SDIFF", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Calculates the difference between two or more sets.
+    ///
+    /// See [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
+    /// - Parameter keys: The source sets to calculate the difference of.
+    /// - Returns: A list of elements resulting from the difference.
+    @inlinable
+    public func sdiff(of keys: String...) -> EventLoopFuture<[RESPValue]> {
+        return self.sdiff(of: keys)
+    }
 
     /// Calculates the difference between two or more sets and stores the result.
     /// - Important: If the destination key already exists, it is overwritten.
@@ -241,6 +275,16 @@ extension RedisClient {
         return send(command: "SINTER", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Calculates the intersection of two or more sets.
+    ///
+    /// See [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
+    /// - Parameter keys: The source sets to calculate the intersection of.
+    /// - Returns: A list of elements resulting from the intersection.
+    @inlinable
+    public func sinter(of keys: String...) -> EventLoopFuture<[RESPValue]> {
+        return self.sinter(of: keys)
+    }
 
     /// Calculates the intersetion of two or more sets and stores the result.
     /// - Important: If the destination key already exists, it is overwritten.
@@ -277,6 +321,16 @@ extension RedisClient {
         let args = keys.map(RESPValue.init)
         return send(command: "SUNION", with: args)
             .convertFromRESPValue()
+    }
+    
+    /// Calculates the union of two or more sets.
+    ///
+    /// See [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
+    /// - Parameter keys: The source sets to calculate the union of.
+    /// - Returns: A list of elements resulting from the union.
+    @inlinable
+    public func sunion(of keys: String...) -> EventLoopFuture<[RESPValue]> {
+        return self.sunion(of: keys)
     }
 
     /// Calculates the union of two or more sets and stores the result.

@@ -39,7 +39,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(values[1].string, "two")
         XCTAssertEqual(values[2].isNull, true)
 
-        XCTAssertEqual(try connection.mget(["empty", #function]).wait().count, 2)
+        XCTAssertEqual(try connection.mget("empty", #function).wait().count, 2)
     }
 
     func test_set() throws {

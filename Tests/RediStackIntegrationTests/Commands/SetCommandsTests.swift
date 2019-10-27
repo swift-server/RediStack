@@ -18,7 +18,7 @@ import XCTest
 
 final class SetCommandsTests: RediStackIntegrationTestCase {
     func test_sadd() throws {
-        var insertCount = try connection.sadd([1, 2, 3], to: #function).wait()
+        var insertCount = try connection.sadd(1, 2, 3, to: #function).wait()
         XCTAssertEqual(insertCount, 3)
         insertCount = try connection.sadd([3, 4, 5], to: #function).wait()
         XCTAssertEqual(insertCount, 2)
@@ -57,7 +57,7 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_srem() throws {
-        var removedCount = try connection.srem([1], from: #function).wait()
+        var removedCount = try connection.srem(1, from: #function).wait()
         XCTAssertEqual(removedCount, 0)
 
         _ = try connection.sadd([1], to: #function).wait()
@@ -96,10 +96,10 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
         _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let diff1 = try connection.sdiff(of: [key1, key2]).wait()
+        let diff1 = try connection.sdiff(of: key1, key2).wait()
         XCTAssertEqual(diff1.count, 2)
 
-        let diff2 = try connection.sdiff(of: [key1, key3]).wait()
+        let diff2 = try connection.sdiff(of: key1, key3).wait()
         XCTAssertEqual(diff2.count, 2)
 
         let diff3 = try connection.sdiff(of: [key1, key2, key3]).wait()
@@ -133,10 +133,10 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
         _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let diff1 = try connection.sinter(of: [key1, key2]).wait()
+        let diff1 = try connection.sinter(of: key1, key2).wait()
         XCTAssertEqual(diff1.count, 1)
 
-        let diff2 = try connection.sinter(of: [key1, key3]).wait()
+        let diff2 = try connection.sinter(of: key1, key3).wait()
         XCTAssertEqual(diff2.count, 1)
 
         let diff3 = try connection.sinter(of: [key1, key2, key3]).wait()
@@ -186,7 +186,7 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
         _ = try connection.sadd([2, 4], to: key3).wait()
 
-        let union1 = try connection.sunion(of: [key1, key2]).wait()
+        let union1 = try connection.sunion(of: key1, key2).wait()
         XCTAssertEqual(union1.count, 5)
 
         let union2 = try connection.sunion(of: [key2, key3]).wait()

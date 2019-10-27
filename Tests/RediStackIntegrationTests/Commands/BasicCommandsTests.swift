@@ -33,7 +33,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         let second = try connection.delete([keys[0]]).wait()
         XCTAssertEqual(second, 0)
 
-        let third = try connection.delete([keys[1], keys[2]]).wait()
+        let third = try connection.delete(keys[1], keys[2]).wait()
         XCTAssertEqual(third, 2)
     }
 

@@ -85,6 +85,16 @@ extension RedisClient {
         return send(command: "DEL", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Removes the specified keys. A key is ignored if it does not exist.
+    ///
+    /// [https://redis.io/commands/del](https://redis.io/commands/del)
+    /// - Parameter keys: A list of keys to delete from the database.
+    /// - Returns: The number of keys deleted from the database.
+    @inlinable
+    public func delete(_ keys: String...) -> EventLoopFuture<Int> {
+        return self.delete(keys)
+    }
 
     /// Sets a timeout on key. After the timeout has expired, the key will automatically be deleted.
     /// - Note: A key with an associated timeout is often said to be "volatile" in Redis terminology.

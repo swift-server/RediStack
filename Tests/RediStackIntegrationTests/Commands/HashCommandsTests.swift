@@ -48,7 +48,7 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
 
     func test_hmget() throws {
         _ = try connection.hmset(["first": "foo", "second": "bar"], in: #function).wait()
-        let values = try connection.hmget(["first", "second", "fake"], from: #function).wait()
+        let values = try connection.hmget("first", "second", "fake", from: #function).wait()
         XCTAssertEqual(values[0], "foo")
         XCTAssertEqual(values[1], "bar")
         XCTAssertNil(values[2])
@@ -63,7 +63,7 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
 
     func test_hdel() throws {
         _ = try connection.hmset(["first": "foo", "second": "bar"], in: #function).wait()
-        let count = try connection.hdel(["first", "second", "fake"], from: #function).wait()
+        let count = try connection.hdel("first", "second", "fake", from: #function).wait()
         XCTAssertEqual(count, 2)
     }
 

@@ -93,6 +93,29 @@ extension RedisClient {
         return send(command: "ZADD", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Adds elements to a sorted set, assigning their score to the values provided.
+    /// - Note: `INCR` is not supported by this library in `zadd`. Use the `zincrby(:element:in:)` method instead.
+    ///
+    /// See [https://redis.io/commands/zadd](https://redis.io/commands/zadd)
+    /// - Parameters:
+    ///     - elements: A list of elements and their score to add to the sorted set.
+    ///     - key: The key of the sorted set.
+    ///     - option: An option for modifying the behavior of the command.
+    ///     - returnChangedCount: `zadd` normally returns the number of new elements added to the set,
+    ///         but setting this to `true` will instead have the command return the number of elements changed.
+    ///
+    ///         "Changed" in this context are new elements added, and elements that had their score updated.
+    /// - Returns: The number of elements added to the sorted set, unless `returnChangedCount` was set to `true`.
+    @inlinable
+    public func zadd<Value: RESPValueConvertible>(
+        _ elements: (element: Value, score: Double)...,
+        to key: String,
+        option: RedisSortedSetAddOption? = nil,
+        returnChangedCount: Bool = false
+    ) -> EventLoopFuture<Int> {
+        return self.zadd(elements, to: key, option: option, returnChangedCount: returnChangedCount)
+    }
 
     /// Adds an element to a sorted set, assigning their score to the value provided.
     ///
@@ -817,6 +840,18 @@ extension RedisClient {
         
         return send(command: "ZREM", with: args)
             .convertFromRESPValue()
+    }
+    
+    /// Removes the specified elements from a sorted set.
+    ///
+    /// See [https://redis.io/commands/zrem](https://redis.io/commands/zrem)
+    /// - Parameters:
+    ///     - elements: The values to remove from the sorted set.
+    ///     - key: The key of the sorted set.
+    /// - Returns: The number of elements removed from the set.
+    @inlinable
+    public func zrem<Value: RESPValueConvertible>(_ elements: Value..., from key: String) -> EventLoopFuture<Int> {
+        return self.zrem(elements, from: key)
     }
 
     /// Removes elements from a sorted set whose lexiographical values are between the range specified.

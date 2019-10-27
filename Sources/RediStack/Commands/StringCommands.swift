@@ -57,6 +57,16 @@ extension RedisClient {
         return send(command: "MGET", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Gets the values of all specified keys, using `.null` to represent non-existant values.
+    ///
+    /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
+    /// - Parameter keys: The list of keys to fetch the values from.
+    /// - Returns: The values stored at the keys provided, matching the same order.
+    @inlinable
+    public func mget(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
+        return self.mget(keys)
+    }
 }
 
 // MARK: Set

@@ -267,6 +267,19 @@ extension RedisClient {
         return send(command: "LPUSH", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Pushes all of the provided elements into a list.
+    /// - Note: This inserts the elements at the head of the list; for the tail see `rpush(_:into:)`.
+    ///
+    /// See [https://redis.io/commands/lpush](https://redis.io/commands/lpush)
+    /// - Parameters:
+    ///     - elements: The values to push into the list.
+    ///     - key: The key of the list.
+    /// - Returns: The length of the list after adding the new elements.
+    @inlinable
+    public func lpush<Value: RESPValueConvertible>(_ elements: Value..., into key: String) -> EventLoopFuture<Int> {
+        return self.lpush(elements, into: key)
+    }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
     /// - Note: This inserts the element at the head of the list, for the tail see `rpushx(_:into:)`.
@@ -317,6 +330,18 @@ extension RedisClient {
         
         return send(command: "RPUSH", with: args)
             .convertFromRESPValue()
+    }
+    
+    /// Pushes all of the provided elements into a list.
+    /// - Note: This inserts the elements at the tail of the list; for the head see `lpush(_:into:)`.
+    ///
+    /// See [https://redis.io/commands/rpush](https://redis.io/commands/rpush)
+    ///     - elements: The values to push into the list.
+    ///     - key: The key of the list.
+    /// - Returns: The length of the list after adding the new elements.
+    @inlinable
+    public func rpush<Value: RESPValueConvertible>(_ elements: Value..., into key: String) -> EventLoopFuture<Int> {
+        return self.rpush(elements, into: key)
     }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
@@ -378,11 +403,30 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func blpop(
-        from keys: [String],
-        timeout: Int = 0
-    ) -> EventLoopFuture<(String, RESPValue)?> {
+    public func blpop(from keys: [String], timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
         return _bpop(command: "BLPOP", keys, timeout)
+    }
+    
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func blpop(from keys: String..., timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+        return self.blpop(from: keys, timeout: timeout)
     }
 
     /// Removes the last element of a list, blocking until an element is available.
@@ -422,11 +466,30 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func brpop(
-        from keys: [String],
-        timeout: Int = 0
-    ) -> EventLoopFuture<(String, RESPValue)?> {
+    public func brpop(from keys: [String], timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
         return _bpop(command: "BRPOP", keys, timeout)
+    }
+
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func brpop(from keys: String..., timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+        return self.brpop(from: keys, timeout: timeout)
     }
 
     @usableFromInline
