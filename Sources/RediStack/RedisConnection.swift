@@ -124,7 +124,7 @@ public final class RedisConnection: RedisClient {
     }
     
     internal let channel: Channel
-    private var logger: Logger
+    public var logger: Logger
     
     private let autoflush = Atomic<Bool>(value: true)
     private let _stateLock = Lock()
@@ -181,7 +181,7 @@ extension RedisConnection {
     /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
-    public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
+    public func send(command: String, with arguments: [RESPValue], logger: Logger) -> EventLoopFuture<RESPValue> {
         guard self.isConnected else {
             let error = RedisClientError.connectionClosed
             logger.warning("\(error.localizedDescription)")
@@ -207,7 +207,7 @@ extension RedisConnection {
             self.logger.error("\(error.localizedDescription)")
         }
         
-        self.logger.debug("Sending command \"\(command)\"\(arguments.count > 0 ? " with \(arguments)" : "")")
+        logger.debug("Sending command \"\(command)\"\(arguments.count > 0 ? " with \(arguments)" : "")")
         
         if self.sendCommandsImmediately {
             return channel.writeAndFlush(command).flatMap { promise.futureResult }

@@ -69,6 +69,7 @@ extension RedisConnectionTests {
     // to regenerate.
     static let __allTests__RedisConnectionTests = [
         ("test_callingCloseMultipleTimes", test_callingCloseMultipleTimes),
+        ("test_customLogger", test_customLogger),
         ("test_sendingCommandAfterClosing", test_sendingCommandAfterClosing),
         ("test_unexpectedChannelClose", test_unexpectedChannelClose),
     ]

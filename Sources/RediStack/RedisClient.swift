@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
+import Logging
 
 /// An object capable of sending commands and receiving responses.
 ///
@@ -24,20 +25,52 @@ import NIO
 public protocol RedisClient {
     /// The `EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
+    
+    /// Default logger this Client will use.
+    var logger: Logger { get }
 
     /// Sends the desired command with the specified arguments.
     /// - Parameters:
     ///     - command: The command to execute.
     ///     - arguments: The arguments, if any, to be sent with the command.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
-    func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
+    func send(command: String, with arguments: [RESPValue], logger: Logger) -> EventLoopFuture<RESPValue>
 }
 
 extension RedisClient {
     /// Sends the desired command without arguments.
     /// - Parameter command: The command keyword to execute.
     /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
+    public func send(command: String, with arguments: [RESPValueConvertible]) -> EventLoopFuture<RESPValue> {
+        return self.send(command: command, with: arguments.map { $0.convertedToRESPValue() }, logger: self.logger)
+    }
+    
+    /// Sends the desired command without arguments.
+    /// - Parameter command: The command keyword to execute.
+    /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
     public func send(command: String) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: [])
+        return self.send(command: command, with: [], logger: self.logger)
+    }
+}
+
+
+extension RedisClient {
+    public func logging(to logger: Logger) -> RedisClient {
+        CustomLoggerRedisClient(client: self, logger: logger)
+    }
+}
+
+private struct CustomLoggerRedisClient {
+    let client: RedisClient
+    let logger: Logger
+}
+
+extension CustomLoggerRedisClient: RedisClient {
+    var eventLoop: EventLoop {
+        self.client.eventLoop
+    }
+    
+    func send(command: String, with arguments: [RESPValue], logger: Logger) -> EventLoopFuture<RESPValue> {
+        self.client.send(command: command, with: arguments, logger: logger)
     }
 }

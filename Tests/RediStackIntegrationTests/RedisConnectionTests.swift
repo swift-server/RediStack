@@ -14,6 +14,7 @@
 
 @testable import RediStack
 import RediStackTestUtils
+import Logging
 import XCTest
 
 final class RedisConnectionTests: RediStackIntegrationTestCase {
@@ -44,5 +45,35 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
         } catch {
             XCTAssertTrue(error is RedisClientError)
         }
+    }
+    
+    func test_customLogger() throws {
+        final class TestLogHandler: LogHandler {
+            var messages: [Logger.Message]
+            var metadata: Logger.Metadata
+            var logLevel: Logger.Level
+            
+            init() {
+                self.messages = []
+                self.metadata = [:]
+                self.logLevel = .trace
+            }
+            
+            func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+                self.messages.append(message)
+            }
+            
+            subscript(metadataKey key: String) -> Logger.Metadata.Value? {
+                get { self.metadata[key] }
+                set(newValue) { self.metadata[key] = newValue }
+            }
+        }
+        
+        let handler = TestLogHandler()
+        let logger = Logger(label: "test", factory: { _ in
+            handler
+        })
+        _ = try self.connection.logging(to: logger).ping().wait()
+        XCTAssert(!handler.messages.isEmpty)
     }
 }
