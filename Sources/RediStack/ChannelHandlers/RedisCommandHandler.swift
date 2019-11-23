@@ -21,14 +21,27 @@ import NIO
 /// This holds the full command message to be sent to Redis, and an `NIO.EventLoopPromise` to be fulfilled when a response has been received.
 /// - Important: This struct has _reference semantics_ due to the retention of the `NIO.EventLoopPromise`.
 public struct RedisCommand {
-    /// A message waiting to be sent to Redis. A full message contains a command keyword and its arguments stored as a single `RESPValue.array`.
-    public let message: RESPValue
+    /// The command keyword that will be sent to Redis.
+    public let keyword: String
+    /// The arguments to be sent as the command.
+    public let arguments: [RESPValue]
     /// A promise to be fulfilled with the sent message's response from Redis.
     public let responsePromise: EventLoopPromise<RESPValue>
 
-    public init(message: RESPValue, responsePromise promise: EventLoopPromise<RESPValue>) {
-        self.message = message
+    public init(keyword: String, arguments: [RESPValue], responsePromise promise: EventLoopPromise<RESPValue>) {
+        self.keyword = keyword
+        self.arguments = arguments
         self.responsePromise = promise
+    }
+    
+    /// Serializes the `RedisCommand` into a `RESPValue` formatted message ready to be sent to Redis.
+    ///
+    /// The format is (command, [arguments...]) stored as a single `RESPValue.array` value.
+    /// - Returns: The command keyword and arguments represented as a single `RESPValue`.
+    public func serialized() -> RESPValue {
+        var elements = [self.keyword.convertedToRESPValue()]
+        elements.append(contentsOf: self.arguments)
+        return .array(elements)
     }
 }
 
@@ -37,6 +50,14 @@ public struct RedisCommand {
 /// `RedisCommandHandler` is a `NIO.ChannelDuplexHandler` that sends `RedisCommand` instances to Redis,
 /// and fulfills the command's `NIO.EventLoopPromise` as soon as a `RESPValue` response has been received from Redis.
 public final class RedisCommandHandler {
+    public enum State {
+        case `default`
+        case pubsub(callbackMap: [String: [RedisPubSubMessageCallback]])
+        case error(Error)
+    }
+    
+    private var state: State = .default
+    
     /// FIFO queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
     private var logger: Logger
@@ -74,13 +95,15 @@ extension RedisCommandHandler: ChannelInboundHandler {
     ///
     /// A `Logging.LogLevel.critical` message will be written with the caught error.
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.state = .error(error)
+        
         let queue = self.commandResponseQueue
         
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
         
         self.logger.critical("Error in channel pipeline.", metadata: ["error": "\(error.localizedDescription)"])
-
+        
         context.close(promise: nil)
     }
 
@@ -91,6 +114,8 @@ extension RedisCommandHandler: ChannelInboundHandler {
     /// See `NIO.ChannelInboundHandler.channelRead(context:data:)`
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let value = self.unwrapInboundIn(data)
+        
+        // check if it's a PubSub message, handling it if it is - otherwise treating it as a normal response
 
         guard let leadPromise = self.commandResponseQueue.popFirst() else {
             self.logger.critical("Read triggered with no promise waiting in the queue!")
@@ -123,11 +148,54 @@ extension RedisCommandHandler: ChannelOutboundHandler {
     ///
     /// See `NIO.ChannelOutboundHandler.write(context:data:promise:)`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let commandContext = self.unwrapOutboundIn(data)
-        self.commandResponseQueue.append(commandContext.responsePromise)
-        context.write(
-            self.wrapOutboundOut(commandContext.message),
-            promise: promise
-        )
+        let command = self.unwrapOutboundIn(data)
+        
+        switch self.state {
+        case .pubsub:
+            switch command.keyword.lowercased() {
+            case "subscribe", "psubscribe",
+                 "unsubscribe", "punsubscribe",
+                 "ping", "quit":
+                fallthrough
+            default: promise?.fail(RedisClientError.illegalPubSubCommand(command.keyword))
+            }
+            break
+        case .default:
+            self.commandResponseQueue.append(command.responsePromise)
+            context.write(
+                self.wrapOutboundOut(command.serialized()),
+                promise: promise
+            )
+        case let .error(e): promise?.fail(e)
+        }
+    }
+}
+
+// MARK: PubSub
+
+/// A subscription callback handler for PubSub messages.
+/// - Parameters:
+///     - channel: The PubSub channel name that published the message.
+///     - message: The published message's data.
+public typealias RedisPubSubMessageCallback = (_ channel: String, _ message: RESPValue) -> Void
+
+extension RedisCommandHandler {
+//    private func handlePubSubMessage(_ message: RESPValue, from channel: String, type: PubSubMessageType) -> Int? {
+////        switch type {
+////            // we're just changing subscriptions, so update our subscription count
+////        }
+//    }
+    
+    private enum PubSubMessageType {
+        case subscriptionChange
+        case message
+        
+        init?(fromRESPValue value: RESPValue) {
+            switch value.string {
+            case "subscribe", "psubscribe", "unsubscribe", "punsubscribe": self = .subscriptionChange
+            case "message", "pmessage": self = .message
+            default: return nil
+            }
+        }
     }
 }

@@ -24,6 +24,10 @@ public enum RedisClientError: LocalizedError {
     /// Expectations of message structures were not met.
     /// If this is ever triggered, please capture the original byte message from Redis along with the command and arguments to Redis.
     case assertionFailure(message: String)
+    /// A command was attempted to be sent to Redis that is not allowed by the PubSub specification.
+    ///
+    /// See [https://redis.io/topics/pubsub](https://redis.io/topics/pubsub)
+    case illegalPubSubCommand(String)
 
     public var errorDescription: String? {
         let message: String
@@ -31,6 +35,7 @@ public enum RedisClientError: LocalizedError {
         case .connectionClosed: message = "Connection was closed while trying to send command."
         case let .failedRESPConversion(type): message = "Failed to convert RESP to \(type)"
         case let .assertionFailure(text): message = text
+        case let .illegalPubSubCommand(command): message = "Illegal command '\(command)' was attempted while the connection is in PubSub mode."
         }
         return "RediStack: \(message)"
     }
