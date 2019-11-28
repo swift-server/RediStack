@@ -17,7 +17,6 @@ import RediStackTestUtils
 import XCTest
 
 final class StringCommandsTests: RediStackIntegrationTestCase {
-    private static let testKey = "SortedSetCommandsTests"
 
     func test_get() throws {
         try connection.set(#function, to: "value").wait()
