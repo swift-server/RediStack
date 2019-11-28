@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import RediStack
+@testable import RediStack
 import XCTest
 
 final class ExtensionTests: XCTestCase {
