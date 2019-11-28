@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import CNIOSHA1
+
 extension Array where Element == RESPValue {
     /// Converts the collection of `RESPValueConvertible` elements and appends them to the end of the array.
     /// - Note: This method guarantees that only one storage expansion will happen to copy the elements.
@@ -81,5 +83,29 @@ extension Array {
     internal init(initialCapacity: Int) {
         self = []
         self.reserveCapacity(initialCapacity)
+    }
+}
+
+extension String {
+    /// Return a sha1 hash for this string.
+    /// Mirrors the internal C-based implementation used by NIO websockets.
+    public var sha1: String? {
+
+        var sha1Ctx = SHA1_CTX()
+        c_nio_sha1_init(&sha1Ctx)
+
+        let buffer = Array(self.utf8)
+        buffer.withUnsafeBufferPointer { (bytes: UnsafeBufferPointer<UInt8>) in
+            c_nio_sha1_loop(&sha1Ctx, bytes.baseAddress!, bytes.count)
+        }
+
+        var hashResult: [UInt8] = Array(repeating: 0, count: 20)
+        hashResult.withUnsafeMutableBufferPointer {
+            $0.baseAddress!.withMemoryRebound(to: Int8.self, capacity: 20) {
+                c_nio_sha1_result(&sha1Ctx, $0)
+            }
+        }
+
+        return hashResult.map { String(format: "%02x", $0) }.joined()
     }
 }
