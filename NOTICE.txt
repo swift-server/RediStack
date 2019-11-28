@@ -38,23 +38,32 @@ This product was heavily influenced by implementations from the Vapor and NozeIO
         * https://github.com/vapor/redis/blob/2bf2d367d1ddcbd18abf5117fb8f73b861848e2e/LICENSE
       * HOMEPAGE:
         * https://github.com/vapor/redis/tree/2bf2d367d1ddcbd18abf5117fb8f73b861848e2e
+        
+---
+
+This product contains a derivation of Marcin Krzyżanowski's 'CryptoSwift'.
+
+  * LICENSE:
+    * https://github.com/krzyzanowskim/CryptoSwift/blob/master/LICENSE
+  * HOMEPAGE:
+    * https://github.com/krzyzanowskim/CryptoSwift
 
 ---
 
 This product contains the entire library from Apple's SwiftLog API.
 
-* LICENSE (Apache License 2.0):
+  * LICENSE (Apache License 2.0):
     * https://github.com/apple/swift-log/blob/master/LICENSE.txt
-* HOMEPAGE:
+  * HOMEPAGE:
     * https://github.com/apple/swift-log
 
 ---
 
 This product contains the entire library from Apple's SwiftMetrics API.
 
-* LICENSE (Apache License 2.0):
+  * LICENSE (Apache License 2.0):
     * https://github.com/apple/swift-metrics/blob/master/LICENSE.txt
-* HOMEPAGE:
+  * HOMEPAGE:
     * https://github.com/apple/swift-metrics
 
 ---
