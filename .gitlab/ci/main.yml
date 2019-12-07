@@ -2,6 +2,9 @@ stages:
   - Platform Tests
   - Quality Checks
   - Docs
+
+variables:
+  CODE_COV_IMAGE: "registry.gitlab.com/mordil/swift-redi-stack/codecov:latest"
  
 pages:
   stage: Docs
@@ -57,6 +60,37 @@ Code Climate:
     expire_in: 1 week
     reports:
       codequality: gl-code-quality-report.json
+
+Code Coverage:
+  only:
+    changes:
+      - "*.swift"
+  stage: Quality Checks
+  image: docker:stable
+  services:
+    - docker:stable-dind
+    - name: redis:5
+      alias: 'redis'
+      command: ["redis-server", "--requirepass", "password"]
+  variables:
+    REDIS_URL: 'redis'
+    REDIS_PW: 'password'
+    DOCKER_DRIVER: overlay2
+  script:
+    - docker run
+        --env CODECOV_TOKEN=$CODECOV_TOKEN
+        --volume "$PWD":/code
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        "$CODE_COV_IMAGE" /code
+
+Build Codecov Image:
+  only:
+    changes:
+      - "Dockerfile"
+      - "scripts/generate_code_cov.sh"
+  stage: .pre
+  image: docker:stable
+  script: docker build -t $CODE_COV_IMAGE .
 
 Ubuntu Bionic:
   stage: Platform Tests
