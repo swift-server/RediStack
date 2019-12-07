@@ -206,15 +206,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/script-exists](https://redis.io/commands/script-exists)
     /// - Parameter hashes: The list of script SHA1 hashes to look for in the Redis instance.
     /// - Returns: A collection matching the same order as the `hashes` provided, with the values of `true` if the script has been loaded or `false` if it has not.
-    public func scriptExists(_ hashes: String...) -> EventLoopFuture<[Bool]> {
-        return self.scriptExists(hashes)
-    }
-    
-    /// Checks the load status for each script by their provided SHA1 hashes.
-    ///
-    /// See [https://redis.io/commands/script-exists](https://redis.io/commands/script-exists)
-    /// - Parameter hashes: The list of script SHA1 hashes to look for in the Redis instance.
-    /// - Returns: A collection matching the same order as the `hashes` provided, with the values of `true` if the script has been loaded or `false` if it has not.
     public func scriptExists(_ hashes: [String]) -> EventLoopFuture<[Bool]> {
         var args: [RESPValue] = [
             .init(bulk: "EXISTS")
