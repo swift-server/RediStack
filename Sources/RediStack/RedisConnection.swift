@@ -124,6 +124,8 @@ public final class RedisConnection: RedisClient {
     }
     
     internal let channel: Channel
+
+    /// Default logger this connection will use.
     public var logger: Logger
     
     private let autoflush = Atomic<Bool>(value: true)
