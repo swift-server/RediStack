@@ -1,3 +1,6 @@
+import Logging
+import NIO
+
 extension RedisClient {
     /// Returns a new `RedisClient` that will log to the supplied logger by default.
     /// - Parameters:
