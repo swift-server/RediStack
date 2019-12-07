@@ -4,7 +4,7 @@ swift 5.0:
   extends: .unit-test
   image: swift:5.0-bionic
   variables:
-    SANITIZER_ARG: ''
+    USE_THREAD_SANITIZER: 'NO'
 
 swift 5.1:
   extends: .unit-test

@@ -8,11 +8,34 @@ stages:
   variables:
     REDIS_URL: 'redis'
     REDIS_PW: 'password'
-    SANITIZER_ARG: '--sanitize=thread'
+    USE_ADDRESS_SANITIZER: 'YES'
+    USE_THREAD_SANITIZER: 'YES'
   services:
   - name: redis:5
     alias: 'redis'
     command: ["redis-server", "--requirepass", "password"]
-  script:
-    - swift build --build-tests $SANITIZER_ARG -v 
-    - swift test --skip-build
+  script: |
+    echo "Running unit tests with sanitizers: thread ($USE_THREAD_SANITIZER) and address ($USE_ADDRESS_SANITIZER)"
+
+    SANITIZERS=()
+
+    if [[ "$USE_THREAD_SANITIZER" == "YES" ]]
+    then
+      SANITIZERS+=("thread")
+    fi
+
+    if [[ "$USE_ADDRESS_SANITIZER" == "YES" ]]
+    then
+      SANITIZERS+=("address")
+    fi
+
+    if [[ 0 -eq ${#SANITIZERS[@]} ]]
+    then
+      SANITIZERS+=("")
+    fi
+
+    for SANITIZER in "${SANITIZERS[@]}"
+    do
+      SANITIZER_ARG=$([ -n SANITIZER ] && echo "--sanitize=$SANITIZER" || echo "")
+      swift test $SANITIZER_ARG
+    done
