@@ -12,16 +12,13 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 @testable import RediStack
 import RediStackTestUtils
 import XCTest
 
 final class RedisConnectionTests: RediStackIntegrationTestCase {
-    static let expectedLogsMessage = "The following log(s) in this test are expected."
-    
     func test_unexpectedChannelClose() throws {
-        print(RedisConnectionTests.expectedLogsMessage)
-        
         XCTAssertTrue(self.connection.isConnected)
         try self.connection.channel.close().wait()
         XCTAssertFalse(self.connection.isConnected)
@@ -35,8 +32,6 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
     }
     
     func test_sendingCommandAfterClosing() throws {
-        print(RedisConnectionTests.expectedLogsMessage)
-        
         self.connection.close()
         do {
             _ = try self.connection.ping().wait()
@@ -44,5 +39,49 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
         } catch {
             XCTAssertTrue(error is RedisClientError)
         }
+    }
+}
+
+// MARK: Logging
+
+extension RedisConnectionTests {
+    final class TestLogHandler: LogHandler {
+        var messages: [Logger.Message]
+        var metadata: Logger.Metadata
+        var logLevel: Logger.Level
+
+        init() {
+            self.messages = []
+            self.metadata = [:]
+            self.logLevel = .trace
+        }
+
+        func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+            self.messages.append(message)
+        }
+
+        subscript(metadataKey key: String) -> Logger.Metadata.Value? {
+            get { return self.metadata[key] }
+            set(newValue) { self.metadata[key] = newValue }
+        }
+    }
+    
+    func test_customLogging() throws {
+        let handler = TestLogHandler()
+        let logger = Logger(label: "test", factory: { _ in return handler })
+        _ = try self.connection.logging(to: logger).ping().wait()
+        XCTAssert(!handler.messages.isEmpty)
+    }
+  
+    func test_loggingMetadata() throws {
+        let handler = TestLogHandler()
+        let logger = Logger(label: #function, factory: { _ in return handler })
+        self.connection.setLogging(to: logger)
+        let metadataKey = String(describing: RedisConnection.self)
+        XCTAssertTrue(handler.metadata.keys.contains(metadataKey))
+        XCTAssertEqual(
+            handler.metadata[metadataKey],
+            .string(self.connection.id.description)
+        )
     }
 }
