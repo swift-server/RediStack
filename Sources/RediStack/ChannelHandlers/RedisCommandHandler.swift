@@ -12,8 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import struct Foundation.UUID
-import Logging
 import NIO
 
 /// The `NIO.ChannelOutboundHandler.OutboundIn` type for `RedisCommandHandler`.
@@ -39,24 +37,18 @@ public struct RedisCommand {
 public final class RedisCommandHandler {
     /// FIFO queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
-    private var logger: Logger
 
     deinit {
-        guard self.commandResponseQueue.count > 0 else { return }
-        self.logger[metadataKey: "Queue Size"] = "\(self.commandResponseQueue.count)"
-        self.logger.warning("Command handler deinit when queue is not empty")
+        if !self.commandResponseQueue.isEmpty {
+            assertionFailure("Command handler deinit when queue is not empty! Queue size: \(self.commandResponseQueue.count)")
+        }
     }
 
-    /// - Parameters:
-    ///     - initialQueueCapacity: The initial queue size to start with. The default is `3`. `RedisCommandHandler` stores all
+    /// - Parameter initialQueueCapacity: The initial queue size to start with. The default is `3`. `RedisCommandHandler` stores all
     ///         `RedisCommand.responsePromise` objects into a buffer, and unless you intend to execute several concurrent commands against Redis,
     ///         and don't want the buffer to resize, you shouldn't need to set this parameter.
-    ///     - logger: The `Logging.Logger` instance to use.
-    ///         The logger will have a `Foundation.UUID` value attached as metadata to uniquely identify this instance.
-    public init(initialQueueCapacity: Int = 3, logger: Logger = Logger(label: "RediStack.CommandHandler")) {
+    public init(initialQueueCapacity: Int = 3) {
         self.commandResponseQueue = CircularBuffer(initialCapacity: initialQueueCapacity)
-        self.logger = logger
-        self.logger[metadataKey: "CommandHandler"] = "\(UUID())"
     }
 }
 
@@ -78,8 +70,6 @@ extension RedisCommandHandler: ChannelInboundHandler {
         
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
-        
-        self.logger.critical("Error in channel pipeline.", metadata: ["error": "\(error.localizedDescription)"])
 
         context.close(promise: nil)
     }
@@ -92,10 +82,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let value = self.unwrapInboundIn(data)
 
-        guard let leadPromise = self.commandResponseQueue.popFirst() else {
-            self.logger.critical("Read triggered with no promise waiting in the queue!")
-            return
-        }
+        guard let leadPromise = self.commandResponseQueue.popFirst() else { return }
 
         switch value {
         case .error(let e):
