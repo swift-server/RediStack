@@ -59,7 +59,7 @@ public struct RedisMetrics {
 /// A specialized wrapper class for working with `Metrics.Gauge` objects for the purpose of an incrementing or decrementing count of active Redis connections.
 public class ActiveConnectionGauge {
     private let gauge = Gauge(label: .activeConnectionCount)
-    private let count = Atomic<Int>(value: 0)
+    private let count:  NIOAtomic<Int> = .makeAtomic(value: 0)
     
     /// The number of the connections that are currently reported as active.
     var currentCount: Int { return count.load() }

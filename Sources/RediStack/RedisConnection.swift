@@ -129,7 +129,7 @@ public final class RedisConnection: RedisClient {
     
     internal let channel: Channel
     
-    private let autoflush = Atomic<Bool>(value: true)
+    private let autoflush: NIOAtomic<Bool> = .makeAtomic(value: true)
     private let _stateLock = Lock()
     private var _state = ConnectionState.open
     private var state: ConnectionState {
