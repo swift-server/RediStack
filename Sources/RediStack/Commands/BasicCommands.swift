@@ -71,6 +71,18 @@ extension RedisClient {
             .convertFromRESPValue(to: String.self)
             .map { return $0 == "OK" }
     }
+    
+    /// Requests the client to authenticate with Redis to allow other commands to be executed.
+    ///
+    /// [https://redis.io/commands/auth](https://redis.io/commands/auth)
+    /// - Parameter password: The password to authenticate with.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves if the password was accepted, otherwise it fails.
+    @inlinable
+    public func authorize(with password: String) -> EventLoopFuture<Void> {
+        let args = [RESPValue(bulk: password)]
+        return send(command: "AUTH", with: args)
+            .map { _ in return () }
+    }
 
     /// Removes the specified keys. A key is ignored if it does not exist.
     ///

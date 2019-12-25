@@ -71,10 +71,8 @@ extension RedisConnection {
                 guard let pw = password else {
                     return connection.eventLoop.makeSucceededFuture(connection)
                 }
-                
-                let args = [RESPValue(bulk: pw)]
-                return connection.send(command: "AUTH", with: args)
-                    .map { _ in return connection }
+                return connection.authorize(with: pw)
+                    .map { return connection }
             }
     }
 }
