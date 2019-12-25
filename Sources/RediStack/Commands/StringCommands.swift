@@ -23,7 +23,7 @@ extension RedisClient {
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: The string value stored at the key provided, otherwise `nil` if the key does not exist.
     @inlinable
-    public func get(_ key: String) -> EventLoopFuture<String?> {
+    public func get(_ key: RedisKey) -> EventLoopFuture<String?> {
         return self.get(key, as: String.self)
     }
     
@@ -36,7 +36,7 @@ extension RedisClient {
     /// - Returns: The converted value stored at the key provided, otherwise `nil` if the key does not exist or fails the conversion.
     @inlinable
     public func get<StoredType: RESPValueConvertible>(
-        _ key: String,
+        _ key: RedisKey,
         as type: StoredType.Type
     ) -> EventLoopFuture<StoredType?> {
         let args = [RESPValue(bulk: key)]
@@ -50,7 +50,7 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     @inlinable
-    public func mget(_ keys: [String]) -> EventLoopFuture<[RESPValue]> {
+    public func mget(_ keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         let args = keys.map(RESPValue.init)
@@ -64,7 +64,7 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     @inlinable
-    public func mget(_ keys: String...) -> EventLoopFuture<[RESPValue]> {
+    public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
         return self.mget(keys)
     }
 }
@@ -81,7 +81,7 @@ extension RedisClient {
     ///     - key: The key to use to uniquely identify this value.
     /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
-    public func append<Value: RESPValueConvertible>(_ value: Value, to key: String) -> EventLoopFuture<Int> {
+    public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
             value.convertedToRESPValue()
@@ -102,7 +102,7 @@ extension RedisClient {
     ///     - value: The value to set the key to.
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public func set<Value: RESPValueConvertible>(_ key: String, to value: Value) -> EventLoopFuture<Void> {
+    public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
             .init(bulk: key),
             value.convertedToRESPValue()
@@ -118,7 +118,7 @@ extension RedisClient {
     /// - Parameter operations: The key-value list of SET operations to execute.
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public func mset<Value: RESPValueConvertible>(_ operations: [String: Value]) -> EventLoopFuture<Void> {
+    public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Void> {
         return _mset(command: "MSET", operations)
             .map { _ in () }
     }
@@ -130,7 +130,7 @@ extension RedisClient {
     /// - Parameter operations: The key-value list of SET operations to execute.
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
-    public func msetnx<Value: RESPValueConvertible>(_ operations: [String: Value]) -> EventLoopFuture<Bool> {
+    public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
         return _mset(command: "MSETNX", operations)
             .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
@@ -139,7 +139,7 @@ extension RedisClient {
     @usableFromInline
     func _mset<Value: RESPValueConvertible>(
         command: String,
-        _ operations: [String: Value]
+        _ operations: [RedisKey: Value]
     ) -> EventLoopFuture<RESPValue> {
         assert(operations.count > 0, "At least 1 key-value pair should be provided.")
 
@@ -164,7 +164,7 @@ extension RedisClient {
     /// - Parameter key: The key whose value should be incremented.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func increment(_ key: String) -> EventLoopFuture<Int> {
+    public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "INCR", with: args)
             .convertFromRESPValue()
@@ -178,7 +178,7 @@ extension RedisClient {
     ///     - count: The amount that this value should be incremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func increment(_ key: String, by count: Int) -> EventLoopFuture<Int> {
+    public func increment(_ key: RedisKey, by count: Int) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: count)
@@ -195,7 +195,7 @@ extension RedisClient {
     ///     - count: The amount that this value should be incremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func increment<Value>(_ key: String, by count: Value) -> EventLoopFuture<Value>
+    public func increment<Value>(_ key: RedisKey, by count: Value) -> EventLoopFuture<Value>
         where
         Value: BinaryFloatingPoint,
         Value: RESPValueConvertible
@@ -218,7 +218,7 @@ extension RedisClient {
     /// - Parameter key: The key whose value should be decremented.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func decrement(_ key: String) -> EventLoopFuture<Int> {
+    public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "DECR", with: args)
             .convertFromRESPValue()
@@ -231,7 +231,7 @@ extension RedisClient {
     ///     - key: The key whose value should be decremented.
     ///     - count: The amount that this value should be decremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
-    public func decrement(_ key: String, by count: Int) -> EventLoopFuture<Int> {
+    public func decrement(_ key: RedisKey, by count: Int) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: count)

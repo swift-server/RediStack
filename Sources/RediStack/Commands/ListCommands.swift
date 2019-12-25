@@ -23,7 +23,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list.
     /// - Returns: The number of elements in the list.
     @inlinable
-    public func llen(of key: String) -> EventLoopFuture<Int> {
+    public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "LLEN", with: args)
             .convertFromRESPValue()
@@ -37,7 +37,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The element stored at index, or `.null` if out of bounds.
     @inlinable
-    public func lindex(_ index: Int, from key: String) -> EventLoopFuture<RESPValue> {
+    public func lindex(_ index: Int, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: index)
@@ -57,7 +57,7 @@ extension RedisClient {
     public func lset<Value: RESPValueConvertible>(
         index: Int,
         to value: Value,
-        in key: String
+        in key: RedisKey
     ) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -79,7 +79,7 @@ extension RedisClient {
     @inlinable
     public func lrem<Value: RESPValueConvertible>(
         _ value: Value,
-        from key: String,
+        from key: RedisKey,
         count: Int = 0
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
@@ -100,7 +100,7 @@ extension RedisClient {
     ///     - stop: The index of the last element to keep.
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
-    public func ltrim(_ key: String, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
+    public func ltrim(_ key: RedisKey, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: start),
@@ -120,7 +120,7 @@ extension RedisClient {
     @inlinable
     public func lrange(
         within range: (startIndex: Int, endIndex: Int),
-        from key: String
+        from key: RedisKey
     ) -> EventLoopFuture<[RESPValue]> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -139,7 +139,7 @@ extension RedisClient {
     ///     - dest: The key of the list to push to.
     /// - Returns: The element that was moved.
     @inlinable
-    public func rpoplpush(from source: String, to dest: String) -> EventLoopFuture<RESPValue> {
+    public func rpoplpush(from source: RedisKey, to dest: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(bulk: source),
             .init(bulk: dest)
@@ -166,8 +166,8 @@ extension RedisClient {
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func brpoplpush(
-        from source: String,
-        to dest: String,
+        from source: RedisKey,
+        to dest: RedisKey,
         timeout: Int = 0
     ) -> EventLoopFuture<RESPValue?> {
         let args: [RESPValue] = [
@@ -194,7 +194,7 @@ extension RedisClient {
     @inlinable
     public func linsert<Value: RESPValueConvertible>(
         _ element: Value,
-        into key: String,
+        into key: RedisKey,
         before pivot: Value
     ) -> EventLoopFuture<Int> {
         return _linsert(pivotKeyword: "BEFORE", element, key, pivot)
@@ -211,7 +211,7 @@ extension RedisClient {
     @inlinable
     public func linsert<Value: RESPValueConvertible>(
         _ element: Value,
-        into key: String,
+        into key: RedisKey,
         after pivot: Value
     ) -> EventLoopFuture<Int> {
         return _linsert(pivotKeyword: "AFTER", element, key, pivot)
@@ -221,7 +221,7 @@ extension RedisClient {
     func _linsert<Value: RESPValueConvertible>(
         pivotKeyword: String,
         _ element: Value,
-        _ key: String,
+        _ key: RedisKey,
         _ pivot: Value
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
@@ -244,7 +244,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, or `.null`.
     @inlinable
-    public func lpop(from key: String) -> EventLoopFuture<RESPValue> {
+    public func lpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args = [RESPValue(bulk: key)]
         return send(command: "LPOP", with: args)
     }
@@ -258,7 +258,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpush<Value: RESPValueConvertible>(_ elements: [Value], into key: String) -> EventLoopFuture<Int> {
+    public func lpush<Value: RESPValueConvertible>(_ elements: [Value], into key: RedisKey) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
         
         var args: [RESPValue] = [.init(bulk: key)]
@@ -277,7 +277,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpush<Value: RESPValueConvertible>(_ elements: Value..., into key: String) -> EventLoopFuture<Int> {
+    public func lpush<Value: RESPValueConvertible>(_ elements: Value..., into key: RedisKey) -> EventLoopFuture<Int> {
         return self.lpush(elements, into: key)
     }
 
@@ -290,7 +290,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func lpushx<Value: RESPValueConvertible>(_ element: Value, into key: String) -> EventLoopFuture<Int> {
+    public func lpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
             element.convertedToRESPValue()
@@ -309,7 +309,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, else `.null`.
     @inlinable
-    public func rpop(from key: String) -> EventLoopFuture<RESPValue> {
+    public func rpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args = [RESPValue(bulk: key)]
         return send(command: "RPOP", with: args)
     }
@@ -322,7 +322,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpush<Value: RESPValueConvertible>(_ elements: [Value], into key: String) -> EventLoopFuture<Int> {
+    public func rpush<Value: RESPValueConvertible>(_ elements: [Value], into key: RedisKey) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
 
         var args: [RESPValue] = [.init(bulk: key)]
@@ -340,7 +340,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpush<Value: RESPValueConvertible>(_ elements: Value..., into key: String) -> EventLoopFuture<Int> {
+    public func rpush<Value: RESPValueConvertible>(_ elements: Value..., into key: RedisKey) -> EventLoopFuture<Int> {
         return self.rpush(elements, into: key)
     }
 
@@ -353,7 +353,7 @@ extension RedisClient {
     ///     - key: The key of the list.
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
-    public func rpushx<Value: RESPValueConvertible>(_ element: Value, into key: String) -> EventLoopFuture<Int> {
+    public func rpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
             element.convertedToRESPValue()
@@ -380,7 +380,7 @@ extension RedisClient {
     ///     - key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
     @inlinable
-    public func blpop(from key: String, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+    public func blpop(from key: RedisKey, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
         return blpop(from: [key], timeout: timeout)
             .map { $0?.1 }
     }
@@ -403,7 +403,7 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func blpop(from keys: [String], timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+    public func blpop(from keys: [RedisKey], timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BLPOP", keys, timeout)
     }
     
@@ -425,7 +425,7 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func blpop(from keys: String..., timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+    public func blpop(from keys: RedisKey..., timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.blpop(from: keys, timeout: timeout)
     }
 
@@ -443,7 +443,7 @@ extension RedisClient {
     ///     - key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
     @inlinable
-    public func brpop(from key: String, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+    public func brpop(from key: RedisKey, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
         return brpop(from: [key], timeout: timeout)
             .map { $0?.1 }
     }
@@ -466,7 +466,7 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func brpop(from keys: [String], timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+    public func brpop(from keys: [RedisKey], timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BRPOP", keys, timeout)
     }
 
@@ -488,16 +488,16 @@ extension RedisClient {
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func brpop(from keys: String..., timeout: Int = 0) -> EventLoopFuture<(String, RESPValue)?> {
+    public func brpop(from keys: RedisKey..., timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.brpop(from: keys, timeout: timeout)
     }
 
     @usableFromInline
     func _bpop(
         command: String,
-        _ keys: [String],
+        _ keys: [RedisKey],
         _ timeout: Int
-    ) -> EventLoopFuture<(String, RESPValue)?> {
+    ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         var args = keys.map(RESPValue.init)
         args.append(.init(bulk: timeout))
         
@@ -511,7 +511,7 @@ extension RedisClient {
                 guard let key = response[0].string else {
                     throw RedisClientError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
-                return (key, response[1])
+                return (.init(key), response[1])
             }
     }
 }

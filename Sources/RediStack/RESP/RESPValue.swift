@@ -150,3 +150,15 @@ extension RESPValue: Equatable {
         }
     }
 }
+
+// MARK: RESPValueConvertible
+
+extension RESPValue: RESPValueConvertible {
+    public init?(fromRESP value: RESPValue) {
+        self = value
+    }
+
+    public func convertedToRESPValue() -> RESPValue {
+        return self
+    }
+}

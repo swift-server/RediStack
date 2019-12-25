@@ -88,9 +88,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sdiff() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
@@ -110,9 +110,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sdiffstore() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
@@ -125,9 +125,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sinter() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
@@ -147,9 +147,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sinterstore() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
@@ -178,9 +178,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sunion() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([3, 4, 5], to: key2).wait()
@@ -197,9 +197,9 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sunionstore() throws {
-        let key1 = #function
-        let key2 = #file
-        let key3 = key1 + key2
+        let key1: RedisKey = #function
+        let key2: RedisKey = #file
+        let key3 = RedisKey(key1.rawValue + key2.rawValue)
 
         _ = try connection.sadd([1, 2, 3], to: key1).wait()
         _ = try connection.sadd([2, 3, 4], to: key2).wait()
@@ -214,7 +214,7 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_sscan() throws {
-        let key = #function
+        let key: RedisKey = #function
         let dataset = [
             "Copenhagen, Denmark",
             "Roskilde, Denmark",

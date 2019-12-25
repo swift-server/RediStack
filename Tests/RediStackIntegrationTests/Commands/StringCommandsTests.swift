@@ -30,7 +30,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_mget() throws {
-        let keys = ["one", "two"]
+        let keys = ["one", "two"].map(RedisKey.init(_:))
         try keys.forEach { _ = try connection.set($0, to: $0).wait() }
 
         let values = try connection.mget(keys + ["empty"]).wait()
@@ -58,7 +58,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     }
     
     func test_mset() throws {
-        let data = [
+        let data: [RedisKey: Int] = [
             "first": 1,
             "second": 2
         ]
@@ -74,7 +74,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_msetnx() throws {
-        let data = [
+        let data: [RedisKey: Int] = [
             "first": 1,
             "second": 2
         ]

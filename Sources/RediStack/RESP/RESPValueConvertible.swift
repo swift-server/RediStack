@@ -29,33 +29,6 @@ public protocol RESPValueConvertible {
     func convertedToRESPValue() -> RESPValue
 }
 
-extension RESPValue: RESPValueConvertible {
-    /// See `RESPValueConvertible.init(fromRESP:)`
-    public init?(fromRESP value: RESPValue) {
-        self = value
-    }
-
-    /// See `RESPValueConvertible.convertedToRESPValue()`
-    public func convertedToRESPValue() -> RESPValue {
-        return self
-    }
-}
-
-extension RedisError: RESPValueConvertible {
-    /// Unwraps an `.error` representation directly into a `RedisError` instance.
-    ///
-    /// See `RESPValueConvertible.init(fromRESP:)`
-    public init?(fromRESP value: RESPValue) {
-        guard case let .error(e) = value else { return nil }
-        self = e
-    }
-
-    /// See `RESPValueConvertible.convertedToRESPValue()`
-    public func convertedToRESPValue() -> RESPValue {
-        return .error(self)
-    }
-}
-
 extension String: RESPValueConvertible {
     /// Attempts to provide a UTF-8 representation of the `RESPValue` provided.
     ///
@@ -80,7 +53,6 @@ extension String: RESPValueConvertible {
         }
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .init(bulk: self)
     }
@@ -104,7 +76,6 @@ extension FixedWidthInteger {
         }
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .init(bulk: self.description)
     }
@@ -135,7 +106,6 @@ extension Double: RESPValueConvertible {
         self = double
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .init(bulk: self.description)
     }
@@ -155,7 +125,6 @@ extension Float: RESPValueConvertible {
         self = float
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         return .init(bulk: self.description)
     }
@@ -224,7 +193,6 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
 import struct Foundation.Data
 
 extension Data: RESPValueConvertible {
-    /// See `RESPValueConvertible.init(fromRESP:)`
     public init?(fromRESP value: RESPValue) {
         switch value {
         case let .simpleString(buffer),
@@ -236,7 +204,6 @@ extension Data: RESPValueConvertible {
         }
     }
 
-    /// See `RESPValueConvertible.convertedToRESPValue()`
     public func convertedToRESPValue() -> RESPValue {
         var buffer = RESPValue.allocator.buffer(capacity: self.count)
         buffer.writeBytes(self)

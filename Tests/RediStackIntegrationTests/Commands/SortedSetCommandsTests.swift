@@ -18,9 +18,9 @@ import RediStackTestUtils
 import XCTest
 
 final class SortedSetCommandsTests: RediStackIntegrationTestCase {
-    private static let testKey = "SortedSetCommandsTests"
+    private static let testKey: RedisKey = "SortedSetCommandsTests"
 
-    private var key: String { return SortedSetCommandsTests.testKey }
+    private var key: RedisKey { return SortedSetCommandsTests.testKey }
 
     override func setUp() {
         super.setUp()
@@ -158,7 +158,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         let min1 = try connection.bzpopmin(from: key).wait()
         XCTAssertEqual(min1?.0, 1)
         let min2 = try connection.bzpopmin(from: [#function, key]).wait()
-        XCTAssertEqual(min2?.0, key)
+        XCTAssertEqual(min2?.0, key.rawValue)
         XCTAssertEqual(min2?.1, 2)
 
         let blockingConnection = try self.makeNewConnection()
@@ -192,7 +192,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         let max1 = try connection.bzpopmax(from: key).wait()
         XCTAssertEqual(max1?.0, 10)
         let max2 = try connection.bzpopmax(from: [#function, key]).wait()
-        XCTAssertEqual(max2?.0, key)
+        XCTAssertEqual(max2?.0, key.rawValue)
         XCTAssertEqual(max2?.1, 9)
 
         let blockingConnection = try self.makeNewConnection()
@@ -219,19 +219,21 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zunionstore() throws {
+        let testKey = RedisKey(#function + #file)
+        
         _ = try connection.zadd([(1, 1), (2, 2)], to: #function).wait()
         _ = try connection.zadd([(3, 3), (4, 4)], to: #file).wait()
 
         let unionCount = try connection.zunionstore(
-            as: #function+#file,
+            as: testKey,
             sources: [key, #function, #file],
             weights: [3, 2, 1],
             aggregateMethod: .max
         ).wait()
         XCTAssertEqual(unionCount, 10)
-        let rank = try connection.zrank(of: 10, in: #function+#file).wait()
+        let rank = try connection.zrank(of: 10, in: testKey).wait()
         XCTAssertEqual(rank, 9)
-        let score = try connection.zscore(of: 10, in: #function+#file).wait()
+        let score = try connection.zscore(of: 10, in: testKey).wait()
         XCTAssertEqual(score, 30)
     }
 

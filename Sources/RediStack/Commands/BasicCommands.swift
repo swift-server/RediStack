@@ -90,7 +90,7 @@ extension RedisClient {
     /// - Parameter keys: A list of keys to delete from the database.
     /// - Returns: The number of keys deleted from the database.
     @inlinable
-    public func delete(_ keys: [String]) -> EventLoopFuture<Int> {
+    public func delete(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
         let args = keys.map(RESPValue.init)
@@ -104,7 +104,7 @@ extension RedisClient {
     /// - Parameter keys: A list of keys to delete from the database.
     /// - Returns: The number of keys deleted from the database.
     @inlinable
-    public func delete(_ keys: String...) -> EventLoopFuture<Int> {
+    public func delete(_ keys: RedisKey...) -> EventLoopFuture<Int> {
         return self.delete(keys)
     }
 
@@ -117,7 +117,7 @@ extension RedisClient {
     ///     - timeout: The time from now the key will expire at.
     /// - Returns: `true` if the expiration was set.
     @inlinable
-    public func expire(_ key: String, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
+    public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         let amount = timeout.nanoseconds / 1_000_000_000
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -153,7 +153,7 @@ extension RedisClient {
     internal func _scan<T>(
         command: String,
         resultType: T.Type = T.self,
-        _ key: String?,
+        _ key: RedisKey?,
         _ pos: Int,
         _ count: Int?,
         _ match: String?
