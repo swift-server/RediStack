@@ -161,19 +161,19 @@ extension RedisClient {
     /// - Parameters:
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0` seconds means to wait indefinitely.
     /// - Returns: The element popped from the source list and pushed to the destination,
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func brpoplpush(
         from source: RedisKey,
         to dest: RedisKey,
-        timeout: Int = 0
+        timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<RESPValue?> {
         let args: [RESPValue] = [
             .init(bulk: source),
             .init(bulk: dest),
-            .init(bulk: timeout)
+            .init(bulk: timeout.seconds)
         ]
         return send(command: "BRPOPLPUSH", with: args)
             .map { $0.isNull ? nil: $0 }
@@ -378,9 +378,10 @@ extension RedisClient {
     /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
     /// - Parameters:
     ///     - key: The key of the list to pop from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
     @inlinable
-    public func blpop(from key: RedisKey, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+    public func blpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue?> {
         return blpop(from: [key], timeout: timeout)
             .map { $0?.1 }
     }
@@ -397,13 +398,13 @@ extension RedisClient {
     /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func blpop(from keys: [RedisKey], timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+    public func blpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BLPOP", keys, timeout)
     }
     
@@ -419,13 +420,13 @@ extension RedisClient {
     /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func blpop(from keys: RedisKey..., timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+    public func blpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.blpop(from: keys, timeout: timeout)
     }
 
@@ -441,9 +442,10 @@ extension RedisClient {
     /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
     /// - Parameters:
     ///     - key: The key of the list to pop from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
     @inlinable
-    public func brpop(from key: RedisKey, timeout: Int = 0) -> EventLoopFuture<RESPValue?> {
+    public func brpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue?> {
         return brpop(from: [key], timeout: timeout)
             .map { $0?.1 }
     }
@@ -460,13 +462,13 @@ extension RedisClient {
     /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func brpop(from keys: [RedisKey], timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+    public func brpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BRPOP", keys, timeout)
     }
 
@@ -482,13 +484,13 @@ extension RedisClient {
     /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
-    public func brpop(from keys: RedisKey..., timeout: Int = 0) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+    public func brpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.brpop(from: keys, timeout: timeout)
     }
 
@@ -496,10 +498,10 @@ extension RedisClient {
     func _bpop(
         command: String,
         _ keys: [RedisKey],
-        _ timeout: Int
+        _ timeout: TimeAmount
     ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         var args = keys.map(RESPValue.init)
-        args.append(.init(bulk: timeout))
+        args.append(.init(bulk: timeout.seconds))
         
         return send(command: command, with: args)
             .flatMapThrowing {

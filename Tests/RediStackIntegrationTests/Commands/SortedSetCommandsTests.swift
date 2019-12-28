@@ -152,7 +152,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_bzpopmin() throws {
-        let nilMin = try connection.bzpopmin(from: #function, timeout: 1).wait()
+        let nilMin = try connection.bzpopmin(from: #function, timeout: .seconds(1)).wait()
         XCTAssertNil(nilMin)
 
         let min1 = try connection.bzpopmin(from: key).wait()
@@ -186,7 +186,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_bzpopmax() throws {
-        let nilMax = try connection.bzpopmax(from: #function, timeout: 1).wait()
+        let nilMax = try connection.bzpopmax(from: #function, timeout: .seconds(1)).wait()
         XCTAssertNil(nilMax)
 
         let max1 = try connection.bzpopmax(from: key).wait()
