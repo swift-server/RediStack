@@ -43,19 +43,19 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(count, 1)
         count = try connection.zadd([(30, 5)], to: #function).wait()
         XCTAssertEqual(count, 0)
-        count = try connection.zadd((30, 6), (31, 0), (32, 1), to: #function, option: .onlyAddNewElements).wait()
+        count = try connection.zadd((30, 6), (31, 0), (32, 1), to: #function, inserting: .onlyNewElements).wait()
         XCTAssertEqual(count, 2)
         count = try connection.zadd(
             [(32, 2), (33, 3)],
             to: #function,
-            option: .onlyUpdateExistingElements,
-            returnChangedCount: true
+            inserting: .onlyExistingElements,
+            returning: .changedElementsCount
         ).wait()
         XCTAssertEqual(count, 1)
 
-        var success = try connection.zadd((30, 7), to: #function, returnChangedCount: true).wait()
+        var success = try connection.zadd((30, 7), to: #function, returning: .changedElementsCount).wait()
         XCTAssertTrue(success)
-        success = try connection.zadd((30, 8), to: #function, option: .onlyAddNewElements).wait()
+        success = try connection.zadd((30, 8), to: #function, inserting: .onlyNewElements).wait()
         XCTAssertFalse(success)
     }
 
