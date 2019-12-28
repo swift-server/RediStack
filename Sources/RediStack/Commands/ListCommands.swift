@@ -90,15 +90,19 @@ extension RedisClient {
         return send(command: "LREM", with: args)
             .convertFromRESPValue()
     }
+}
 
-    /// Trims a list to only contain elements within the specified inclusive bounds of 0-based indices.
+// MARK: LTrim
+
+extension RedisClient {
+    /// Trims a List to only contain elements within the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
     /// - Parameters:
-    ///     - key: The key of the list to trim.
+    ///     - key: The key of the List to trim.
     ///     - start: The index of the first element to keep.
     ///     - stop: The index of the last element to keep.
-    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
     public func ltrim(_ key: RedisKey, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
@@ -109,28 +113,295 @@ extension RedisClient {
         return send(command: "LTRIM", with: args)
             .map { _ in () }
     }
+    
+    /// Trims a List to only contain elements within the specified inclusive bounds of 0-based indices.
+    ///
+    /// To keep elements 4 through 7:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: 3...6)
+    /// ```
+    ///
+    /// To keep the last 4 through 7 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: (-7)...(-4))
+    /// ```
+    ///
+    /// To keep the first and last 4 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: (-4)...3)
+    /// ```
+    ///
+    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Warning: A `ClosedRange` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0...-1`,
+    ///     `ClosedRange` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `ltrim(_:before:after:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to trim.
+    ///     - range: The range of indices that should be kept in the List.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    @inlinable
+    public func ltrim(_ key: RedisKey, keepingIndices range: ClosedRange<Int>) -> EventLoopFuture<Void> {
+        return self.ltrim(key, before: range.lowerBound, after: range.upperBound)
+    }
 
-    /// Gets all elements from a list within the the specified inclusive bounds of 0-based indices.
+    /// Trims a List to only contain elements starting from the specified index.
+    ///
+    /// To keep all but the first 3 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: 3...)
+    /// ```
+    ///
+    /// To keep the last 4 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: (-4)...)
+    /// ```
+    ///
+    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Parameters:
+    ///     - key: The key of the List to trim.
+    ///     - range: The range of indices that should be kept in the List.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    @inlinable
+    public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeFrom<Int>) -> EventLoopFuture<Void> {
+        return self.ltrim(key, before: range.lowerBound, after: -1)
+    }
+    
+    /// Trims a List to only contain elements before the specified index.
+    ///
+    /// To keep the first 3 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: ..<3)
+    /// ```
+    ///
+    /// To keep all but the last 4 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: ..<(-4))
+    /// ```
+    ///
+    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Parameters:
+    ///     - key: The key of the List to trim.
+    ///     - range: The range of indices that should be kept in the List.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    @inlinable
+    public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeUpTo<Int>) -> EventLoopFuture<Void> {
+        return self.ltrim(key, before: 0, after: range.upperBound - 1)
+    }
+    
+    /// Trims a List to only contain elements up to the specified index.
+    ///
+    /// To keep the first 4 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: ...3)
+    /// ```
+    ///
+    /// To keep all but the last 3 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: ...(-4))
+    /// ```
+    ///
+    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Parameters:
+    ///     - key: The key of the List to trim.
+    ///     - range: The range of indices that should be kept in the List.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    @inlinable
+    public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeThrough<Int>) -> EventLoopFuture<Void> {
+        return self.ltrim(key, before: 0, after: range.upperBound)
+    }
+    
+    /// Trims a List to only contain the elements from the specified index up to the index provided.
+    ///
+    /// To keep the first 4 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: 0..<4)
+    /// ```
+    ///
+    /// To keep all but the last 3 elements:
+    /// ```swift
+    /// client.ltrim("myList", keepingIndices: 0..<(-3))
+    /// ```
+    ///
+    /// See [https://redis.io/commands/ltrim](https://redis.io/commands/ltrim)
+    /// - Warning: A `Range` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0..<(-1)`,
+    ///     `Range` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `ltrim(_:before:after:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to trim.
+    ///     - range: The range of indices that should be kept in the List.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
+    @inlinable
+    public func ltrim(_ key: RedisKey, keepingIndices range: Range<Int>) -> EventLoopFuture<Void> {
+        return self.ltrim(key, before: range.lowerBound, after: range.upperBound - 1)
+    }
+}
+
+// MARK: LRange
+
+extension RedisClient {
+    /// Gets all elements from a List within the the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
     /// - Parameters:
-    ///     - range: The range of inclusive indices of elements to get.
-    ///     - key: The key of the list.
-    /// - Returns: A list of elements found within the range specified.
+    ///     - key: The key of the List.
+    ///     - firstIndex: The index of the first element to include in the range of elements returned.
+    ///     - lastIndex: The index of the last element to include in the range of elements returned.
+    /// - Returns: An array of elements found within the range specified.
     @inlinable
-    public func lrange(
-        within range: (startIndex: Int, endIndex: Int),
-        from key: RedisKey
-    ) -> EventLoopFuture<[RESPValue]> {
+    public func lrange(from key: RedisKey, firstIndex: Int, lastIndex: Int) -> EventLoopFuture<[RESPValue]> {
         let args: [RESPValue] = [
             .init(bulk: key),
-            .init(bulk: range.startIndex),
-            .init(bulk: range.endIndex)
+            .init(bulk: firstIndex),
+            .init(bulk: lastIndex)
         ]
         return send(command: "LRANGE", with: args)
             .convertFromRESPValue()
     }
+    
+    /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
+    ///
+    /// To get the elements at index 4 through 7:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: 4...7)
+    /// ```
+    ///
+    /// To get the last 4 elements:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)...(-1))
+    /// ```
+    ///
+    /// To get the first and last 4 elements:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)...3)
+    /// ```
+    ///
+    /// To get the first element, and the last 4:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)...0))
+    /// ```
+    ///
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Warning: A `ClosedRange` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0...-1`,
+    ///     `ClosedRange` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - range: The range of inclusive indices of elements to get.
+    /// - Returns: An array of elements found within the range specified.
+    @inlinable
+    public func lrange(from key: RedisKey, indices range: ClosedRange<Int>) -> EventLoopFuture<[RESPValue]> {
+        return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
+    }
+    
+    /// Gets all the elements from a List starting with the first index bound up to, but not including, the element at the last index bound.
+    ///
+    /// To get the elements at index 4 through 7:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: 4..<8)
+    /// ```
+    ///
+    /// To get the last 4 elements:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)..<0)
+    /// ```
+    ///
+    /// To get the first and last 4 elements:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)..<4)
+    /// ```
+    ///
+    /// To get the first element, and the last 4:
+    /// ```swift
+    /// client.lrange(from: "myList", indices: (-4)..<1)
+    /// ```
+    ///
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Warning: A `Range` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0..<(-1)`,
+    ///     `Range` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
+    /// - Returns: An array of elements found within the range specified.
+    @inlinable
+    public func lrange(from key: RedisKey, indices range: Range<Int>) -> EventLoopFuture<[RESPValue]> {
+        return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
+    }
 
+    /// Gets all elements from the index specified to the end of a List.
+    ///
+    /// To get all except the first 2 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", fromIndex: 2)
+    /// ```
+    ///
+    /// To get the last 4 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", fromIndex: -4)
+    /// ```
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the first element that will be in the returned values.
+    /// - Returns: An array of elements from the List between the index and the end.
+    @inlinable
+    public func lrange(from key: RedisKey, fromIndex index: Int) -> EventLoopFuture<[RESPValue]> {
+        return self.lrange(from: key, firstIndex: index, lastIndex: -1)
+    }
+    
+    /// Gets all elements from the the start of a List up to, and including, the element at the index specified.
+    ///
+    /// To get the first 3 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", throughIndex: 2)
+    /// ```
+    ///
+    /// To get all except the last 3 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", throughIndex: -4)
+    /// ```
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the last element that will be in the returned values.
+    /// - Returns: An array of elements from the start of a List to the index.
+    @inlinable
+    public func lrange(from key: RedisKey, throughIndex index: Int) -> EventLoopFuture<[RESPValue]> {
+        return self.lrange(from: key, firstIndex: 0, lastIndex: index)
+    }
+    
+    /// Gets all elements from the the start of a List up to, but not including, the element at the index specified.
+    ///
+    /// To get the first 3 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", upToIndex: 3)
+    /// ```
+    ///
+    /// To get all except the last 3 elements of a List:
+    /// ```swift
+    /// client.lrange(from: "myList", upToIndex: -3)
+    /// ```
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the element to not include in the returned values.
+    /// - Returns: An array of elements from the start of the List and up to the index.
+    @inlinable
+    public func lrange(from key: RedisKey, upToIndex index: Int) -> EventLoopFuture<[RESPValue]> {
+        return self.lrange(from: key, firstIndex: 0, lastIndex: index - 1)
+    }
+}
+
+// MARK: Pop & Push
+
+extension RedisClient {
     /// Pops the last element from a source list and pushes it to a destination list.
     ///
     /// See [https://redis.io/commands/rpoplpush](https://redis.io/commands/rpoplpush)

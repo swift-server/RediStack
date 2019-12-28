@@ -53,23 +53,28 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_lrange() throws {
-        var elements = try connection.lrange(within: (0, 10), from: #function).wait()
+        var elements = try connection.lrange(from: #function, indices: 0...10).wait()
         XCTAssertEqual(elements.count, 0)
 
         _ = try connection.lpush([5, 4, 3, 2, 1], into: #function).wait()
 
-        elements = try connection.lrange(within: (0, 4), from: #function).wait()
+        elements = try connection.lrange(from: #function, throughIndex: 4).wait()
         XCTAssertEqual(elements.count, 5)
         XCTAssertEqual(Int(fromRESP: elements[0]), 1)
         XCTAssertEqual(Int(fromRESP: elements[4]), 5)
+        
+        elements = try connection.lrange(from: #function, fromIndex: 1).wait()
+        XCTAssertEqual(elements.count, 4)
+        elements = try connection.lrange(from: #function, fromIndex: -3).wait()
+        XCTAssertEqual(elements.count, 3)
 
-        elements = try connection.lrange(within: (2, 0), from: #function).wait()
+        elements = try connection.lrange(from: #function, firstIndex: 2, lastIndex: 0).wait()
         XCTAssertEqual(elements.count, 0)
 
-        elements = try connection.lrange(within: (4, 5), from: #function).wait()
+        elements = try connection.lrange(from: #function, indices: 4...5).wait()
         XCTAssertEqual(elements.count, 1)
 
-        elements = try connection.lrange(within: (0, -4), from: #function).wait()
+        elements = try connection.lrange(from: #function, upToIndex: -3).wait()
         XCTAssertEqual(elements.count, 2)
     }
 
@@ -109,13 +114,13 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         _ = try connection.lpush([10], into: #function).wait()
 
         _ = try connection.linsert(20, into: #function, after: 10).wait()
-        var elements = try connection.lrange(within: (0, 1), from: #function)
+        var elements = try connection.lrange(from: #function, throughIndex: 1)
             .map { response in response.compactMap { Int(fromRESP: $0) } }
             .wait()
         XCTAssertEqual(elements, [10, 20])
 
         _ = try connection.linsert(30, into: #function, before: 10).wait()
-        elements = try connection.lrange(within: (0, 2), from: #function)
+        elements = try connection.lrange(from: #function, throughIndex: 2)
             .map { response in response.compactMap { Int(fromRESP: $0) } }
             .wait()
         XCTAssertEqual(elements, [30, 10, 20])
@@ -235,5 +240,37 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
             .map { return Int(fromRESP: $0) }
             .wait()
         XCTAssertEqual(element, 10)
+    }
+    
+    func test_ltrim() throws {
+        let setup = {
+            _ = try self.connection.delete(#function).wait()
+            _ = try self.connection.lpush([5, 4, 3, 2, 1], into: #function).wait()
+        }
+        let getElements = { return try self.connection.lrange(from: #function, fromIndex: 0).wait() }
+        
+        try setup()
+        
+        XCTAssertNoThrow(try connection.ltrim(#function, before: 1, after: 3).wait())
+        XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: 0...1).wait())
+        var elements = try getElements()
+        XCTAssertEqual(elements.count, 2)
+        
+        try setup()
+        
+        XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: (-3)...).wait())
+        elements = try getElements()
+        XCTAssertEqual(elements.count, 3)
+        
+        try setup()
+        
+        XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: ...(-4)).wait())
+        elements = try getElements()
+        XCTAssertEqual(elements.count, 2)
+        
+        try setup()
+        XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: ..<(-2)).wait())
+        elements = try getElements()
+        XCTAssertEqual(elements.count, 3)
     }
 }
