@@ -105,7 +105,6 @@ public final class RedisConnection: RedisClient {
         }
     }
     public var eventLoop: EventLoop { return self.channel.eventLoop }
-    /// Is the connection to Redis still open?
     public var isConnected: Bool {
         // `Channel.isActive` is set to false before the `closeFuture` resolves in cases where the channel might be
         // closed, or closing, before our state has been updated
