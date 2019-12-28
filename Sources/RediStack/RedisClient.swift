@@ -23,7 +23,10 @@ import NIO
 ///
 /// See [https://redis.io/commands](https://redis.io/commands)
 public protocol RedisClient {
-    /// The `EventLoop` that this client operates on.
+    /// Is the client currently connected to Redis?
+    var isConnected: Bool { get }
+    
+    /// The `NIO.EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
     
     /// The `Logging.Logger` that this client uses.
@@ -33,7 +36,7 @@ public protocol RedisClient {
     /// - Parameters:
     ///     - command: The command to execute.
     ///     - arguments: The arguments, if any, to be sent with the command.
-    /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
+    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
     func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
     
     /// Updates the client's logger.
@@ -44,7 +47,7 @@ public protocol RedisClient {
 extension RedisClient {
     /// Sends the desired command without arguments.
     /// - Parameter command: The command keyword to execute.
-    /// - Returns: An `EventLoopFuture` that will resolve with the Redis command response.
+    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
     public func send(command: String) -> EventLoopFuture<RESPValue> {
         return self.send(command: command, with: [])
     }
