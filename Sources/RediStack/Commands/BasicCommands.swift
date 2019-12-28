@@ -118,10 +118,9 @@ extension RedisClient {
     /// - Returns: `true` if the expiration was set.
     @inlinable
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
-        let amount = timeout.nanoseconds / 1_000_000_000
         let args: [RESPValue] = [
             .init(bulk: key),
-            .init(bulk: amount.description)
+            .init(bulk: timeout.seconds)
         ]
         return send(command: "EXPIRE", with: args)
             .convertFromRESPValue(to: Int.self)

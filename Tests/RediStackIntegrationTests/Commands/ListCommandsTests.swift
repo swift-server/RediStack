@@ -133,7 +133,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_blpop() throws {
-        let nilPop = try connection.blpop(from: #function, timeout: 1).wait()
+        let nilPop = try connection.blpop(from: #function, timeout: .seconds(1)).wait()
         XCTAssertNil(nilPop)
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()
@@ -192,7 +192,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_brpop() throws {
-        let nilPop = try connection.brpop(from: #function, timeout: 1).wait()
+        let nilPop = try connection.brpop(from: #function, timeout: .seconds(1)).wait()
         XCTAssertNil(nilPop)
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()

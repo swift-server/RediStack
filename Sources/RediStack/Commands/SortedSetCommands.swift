@@ -367,14 +367,14 @@ extension RedisClient {
     /// See [https://redis.io/commands/bzpopmin](https://redis.io/commands/bzpopmin)
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     The element and its associated score that was popped from the sorted set,
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func bzpopmin(
         from key: RedisKey,
-        timeout: Int = 0
+        timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(Double, RESPValue)?> {
         return bzpopmin(from: [key], timeout: timeout)
             .map {
@@ -396,7 +396,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/bzpopmin](https://redis.io/commands/bzpopmin)
     /// - Parameters:
     ///     - keys: A list of sorted set keys in Redis.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
@@ -405,7 +405,7 @@ extension RedisClient {
     @inlinable
     public func bzpopmin(
         from keys: [RedisKey],
-        timeout: Int = 0
+        timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         return self._bzpop(command: "BZPOPMIN", keys, timeout)
     }
@@ -423,14 +423,14 @@ extension RedisClient {
     /// See [https://redis.io/commands/bzpopmax](https://redis.io/commands/bzpopmax)
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     The element and its associated score that was popped from the sorted set,
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func bzpopmax(
         from key: RedisKey,
-        timeout: Int = 0
+        timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(Double, RESPValue)?> {
         return self.bzpopmax(from: [key], timeout: timeout)
             .map {
@@ -452,7 +452,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/bzpopmax](https://redis.io/commands/bzpopmax)
     /// - Parameters:
     ///     - keys: A list of sorted set keys in Redis.
-    ///     - timeout: The time (in seconds) to wait. `0` means indefinitely.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
     ///     If timeout was reached, `nil`.
     ///
@@ -461,7 +461,7 @@ extension RedisClient {
     @inlinable
     public func bzpopmax(
         from keys: [RedisKey],
-        timeout: Int = 0
+        timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         return self._bzpop(command: "BZPOPMAX", keys, timeout)
     }
@@ -470,10 +470,10 @@ extension RedisClient {
     func _bzpop(
         command: String,
         _ keys: [RedisKey],
-        _ timeout: Int
+        _ timeout: TimeAmount
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         var args = keys.map(RESPValue.init)
-        args.append(.init(bulk: timeout))
+        args.append(.init(bulk: timeout.seconds))
         
         return send(command: command, with: args)
             // per the Redis docs,

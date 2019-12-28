@@ -37,6 +37,16 @@ extension EventLoopFuture where Value == RESPValue {
     }
 }
 
+extension TimeAmount {
+    /// The seconds representation of the TimeAmount.
+    @usableFromInline
+    internal var seconds: Int64 {
+        return self.nanoseconds / 1_000_000_000
+    }
+}
+
+// MARK: Setting up a Redis connection
+
 extension Channel {
     /// Adds the baseline `ChannelHandlers` needed to support sending and receiving messages in Redis Serialization Protocol (RESP) format to the pipeline.
     ///
