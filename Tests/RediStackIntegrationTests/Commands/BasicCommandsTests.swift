@@ -22,7 +22,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_delete() throws {
-        let keys = [ #function + "1", #function + "2", #function + "3" ]
+        let keys = [ #function + "1", #function + "2", #function + "3" ].map(RedisKey.init(_:))
         try connection.set(keys[0], to: "value").wait()
         try connection.set(keys[1], to: "value").wait()
         try connection.set(keys[2], to: "value").wait()
@@ -87,9 +87,9 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_scan() throws {
-        var dataset: [String] = .init(repeating: "", count: 10)
+        var dataset: [RedisKey] = .init(repeating: "", count: 10)
         for index in 1...15 {
-            let key = "key\(index)\(index % 2 == 0 ? "_even" : "_odd")"
+            let key = RedisKey("key\(index)\(index % 2 == 0 ? "_even" : "_odd")")
             dataset.append(key)
             _ = try connection.set(key, to: "\(index)").wait()
         }

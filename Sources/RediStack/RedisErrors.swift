@@ -50,3 +50,19 @@ public struct RedisError: LocalizedError, Equatable {
         return lhs.message == rhs.message
     }
 }
+
+// MARK: RESPValueConvertible
+
+extension RedisError: RESPValueConvertible {
+    /// Unwraps an `.error` representation directly into a `RedisError` instance.
+    ///
+    /// See `RESPValueConvertible.init(fromRESP:)`
+    public init?(fromRESP value: RESPValue) {
+        guard case let .error(e) = value else { return nil }
+        self = e
+    }
+
+    public func convertedToRESPValue() -> RESPValue {
+        return .error(self)
+    }
+}

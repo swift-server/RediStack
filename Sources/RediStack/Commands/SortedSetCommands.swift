@@ -73,7 +73,7 @@ extension RedisClient {
     @inlinable
     public func zadd<Value: RESPValueConvertible>(
         _ elements: [(element: Value, score: Double)],
-        to key: String,
+        to key: RedisKey,
         option: RedisSortedSetAddOption? = nil,
         returnChangedCount: Bool = false
     ) -> EventLoopFuture<Int> {
@@ -110,7 +110,7 @@ extension RedisClient {
     @inlinable
     public func zadd<Value: RESPValueConvertible>(
         _ elements: (element: Value, score: Double)...,
-        to key: String,
+        to key: RedisKey,
         option: RedisSortedSetAddOption? = nil,
         returnChangedCount: Bool = false
     ) -> EventLoopFuture<Int> {
@@ -132,7 +132,7 @@ extension RedisClient {
     @inlinable
     public func zadd<Value: RESPValueConvertible>(
         _ element: (element: Value, score: Double),
-        to key: String,
+        to key: RedisKey,
         option: RedisSortedSetAddOption? = nil,
         returnChangedCount: Bool = false
     ) -> EventLoopFuture<Bool> {
@@ -146,7 +146,7 @@ extension RedisClient {
     /// - Parameter key: The key of the sorted set.
     /// - Returns: The number of elements in the sorted set.
     @inlinable
-    public func zcard(of key: String) -> EventLoopFuture<Int> {
+    public func zcard(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "ZCARD", with: args)
             .convertFromRESPValue()
@@ -160,7 +160,7 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The score of the element provided, or `nil` if the element is not found in the set or the set does not exist.
     @inlinable
-    public func zscore<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Double?> {
+    public func zscore<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Double?> {
         let args: [RESPValue] = [
             .init(bulk: key),
             element.convertedToRESPValue()
@@ -180,7 +180,7 @@ extension RedisClient {
     /// - Returns: A cursor position for additional invocations with a limited collection of elements found in the sorted set with their scores.
     @inlinable
     public func zscan(
-        _ key: String,
+        _ key: RedisKey,
         startingFrom position: Int = 0,
         count: Int? = nil,
         matching match: String? = nil
@@ -206,7 +206,7 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+    public func zrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Int?> {
         let args: [RESPValue] = [
             .init(bulk: key),
             element.convertedToRESPValue()
@@ -225,7 +225,7 @@ extension RedisClient {
     ///     - key: The key of the sorted set to search.
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
-    public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: String) -> EventLoopFuture<Int?> {
+    public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Int?> {
         let args: [RESPValue] = [
             .init(bulk: key),
             element.convertedToRESPValue()
@@ -247,7 +247,7 @@ extension RedisClient {
     /// - Returns: The number of elements in the sorted set that fit within the score range.
     @inlinable
     public func zcount(
-        of key: String,
+        of key: RedisKey,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
@@ -269,7 +269,7 @@ extension RedisClient {
     /// - Returns: The number of elements in the sorted set that fit within the value range.
     @inlinable
     public func zlexcount(
-        of key: String,
+        of key: RedisKey,
         within range: (min: String, max: String)
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
@@ -293,7 +293,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     @inlinable
-    public func zpopmin(from key: String, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
+    public func zpopmin(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
         return _zpop(command: "ZPOPMIN", count, key)
     }
 
@@ -303,7 +303,7 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     @inlinable
-    public func zpopmin(from key: String) -> EventLoopFuture<(RESPValue, Double)?> {
+    public func zpopmin(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
         return _zpop(command: "ZPOPMIN", nil, key)
             .map { return $0.count > 0 ? $0[0] : nil }
     }
@@ -316,7 +316,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     @inlinable
-    public func zpopmax(from key: String, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
+    public func zpopmax(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
         return _zpop(command: "ZPOPMAX", count, key)
     }
 
@@ -326,7 +326,7 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     @inlinable
-    public func zpopmax(from key: String) -> EventLoopFuture<(RESPValue, Double)?> {
+    public func zpopmax(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
         return _zpop(command: "ZPOPMAX", nil, key)
             .map { return $0.count > 0 ? $0[0] : nil }
     }
@@ -335,7 +335,7 @@ extension RedisClient {
     func _zpop(
         command: String,
         _ count: Int?,
-        _ key: String
+        _ key: RedisKey
     ) -> EventLoopFuture<[(RESPValue, Double)]> {
         var args: [RESPValue] = [.init(bulk: key)]
 
@@ -373,7 +373,7 @@ extension RedisClient {
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func bzpopmin(
-        from key: String,
+        from key: RedisKey,
         timeout: Int = 0
     ) -> EventLoopFuture<(Double, RESPValue)?> {
         return bzpopmin(from: [key], timeout: timeout)
@@ -404,7 +404,7 @@ extension RedisClient {
     ///     and its associated score is returned.
     @inlinable
     public func bzpopmin(
-        from keys: [String],
+        from keys: [RedisKey],
         timeout: Int = 0
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         return self._bzpop(command: "BZPOPMIN", keys, timeout)
@@ -429,7 +429,7 @@ extension RedisClient {
     ///     or `nil` if the timeout was reached.
     @inlinable
     public func bzpopmax(
-        from key: String,
+        from key: RedisKey,
         timeout: Int = 0
     ) -> EventLoopFuture<(Double, RESPValue)?> {
         return self.bzpopmax(from: [key], timeout: timeout)
@@ -460,7 +460,7 @@ extension RedisClient {
     ///     and its associated score is returned.
     @inlinable
     public func bzpopmax(
-        from keys: [String],
+        from keys: [RedisKey],
         timeout: Int = 0
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         return self._bzpop(command: "BZPOPMAX", keys, timeout)
@@ -469,7 +469,7 @@ extension RedisClient {
     @usableFromInline
     func _bzpop(
         command: String,
-        _ keys: [String],
+        _ keys: [RedisKey],
         _ timeout: Int
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         var args = keys.map(RESPValue.init)
@@ -511,7 +511,7 @@ extension RedisClient {
     public func zincrby<Value: RESPValueConvertible>(
         _ amount: Double,
         element: Value,
-        in key: String
+        in key: RedisKey
     ) -> EventLoopFuture<Double> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -552,8 +552,8 @@ extension RedisClient {
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zunionstore(
-        as destination: String,
-        sources: [String],
+        as destination: RedisKey,
+        sources: [RedisKey],
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
@@ -572,8 +572,8 @@ extension RedisClient {
     /// - Returns: The number of elements in the new sorted set.
     @inlinable
     public func zinterstore(
-        as destination: String,
-        sources: [String],
+        as destination: RedisKey,
+        sources: [RedisKey],
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
@@ -583,8 +583,8 @@ extension RedisClient {
     @usableFromInline
     func _zopstore(
         command: String,
-        _ sources: [String],
-        _ destination: String,
+        _ sources: [RedisKey],
+        _ destination: RedisKey,
         _ weights: [Int]?,
         _ aggregate: RedisSortedSetAggregateMethod?
     ) -> EventLoopFuture<Int> {
@@ -631,7 +631,7 @@ extension RedisClient {
     @inlinable
     public func zrange(
         within range: (start: Int, stop: Int),
-        from key: String,
+        from key: RedisKey,
         withScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
         return _zrange(command: "ZRANGE", key, range.start, range.stop, withScores)
@@ -651,7 +651,7 @@ extension RedisClient {
     @inlinable
     public func zrevrange(
         within range: (start: Int, stop: Int),
-        from key: String,
+        from key: RedisKey,
         withScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
         return _zrange(command: "ZREVRANGE", key, range.start, range.stop, withScores)
@@ -660,7 +660,7 @@ extension RedisClient {
     @usableFromInline
     func _zrange(
         command: String,
-        _ key: String,
+        _ key: RedisKey,
         _ start: Int,
         _ stop: Int,
         _ withScores: Bool
@@ -696,7 +696,7 @@ extension RedisClient {
     @inlinable
     public func zrangebyscore(
         within range: (min: String, max: String),
-        from key: String,
+        from key: RedisKey,
         withScores: Bool = false,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
@@ -718,7 +718,7 @@ extension RedisClient {
     @inlinable
     public func zrevrangebyscore(
         within range: (min: String, max: String),
-        from key: String,
+        from key: RedisKey,
         withScores: Bool = false,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
@@ -728,7 +728,7 @@ extension RedisClient {
     @usableFromInline
     func _zrangebyscore(
         command: String,
-        _ key: String,
+        _ key: RedisKey,
         _ range: (min: String, max: String),
         _ withScores: Bool,
         _ limit: (offset: Int, count: Int)?
@@ -769,7 +769,7 @@ extension RedisClient {
     @inlinable
     public func zrangebylex(
         within range: (min: String, max: String),
-        from key: String,
+        from key: RedisKey,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
         return _zrangebylex(command: "ZRANGEBYLEX", key, range, limit)
@@ -790,7 +790,7 @@ extension RedisClient {
     @inlinable
     public func zrevrangebylex(
         within range: (min: String, max: String),
-        from key: String,
+        from key: RedisKey,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
         return _zrangebylex(command: "ZREVRANGEBYLEX", key, (range.max, range.min), limit)
@@ -799,7 +799,7 @@ extension RedisClient {
     @usableFromInline
     func _zrangebylex(
         command: String,
-        _ key: String,
+        _ key: RedisKey,
         _ range: (min: String, max: String),
         _ limit: (offset: Int, count: Int)?
     ) -> EventLoopFuture<[RESPValue]> {
@@ -832,7 +832,7 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The number of elements removed from the set.
     @inlinable
-    public func zrem<Value: RESPValueConvertible>(_ elements: [Value], from key: String) -> EventLoopFuture<Int> {
+    public func zrem<Value: RESPValueConvertible>(_ elements: [Value], from key: RedisKey) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
         var args: [RESPValue] = [.init(bulk: key)]
@@ -850,7 +850,7 @@ extension RedisClient {
     ///     - key: The key of the sorted set.
     /// - Returns: The number of elements removed from the set.
     @inlinable
-    public func zrem<Value: RESPValueConvertible>(_ elements: Value..., from key: String) -> EventLoopFuture<Int> {
+    public func zrem<Value: RESPValueConvertible>(_ elements: Value..., from key: RedisKey) -> EventLoopFuture<Int> {
         return self.zrem(elements, from: key)
     }
 
@@ -865,7 +865,7 @@ extension RedisClient {
     @inlinable
     public func zremrangebylex(
         within range: (min: String, max: String),
-        from key: String
+        from key: RedisKey
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -886,7 +886,7 @@ extension RedisClient {
     @inlinable
     public func zremrangebyrank(
         within range: (start: Int, stop: Int),
-        from key: String
+        from key: RedisKey
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -907,7 +907,7 @@ extension RedisClient {
     @inlinable
     public func zremrangebyscore(
         within range: (min: String, max: String),
-        from key: String
+        from key: RedisKey
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(bulk: key),
