@@ -56,6 +56,7 @@ extension ListCommandsTests {
         ("test_lrange", test_lrange),
         ("test_lrem", test_lrem),
         ("test_lset", test_lset),
+        ("test_ltrim", test_ltrim),
         ("test_rpop", test_rpop),
         ("test_rpoplpush", test_rpoplpush),
         ("test_rpush", test_rpush),
@@ -69,6 +70,8 @@ extension RedisConnectionTests {
     // to regenerate.
     static let __allTests__RedisConnectionTests = [
         ("test_callingCloseMultipleTimes", test_callingCloseMultipleTimes),
+        ("test_customLogging", test_customLogging),
+        ("test_loggingMetadata", test_loggingMetadata),
         ("test_sendingCommandAfterClosing", test_sendingCommandAfterClosing),
         ("test_unexpectedChannelClose", test_unexpectedChannelClose),
     ]
