@@ -6,7 +6,7 @@
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
     <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.0+-orange.svg" alt="Swift 5.0+"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0+-red.svg" alt="Redis 5.0+"></a>
+    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 </div>
 
@@ -20,11 +20,15 @@ The <a href="https://github.com/Mordil/swift-redi-stack" rel="nofollow noreferre
 
 It communicates over the network using Redis' [**Re**dis **S**eralization **P**rotocol (RESP2)](https://redis.io/topics/protocol).
 
+This library is primarily developed for Redis v5, but is backwards compatible to Redis v3**¹**.
+
 The table below lists the major releases alongside their compatible language, dependency, and Redis versions.
 
-| SPM Version | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
-|:---:|:---:|:---:|:---:|:---:|:---:|
-| `from: "1.0.0-alpha.5"` | 5.0+ | 5.0+ | 2.x | 1.x | 1.x |
+| RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
+|:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
+| `from: "1.0.0-alpha.7"` | 5.0+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x |
+
+> **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
 ### Supported Operating Systems
 
