@@ -100,11 +100,11 @@ Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/swift-redi-stack/blob/mas
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI).
 
-| Swift Version | macOS Mojave | Ubuntu 16.04 (Xenial) | Ubuntu 18.04 (Bionic) |
-|---|:---:|:---:|:---:|
-| 5.0 | X | X | X |
-| 5.1 | X | X | X |
-| Trunk | X | X | |
+| Platform | Swift 5 | 5.1 | 5.2 | Trunk |
+|:---------|:-------:|:---:|:---:|:-----:|
+| macOS Latest | | :white_check_mark: | | |
+| Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | | |
+| Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## License
 

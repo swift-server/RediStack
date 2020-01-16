@@ -84,6 +84,9 @@ test 5.0:ubuntu-xenial:
 test 5.1:ubuntu-xenial:
   extends: .test
   image: swift:5.1-xenial
+test 5.2:ubuntu-xenial:
+  extends: .test
+  image: norionomura/swift:swift-5.2-branch
 test latest:ubuntu-xenial:
   extends: .test
   image: norionomura/swift:nightly
