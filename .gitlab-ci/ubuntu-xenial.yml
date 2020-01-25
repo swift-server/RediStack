@@ -1,0 +1,20 @@
+include: '/.gitlab-ci/test-template.yml'
+
+swift 5.0:
+  extends: .unit-test
+  image: swift:5.0-xenial
+  variables:
+    SANITIZER_ARG: ''
+
+swift 5.1:
+  extends: .unit-test
+  image: swift:5.1-xenial
+
+swift 5.2:
+  extends: .unit-test
+  image: swiftlang/swift:nightly-5.2-xenial
+
+swift trunk:
+  extends: .unit-test
+  image: swiftlang/swift:nightly-master-xenial
+  allow_failure: true
