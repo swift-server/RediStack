@@ -2,7 +2,7 @@
 <p><img src="https://gitlab.com/Mordil/swift-redi-stack/wikis/uploads/cb4c517e40bd2f5ab796f1093efbd697/RediStack_social-preview_transparent.png" width="350" alt="RediStack logo"></p>
 
 <p>
-    <a href="https://gitlab.com/Mordil/swift-redis-nio-client/pipelines"><img src="https://gitlab.com/Mordil/swift-redis-nio-client/badges/master/pipeline.svg" alt="Build Status"></a>
+    <a href="https://gitlab.com/Mordil/swift-redi-stack/pipelines"><img src="https://gitlab.com/Mordil/swift-redi-stack/badges/master/pipeline.svg" alt="Build Status"></a>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
     <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.0+-orange.svg" alt="Swift 5.0+"></a>
@@ -107,7 +107,7 @@ receive regular unit testing (either in development, or with CI).
 | Platform | Swift 5 | 5.1 | 5.2 | Trunk |
 |:---------|:-------:|:---:|:---:|:-----:|
 | macOS Latest | | :white_check_mark: | | |
-| Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | | |
+| Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## License
