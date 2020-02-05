@@ -23,6 +23,7 @@ xcuserdata/
 *.xccheckout
 *.xcscmblueprint
 *.xcodeproj
+public/
 
 ## Obj-C/Swift specific
 *.hmap

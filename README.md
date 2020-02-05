@@ -10,6 +10,7 @@
 
 <p>
     <a href="https://gitlab.com/Mordil/swift-redi-stack/pipelines"><img src="https://gitlab.com/Mordil/swift-redi-stack/badges/master/pipeline.svg" alt="Build Status"></a>
+    <a href="https://docs.redistack.info"><img src="https://docs.redistack.info/badge.svg" alt="Documentation Coverage"></a>
     <a href="https://codeclimate.com/github/Mordil/swift-redi-stack/maintainability"><img src="https://api.codeclimate.com/v1/badges/3ff84c8d384b01cb5875/maintainability" /></a>
 </p>
 </div>
