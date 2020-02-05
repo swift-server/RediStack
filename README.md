@@ -2,11 +2,15 @@
 <p><img src="https://gitlab.com/Mordil/swift-redi-stack/wikis/uploads/cb4c517e40bd2f5ab796f1093efbd697/RediStack_social-preview_transparent.png" width="350" alt="RediStack logo"></p>
 
 <p>
-    <a href="https://gitlab.com/Mordil/swift-redi-stack/pipelines"><img src="https://gitlab.com/Mordil/swift-redi-stack/badges/master/pipeline.svg" alt="Build Status"></a>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
     <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.0+-orange.svg" alt="Swift 5.0+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
+</p>
+
+<p>
+    <a href="https://gitlab.com/Mordil/swift-redi-stack/pipelines"><img src="https://gitlab.com/Mordil/swift-redi-stack/badges/master/pipeline.svg" alt="Build Status"></a>
+    <a href="https://codeclimate.com/github/Mordil/swift-redi-stack/maintainability"><img src="https://api.codeclimate.com/v1/badges/3ff84c8d384b01cb5875/maintainability" /></a>
 </p>
 </div>
 

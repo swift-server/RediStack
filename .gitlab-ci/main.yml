@@ -1,4 +1,5 @@
 stages:
+  - Quality Checks
   - Platform Tests
   - Docs
  
@@ -31,6 +32,30 @@ pages:
   artifacts:
     paths:
       - public
+
+Code Climate:
+  only:
+    refs:
+      - branches
+      - tags
+  stage: Quality Checks
+  image: docker:stable
+  services:
+    - docker:stable-dind
+  variables:
+    DOCKER_DRIVER: overlay2
+    CODE_QUALITY_IMAGE: "registry.gitlab.com/gitlab-org/security-products/codequality:latest"
+  script:
+    - docker pull --quiet "$CODE_QUALITY_IMAGE"
+    - docker run
+        --env SOURCE_CODE="$PWD"
+        --volume "$PWD":/code
+        --volume /var/run/docker.sock:/var/run/docker.sock
+        "$CODE_QUALITY_IMAGE" /code
+  artifacts:
+    expire_in: 1 week
+    reports:
+      codequality: gl-code-quality-report.json
 
 Ubuntu Bionic:
   stage: Platform Tests
