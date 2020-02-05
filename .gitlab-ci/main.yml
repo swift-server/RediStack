@@ -35,9 +35,10 @@ pages:
 
 Code Climate:
   only:
-    refs:
-      - branches
-      - tags
+    - branches
+    - tags
+  except:
+    - schedules
   stage: Quality Checks
   image: docker:stable
   services:
