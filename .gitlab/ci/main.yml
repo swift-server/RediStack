@@ -1,10 +1,9 @@
+include: '/.gitlab-ci/test-template.yml'
+
 stages:
   - Platform Tests
   - Quality Checks
   - Docs
-
-variables:
-  CODE_COV_IMAGE: "registry.gitlab.com/mordil/swift-redi-stack/codecov:latest"
  
 pages:
   stage: Docs
@@ -65,35 +64,35 @@ Code Coverage:
   # only:
   #   changes:
   #     - "*.swift"
+  except:
+    - schedules
+  extends: .unit-test
   stage: Quality Checks
-  image: docker:stable
-  services:
-    - docker:stable-dind
-    - name: redis:5
-      alias: 'redis'
-      command: ["redis-server", "--requirepass", "password"]
-  variables:
-    REDIS_URL: 'redis'
-    REDIS_PW: 'password'
-    DOCKER_DRIVER: overlay2
-  script:
-    - docker run
-        --env CODECOV_TOKEN=$CODECOV_TOKEN
-        --volume "$PWD":/code
-        --volume /var/run/docker.sock:/var/run/docker.sock
-        --workdir /code
-        "$CODE_COV_IMAGE"
+  image: swiftlang/swift:nightly-5.2
+  before_script:
+    - apt-get update
+    - apt-get install -y curl
+  script: |
+    swift test --enable-code-coverage
+    
+    BINARY_PATH=".build/x86_64-unknown-linux-gnu/debug/redi-stackPackageTests.xctest"
+    PROF_DATA_PATH=".build/x86_64-unknown-linux-gnu/debug/codecov/default.profdata"
+    IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
+    
+    llvm-cov report \
+      $BINARY_PATH \
+      --format=text \
+      -instr-profile="$PROF_DATA_PATH" \
+      -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
 
-Build Codecov Image:
-  # only:
-  #   changes:
-  #     - "Dockerfile"
-  #     - "scripts/generate_code_cov.sh"
-  stage: .pre
-  image: docker:stable
-  services:
-    - docker:stable-dind
-  script: docker build -t $CODE_COV_IMAGE .
+    llvm-cov show \
+      $BINARY_PATH \
+      -instr-profile="$PROF_DATA_PATH" \
+      -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
+
+    bash <(curl -s https://codecov.io/bash) \
+      -J "RediStack" \
+      -D ".build/debug"
 
 Ubuntu Bionic:
   stage: Platform Tests
