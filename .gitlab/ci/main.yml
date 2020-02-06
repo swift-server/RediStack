@@ -90,8 +90,6 @@ Code Coverage:
       -instr-profile="$PROF_DATA_PATH" \
       -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
 
-    cp $(swift test --show-codecov-path) coverage.json
-
     bash <(curl -s https://codecov.io/bash) \
       -J "RediStack" \
       -D ".build/debug"
