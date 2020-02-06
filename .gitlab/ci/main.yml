@@ -62,9 +62,9 @@ Code Climate:
       codequality: gl-code-quality-report.json
 
 Code Coverage:
-  only:
-    changes:
-      - "*.swift"
+  # only:
+  #   changes:
+  #     - "*.swift"
   stage: Quality Checks
   image: docker:stable
   services:
@@ -90,6 +90,8 @@ Build Codecov Image:
       - "scripts/generate_code_cov.sh"
   stage: .pre
   image: docker:stable
+  services:
+    - docker:stable-dind
   script: docker build -t $CODE_COV_IMAGE .
 
 Ubuntu Bionic:
