@@ -81,13 +81,14 @@ Code Coverage:
         --env CODECOV_TOKEN=$CODECOV_TOKEN
         --volume "$PWD":/code
         --volume /var/run/docker.sock:/var/run/docker.sock
-        "$CODE_COV_IMAGE" /code
+        --workdir /code
+        "$CODE_COV_IMAGE"
 
 Build Codecov Image:
-  only:
-    changes:
-      - "Dockerfile"
-      - "scripts/generate_code_cov.sh"
+  # only:
+  #   changes:
+  #     - "Dockerfile"
+  #     - "scripts/generate_code_cov.sh"
   stage: .pre
   image: docker:stable
   services:
