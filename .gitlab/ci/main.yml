@@ -68,7 +68,7 @@ Code Coverage:
     - schedules
   extends: .unit-test
   stage: Quality Checks
-  image: swiftlang/swift:nightly-5.2
+  image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.2
   before_script:
     - apt-get update
     - apt-get install -y curl
