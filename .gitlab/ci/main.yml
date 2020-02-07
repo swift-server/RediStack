@@ -73,6 +73,8 @@ Code Coverage:
     - apt-get update
     - apt-get install -y curl
   script: |
+    llvm-cov --version
+    
     swift test --enable-code-coverage
 
     echo "CHILDREN: .build"
