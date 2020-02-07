@@ -68,15 +68,24 @@ Code Coverage:
     - schedules
   extends: .unit-test
   stage: Quality Checks
-  image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.2
+  image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.1
   before_script:
     - apt-get update
     - apt-get install -y curl
   script: |
     swift test --enable-code-coverage
+
+    echo "CHILDREN: .build"
+    ls .build
+
+    echo "CHILDNEN: .build/x86_64-unknown-linux"
+    ls .build/x86_64-unknown-linux
+
+    echo "CHILDREN: .build/x86_64-unknown-linux/debug"
+    ls .build/x86_64-unknown-linux/debug
     
-    BINARY_PATH=".build/x86_64-unknown-linux-gnu/debug/redi-stackPackageTests.xctest"
-    PROF_DATA_PATH=".build/x86_64-unknown-linux-gnu/debug/codecov/default.profdata"
+    BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
+    PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
     
     llvm-cov report \
