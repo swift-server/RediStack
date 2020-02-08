@@ -3,6 +3,7 @@ include: '/.gitlab-ci/test-template.yml'
 stages:
   - Platform Tests
   - Quality Checks
+  - LLVM test
   - Docs
  
 pages:
@@ -61,31 +62,66 @@ Code Climate:
       codequality: gl-code-quality-report.json
 
 Code Coverage:
-  # only:
-  #   changes:
-  #     - "*.swift"
-  except:
-    - schedules
+#   # only:
+#   #   changes:
+#   #     - "*.swift"
+#   except:
+#     - schedules
   extends: .unit-test
   stage: Quality Checks
   image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.1
-  before_script:
-    - apt-get update
-    - apt-get install -y curl
+#   before_script:
+#     - apt-get update
+#     - apt-get install -y curl
   script: |
     llvm-cov --version
     
     swift test --enable-code-coverage
 
-    echo "CHILDREN: .build"
-    ls .build
+#     echo "CHILDREN: .build"
+#     ls .build
 
-    echo "CHILDNEN: .build/x86_64-unknown-linux"
-    ls .build/x86_64-unknown-linux
+#     echo "CHILDNEN: .build/x86_64-unknown-linux"
+#     ls .build/x86_64-unknown-linux
 
-    echo "CHILDREN: .build/x86_64-unknown-linux/debug"
-    ls .build/x86_64-unknown-linux/debug
+#     echo "CHILDREN: .build/x86_64-unknown-linux/debug"
+#     ls .build/x86_64-unknown-linux/debug
     
+#     BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
+#     PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
+#     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
+
+#     echo "Snooping"
+#     echo "Profdata: " $(ls -l $PROF_DATA_PATH)
+#     echo "Test binary: " $(ls -l $BINARY_PATH)
+    
+#     llvm-cov report \
+#       $BINARY_PATH \
+#       --format=text \
+#       -instr-profile="$PROF_DATA_PATH" \
+#       -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
+
+#     llvm-cov show \
+#       $BINARY_PATH \
+#       -instr-profile="$PROF_DATA_PATH" \
+#       -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
+
+#     bash <(curl -s https://codecov.io/bash) \
+#       -J "RediStack" \
+#       -D ".build/debug"
+  artifacts:
+    expire_in: 1 hour
+    paths:
+      - .build/
+
+LLVM:
+  image: ubuntu:latest
+  stage: LLVM test
+  needs: ["Code Coverage"]
+  before_script:
+    - apt-get update
+    - apt-get install -y llvm-8 llvm-9
+  script: |
     BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
     PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
@@ -93,21 +129,23 @@ Code Coverage:
     echo "Snooping"
     echo "Profdata: " $(ls -l $PROF_DATA_PATH)
     echo "Test binary: " $(ls -l $BINARY_PATH)
-    
-    llvm-cov report \
-      $BINARY_PATH \
-      --format=text \
-      -instr-profile="$PROF_DATA_PATH" \
-      -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
 
-    llvm-cov show \
-      $BINARY_PATH \
-      -instr-profile="$PROF_DATA_PATH" \
-      -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
-
-    bash <(curl -s https://codecov.io/bash) \
-      -J "RediStack" \
-      -D ".build/debug"
+    LLVM_COV_TOOLS=("llvm-cov-8" "llvm-cov-9")
+    for LLVM_COV in "${LLVM_COV_TOOLS[@]}"
+    do
+      if which $LLVM_COV > /dev/null;
+      then
+        $LLVM_COV report \
+          $BINARY_PATH \
+          --format=text \
+          -instr-profile="$PROF_DATA_PATH" \
+          -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
+      else
+        echo "${LLVM_COV} NOT FOUND"
+      fi
+    done
+  dependencies:
+    - Code Coverage
 
 Ubuntu Bionic:
   stage: Platform Tests
