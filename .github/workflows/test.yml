@@ -5,7 +5,8 @@ on: [push]
 jobs:
   codecov-linux:
     runs-on: ubuntu-latest
-    image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.1
+    container:
+      image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.1
     steps:
     - uses: actions/checkout@v1
     - name: Codecov
