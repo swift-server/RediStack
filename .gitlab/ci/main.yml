@@ -1,9 +1,9 @@
 include: '/.gitlab-ci/test-template.yml'
 
 stages:
-  - Platform Tests
   - Quality Checks
   - LLVM test
+  - Platform Tests
   - Docs
  
 pages:
@@ -77,29 +77,26 @@ Code Coverage:
     llvm-cov --version
     
     swift test --enable-code-coverage
-
-#     echo "CHILDREN: .build"
-#     ls .build
-
-#     echo "CHILDNEN: .build/x86_64-unknown-linux"
-#     ls .build/x86_64-unknown-linux
-
-#     echo "CHILDREN: .build/x86_64-unknown-linux/debug"
-#     ls .build/x86_64-unknown-linux/debug
     
-#     BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
-#     PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
-#     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
+    BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
+    PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
+    IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
 
-#     echo "Snooping"
-#     echo "Profdata: " $(ls -l $PROF_DATA_PATH)
-#     echo "Test binary: " $(ls -l $BINARY_PATH)
-    
-#     llvm-cov report \
-#       $BINARY_PATH \
-#       --format=text \
-#       -instr-profile="$PROF_DATA_PATH" \
-#       -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
+    echo "Snooping"
+    echo "Profdata: " $(ls -l $PROF_DATA_PATH)
+    echo "Test binary: " $(ls -l $BINARY_PATH)
+
+    llvm-cov report \
+      -dump \
+      $BINARY_PATH \
+      -instr-profile="$PROF_DATA_PATH" \
+      -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
+
+    llvm-cov report \
+      $BINARY_PATH \
+      --format=text \
+      -instr-profile="$PROF_DATA_PATH" \
+      -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
 
 #     llvm-cov show \
 #       $BINARY_PATH \
@@ -136,6 +133,12 @@ LLVM:
       if which $LLVM_COV > /dev/null;
       then
         $LLVM_COV report \
+          -dump \
+          $BINARY_PATH \
+          -instr-profile="$PROF_DATA_PATH" \
+          -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
+
+        $LLVM_COV report \
           $BINARY_PATH \
           --format=text \
           -instr-profile="$PROF_DATA_PATH" \
@@ -151,28 +154,10 @@ Ubuntu Bionic:
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab/ci/ubuntu-bionic.yml'
+    include: '/.gitlab-ci/ubuntu-bionic.yml'
 
 Ubuntu Xenial:
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab/ci/ubuntu-xenial.yml'
-
-Ubuntu Focal:
-  stage: Platform Tests
-  trigger:
-    strategy: depend
-    include: '/.gitlab/ci/ubuntu-focal.yml'
-
-CentOS 8:
-  stage: Platform Tests
-  trigger:
-    strategy: depend
-    include: '/.gitlab/ci/centos-8.yml'
-
-Amazon Linux 2:
-  stage: Platform Tests
-  trigger:
-    strategy: depend
-    include: '/.gitlab/ci/amazonlinux-2.yml'
+    include: '/.gitlab-ci/ubuntu-xenial.yml'
