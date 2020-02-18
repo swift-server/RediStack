@@ -2,7 +2,7 @@ version: "3.5"
 
 services:
   redis:
-    image: redis:5.0
+    image: redis:5
     container_name: "redis"
     ports:
       - "0.0.0.0:6379:6379"
