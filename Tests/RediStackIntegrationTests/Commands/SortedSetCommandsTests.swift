@@ -37,7 +37,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zadd() throws {
-        _ = try connection.send(command: "FLUSHALL").wait()
+        try self.flushAllFromRedis()
 
         var count = try connection.zadd([(30, 2)], to: #function).wait()
         XCTAssertEqual(count, 1)
@@ -70,7 +70,7 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zscore() throws {
-        _ = try connection.send(command: "FLUSHALL").wait()
+        try self.flushAllFromRedis()
 
         var score = try connection.zscore(of: 30, in: #function).wait()
         XCTAssertEqual(score, nil)

@@ -32,25 +32,14 @@ public protocol RedisClient {
     /// The `Logging.Logger` that this client uses.
     var logger: Logger { get }
 
-    /// Sends the desired command with the specified arguments.
-    /// - Parameters:
-    ///     - command: The command to execute.
-    ///     - arguments: The arguments, if any, to be sent with the command.
-    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
-    func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
+    /// Sends the provided command to Redis.
+    /// - Parameter command: The command to send.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves the Redis command response.
+    func sendCommand<T: RESPValueConvertible>(_ command: NewRedisCommand<T>) -> EventLoopFuture<T>
     
     /// Updates the client's logger.
     /// - Parameter logger: The `Logging.Logger` that is desired to receive all client logs.
     func setLogging(to logger: Logger)
-}
-
-extension RedisClient {
-    /// Sends the desired command without arguments.
-    /// - Parameter command: The command keyword to execute.
-    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
-    public func send(command: String) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: [])
-    }
 }
 
 extension RedisClient {

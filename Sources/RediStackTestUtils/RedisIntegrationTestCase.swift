@@ -64,9 +64,7 @@ open class RedisIntegrationTestCase: XCTestCase {
     open override func tearDown() {
         do {
             if self.connection.isConnected {
-                _ = try self.connection.send(command: "FLUSHALL")
-                    .flatMap { _ in self.connection.close() }
-                    .wait()
+                try self.flushAllFromRedis()
             }
             
             self.connection = nil
@@ -86,5 +84,13 @@ open class RedisIntegrationTestCase: XCTestCase {
             port: self.redisPort,
             password: self.redisPassword
         ).wait()
+    }
+    
+    /// Executes the "FLUSHALL" command against Redis.
+    public func flushAllFromRedis() throws {
+        let flush = NewRedisCommand<String>(keyword: "FLUSHALL", arguments: [])
+        _ = try self.connection.sendCommand(flush)
+            .flatMap { _ in self.connection.close() }
+            .wait()
     }
 }

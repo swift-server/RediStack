@@ -16,35 +16,54 @@ import NIO
 
 // MARK: Get
 
-extension NewRedisCommand {
+extension RedisClient {
+    /// Get the value of a key.
+    ///
+    /// [https://redis.io/commands/get](https://redis.io/commands/get)
+    /// - Parameter key: The key to fetch the value from.
+    /// - Returns: The string value stored at the key provided, otherwise `nil` if the key does not exist.
+    public func get(_ key: RedisKey) -> EventLoopFuture<String?> {
+        return self.sendCommand(.get(key, as: String.self))
+    }
+
     /// Get the value of a key, converting it to the desired type.
     ///
     /// [https://redis.io/commands/get](https://redis.io/commands/get)
     /// - Parameters:
     ///     - key: The key to fetch the value from.
     ///     - type: The desired type to convert the stored data to.
+    /// - Returns: The converted value stored at the key provided, otherwise `nil` if the key does not exist or fails the conversion.
     @inlinable
-    public static func get<StoredType: RESPValueConvertible>(
+    public func get<StoredType: RESPValueConvertible>(
         _ key: RedisKey,
         as type: StoredType.Type
-    ) -> NewRedisCommand<StoredType?> {
-        let args = [RESPValue(bulk: key)]
-        return .init(keyword: "GET", arguments: args)
+    ) -> EventLoopFuture<StoredType?> {
+        return self.sendCommand(.get(key, as: type))
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
     ///
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
     /// - Parameter keys: The list of keys to fetch the values from.
-    public static func mget(_ keys: [RedisKey]) -> NewRedisCommand<[RESPValue]> {
-        let args = keys.map(RESPValue.init)
-        return .init(keyword: "MGET", arguments: args)
+    /// - Returns: The values stored at the keys provided, matching the same order.
+    public func mget(_ keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
+        guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
+        return self.sendCommand(.mget(keys))
+    }
+    
+    /// Gets the values of all specified keys, using `.null` to represent non-existant values.
+    ///
+    /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
+    /// - Parameter keys: The list of keys to fetch the values from.
+    /// - Returns: The values stored at the keys provided, matching the same order.
+    public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
+        return self.mget(keys)
     }
 }
-
+    
 // MARK: Set
 
-extension NewRedisCommand {
+extension RedisClient {
     /// Append a value to the end of an existing entry.
     /// - Note: If the key does not exist, it is created and set as an empty string, so `APPEND` will be similar to `SET` in this special case.
     ///
@@ -52,13 +71,10 @@ extension NewRedisCommand {
     /// - Parameters:
     ///     - value: The value to append onto the value stored at the key.
     ///     - key: The key to use to uniquely identify this value.
+    /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
-    public static func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> NewRedisCommand<Int> {
-        let args: [RESPValue] = [
-            .init(bulk: key),
-            value.convertedToRESPValue()
-        ]
-        return .init(keyword: "APPEND", arguments: args)
+    public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> EventLoopFuture<Int> {
+        return self.sendCommand(.append(value, to: key))
     }
     
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -71,13 +87,11 @@ extension NewRedisCommand {
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value.
     ///     - value: The value to set the key to.
+    /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public static func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> NewRedisCommand<String> {
-        let args: [RESPValue] = [
-            .init(bulk: key),
-            value.convertedToRESPValue()
-        ]
-        return .init(keyword: "SET", arguments: args)
+    public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Void> {
+        return self.sendCommand(.set(key, to: value))
+            .map { _ in return () }
     }
 
     /// Sets each key to their respective new value, overwriting existing values.
@@ -85,9 +99,11 @@ extension NewRedisCommand {
     ///
     /// See [https://redis.io/commands/mset](https://redis.io/commands/mset)
     /// - Parameter operations: The key-value list of SET operations to execute.
+    /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public static func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> NewRedisCommand<String> {
-        return ._mset(command: "MSET", operations)
+    public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Void> {
+        return self.sendCommand(.mset(operations))
+            .map { _ in return () }
     }
 
     /// Sets each key to their respective new value, only if all keys do not currently exist.
@@ -95,48 +111,38 @@ extension NewRedisCommand {
     ///
     /// See [https://redis.io/commands/msetnx](https://redis.io/commands/msetnx)
     /// - Parameter operations: The key-value list of SET operations to execute.
+    /// - Returns: `true` if the operation successfully completed.
     @inlinable
-    public static func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> NewRedisCommand<Int> {
-        return ._mset(command: "MSETNX", operations)
-    }
-    
-    @usableFromInline
-    internal static func _mset<Value: RESPValueConvertible, ReturnType: RESPValueConvertible>(
-        command: String,
-        _ operations: [RedisKey: Value]
-    ) -> NewRedisCommand<ReturnType> {
-        assert(operations.count > 0, "At least 1 key-value pair should be provided.")
-
-        let args: [RESPValue] = operations.reduce(
-            into: .init(initialCapacity: operations.count * 2),
-            { (array, element) in
-                array.append(.init(bulk: element.key))
-                array.append(element.value.convertedToRESPValue())
-            }
-        )
-        
-        return .init(keyword: command, arguments: args)
+    public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
+        return self.sendCommand(.msetnx(operations))
+            .map { return $0 == 1 }
     }
 }
-
+    
 // MARK: Increment
 
-extension NewRedisCommand {
-    /// Increments the stored value by the amount desired.
+extension RedisClient {
+    /// Increments the stored value by 1.
     ///
     /// See [https://redis.io/commands/incr](https://redis.io/commands/incr)
+    /// - Parameter key: The key whose value should be incremented.
+    /// - Returns: The new value after the operation.
+    public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
+        return self.sendCommand(.incrby(key, amount: 1))
+    }
+
+    /// Increments the stored value by the amount desired .
+    ///
+    /// See [https://redis.io/commands/incrby](https://redis.io/commands/incrby)
     /// - Parameters:
     ///     - key: The key whose value should be incremented.
-    ///     - amount: The optional amount to increment the value by.
+    ///     - amount: The amount that this value should be incremented, supporting both positive and negative values.
+    /// - Returns: The new value after the operation.
     @inlinable
-    public static func incrby<Value>(_ key: RedisKey, amount: Value) -> NewRedisCommand<Int>
+    public func increment<Value>(_ key: RedisKey, by amount: Value) -> EventLoopFuture<Int>
         where Value: SignedInteger & RESPValueConvertible
     {
-        let args: [RESPValue] = [
-            .init(bulk: key),
-            .init(bulk: amount)
-        ]
-        return .init(keyword: "INCRBY", arguments: args)
+        return self.sendCommand(.incrby(key, amount: amount))
     }
 
     /// Increments the stored value by the amount desired.
@@ -145,28 +151,25 @@ extension NewRedisCommand {
     /// - Parameters:
     ///     - key: The key whose value should be incremented.
     ///     - amount: The amount that this value should be incremented, supporting both positive and negative values.
+    /// - Returns: The new value after the operation.
     @inlinable
-    public static func incrbyfloat<Value>(_ key: RedisKey, amount: Value) -> NewRedisCommand<Value>
+    public func increment<Value>(_ key: RedisKey, by amount: Value) -> EventLoopFuture<Value>
         where Value: BinaryFloatingPoint & RESPValueConvertible
     {
-        let args: [RESPValue] = [
-            .init(bulk: key),
-            amount.convertedToRESPValue()
-        ]
-        return .init(keyword: "INCRBYFLOAT", arguments: args)
+        return self.sendCommand(.incrbyfloat(key, amount: amount))
     }
 }
-
+    
 // MARK: Decrement
 
-extension NewRedisCommand {
+extension RedisClient {
     /// Decrements the stored value by 1.
     ///
     /// See [https://redis.io/commands/decr](https://redis.io/commands/decr)
     /// - Parameter key: The key whose value should be decremented.
-    public static func decr(_ key: RedisKey) -> NewRedisCommand<Int> {
-        let args = [RESPValue(bulk: key)]
-        return .init(keyword: "DECR", arguments: args)
+    /// - Returns: The new value after the operation.
+    public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
+        return self.sendCommand(.decr(key))
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -175,14 +178,8 @@ extension NewRedisCommand {
     /// - Parameters:
     ///     - key: The key whose value should be decremented.
     ///     - amount: The amount that this value should be decremented, supporting both positive and negative values.
-    @inlinable
-    public static func decrby<Value>(_ key: RedisKey, amount: Value) -> NewRedisCommand<Int>
-        where Value: SignedInteger & RESPValueConvertible
-    {
-        let args: [RESPValue] = [
-            .init(bulk: key),
-            .init(bulk: amount)
-        ]
-        return .init(keyword: "DECRBY", arguments: args)
+    /// - Returns: The new value after the operation.
+    public func decrement(_ key: RedisKey, by amount: Int) -> EventLoopFuture<Int> {
+        return self.sendCommand(.decrby(key, amount: amount))
     }
 }

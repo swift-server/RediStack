@@ -57,12 +57,12 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_srem() throws {
-        var removedCount = try connection.srem(1, from: #function).wait()
-        XCTAssertEqual(removedCount, 0)
+        var wasRemoved = try connection.srem(1, from: #function).wait()
+        XCTAssertFalse(wasRemoved)
 
         _ = try connection.sadd([1], to: #function).wait()
-        removedCount = try connection.srem([1], from: #function).wait()
-        XCTAssertEqual(removedCount, 1)
+        wasRemoved = try connection.srem([1], from: #function).wait()
+        XCTAssertTrue(wasRemoved)
     }
 
     func test_spop() throws {

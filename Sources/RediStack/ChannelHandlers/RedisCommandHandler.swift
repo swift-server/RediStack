@@ -14,48 +14,35 @@
 
 import NIO
 
-/// The `NIO.ChannelOutboundHandler.OutboundIn` type for `RedisCommandHandler`.
-///
-/// This holds the full command message to be sent to Redis, and an `NIO.EventLoopPromise` to be fulfilled when a response has been received.
-/// - Important: This struct has _reference semantics_ due to the retention of the `NIO.EventLoopPromise`.
-public struct RedisCommand {
-    /// A message waiting to be sent to Redis. A full message contains a command keyword and its arguments stored as a single `RESPValue.array`.
-    public let message: RESPValue
-    /// A promise to be fulfilled with the sent message's response from Redis.
-    public let responsePromise: EventLoopPromise<RESPValue>
-
-    public init(message: RESPValue, responsePromise promise: EventLoopPromise<RESPValue>) {
-        self.message = message
-        self.responsePromise = promise
-    }
-}
-
 /// An object that operates in a First In, First Out (FIFO) request-response cycle.
 ///
 /// `RedisCommandHandler` is a `NIO.ChannelDuplexHandler` that sends `RedisCommand` instances to Redis,
 /// and fulfills the command's `NIO.EventLoopPromise` as soon as a `RESPValue` response has been received from Redis.
 public final class RedisCommandHandler {
+    public typealias ResponsePromise = EventLoopPromise<RESPValue>
+
     /// FIFO queue of promises waiting to receive a response value from a sent command.
-    private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
+    private var responseQueue: CircularBuffer<ResponsePromise>
 
     deinit {
-        if !self.commandResponseQueue.isEmpty {
-            assertionFailure("Command handler deinit when queue is not empty! Queue size: \(self.commandResponseQueue.count)")
+        if !self.responseQueue.isEmpty {
+            assertionFailure("Command handler deinit when queue is not empty! Queue size: \(self.responseQueue.count)")
         }
     }
 
-    /// - Parameter initialQueueCapacity: The initial queue size to start with. The default is `3`. `RedisCommandHandler` stores all
-    ///         `RedisCommand.responsePromise` objects into a buffer, and unless you intend to execute several concurrent commands against Redis,
-    ///         and don't want the buffer to resize, you shouldn't need to set this parameter.
+    /// Creates a new request-response loop handler for Redis commands.
+    ///
+    /// Unless you intend to execute several concurrent commands using the same connection **and** don't want the internal buffer of pending responses to
+    /// resize, you should not need to provide an `initialQueueCapacity` value.
+    /// - Parameter initialQueueCapacity: The initial size of the internal buffer of pending responses. The default is `3`.
     public init(initialQueueCapacity: Int = 3) {
-        self.commandResponseQueue = CircularBuffer(initialCapacity: initialQueueCapacity)
+        self.responseQueue = CircularBuffer(initialCapacity: initialQueueCapacity)
     }
 }
 
 // MARK: ChannelInboundHandler
 
 extension RedisCommandHandler: ChannelInboundHandler {
-    /// See `NIO.ChannelInboundHandler.InboundIn`
     public typealias InboundIn = RESPValue
 
     /// Invoked by SwiftNIO when an error has been thrown. The command queue will be drained, with each promise in the queue being failed with the error thrown.
@@ -63,12 +50,10 @@ extension RedisCommandHandler: ChannelInboundHandler {
     /// See `NIO.ChannelInboundHandler.errorCaught(context:error:)`
     /// - Important: This will also close the socket connection to Redis.
     /// - Note:`RedisMetrics.commandFailureCount` is **not** incremented from this error.
-    ///
-    /// A `Logging.LogLevel.critical` message will be written with the caught error.
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
-        let queue = self.commandResponseQueue
+        let queue = self.responseQueue
         
-        self.commandResponseQueue.removeAll()
+        self.responseQueue.removeAll()
         queue.forEach { $0.fail(error) }
 
         context.close(promise: nil)
@@ -82,7 +67,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
     public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         let value = self.unwrapInboundIn(data)
 
-        guard let leadPromise = self.commandResponseQueue.popFirst() else { return }
+        guard let leadPromise = self.responseQueue.popFirst() else { return }
 
         switch value {
         case .error(let e):
@@ -99,22 +84,14 @@ extension RedisCommandHandler: ChannelInboundHandler {
 // MARK: ChannelOutboundHandler
 
 extension RedisCommandHandler: ChannelOutboundHandler {
-    /// See `NIO.ChannelOutboundHandler.OutboundIn`
-    public typealias OutboundIn = RedisCommand
-    /// See `NIO.ChannelOutboundHandler.OutboundOut`
+    public typealias OutboundIn = (data: RESPValue, promise: ResponsePromise)
     public typealias OutboundOut = RESPValue
 
-    /// Invoked by SwiftNIO when a `write` has been requested on the `Channel`.
-    /// This unwraps a `RedisCommand`, storing the `NIO.EventLoopPromise` in a command queue,
-    /// to fulfill later with the response to the command that is about to be sent through the `NIO.Channel`.
-    ///
-    /// See `NIO.ChannelOutboundHandler.write(context:data:promise:)`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let commandContext = self.unwrapOutboundIn(data)
-        self.commandResponseQueue.append(commandContext.responsePromise)
-        context.write(
-            self.wrapOutboundOut(commandContext.message),
-            promise: promise
-        )
+        let request = self.unwrapOutboundIn(data)
+
+        self.responseQueue.append(request.promise)
+
+        context.write(self.wrapOutboundOut(request.data), promise: promise)
     }
 }

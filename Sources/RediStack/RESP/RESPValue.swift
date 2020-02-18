@@ -52,7 +52,7 @@ public enum RESPValue {
 
     /// Initializes a `bulkString` value.
     /// - Parameter value: The `Int` value to store in a `.bulkString` representation.
-    public init<Value: FixedWidthInteger>(bulk value: Value?) {
+    public init<Value: BinaryInteger>(bulk value: Value?) {
         self.init(bulk: value?.description)
     }
 
