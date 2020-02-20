@@ -254,3 +254,67 @@ extension RangeReplaceableCollection where Element == RESPValue {
         elementsToCopy.forEach { closure(&self, $0) }
     }
 }
+
+// MARK: Mapping RESPValue Collections
+
+extension Collection where Element == RESPValue {
+    /// Maps the elements of the sequence to the type desired.
+    /// - Parameter t1: The type to convert the elements to.
+    /// - Returns: An array of the results from the conversions.
+    @inlinable
+    public func map<T: RESPValueConvertible>(as t1: T.Type) -> [T?] {
+        return self.map(T.init(fromRESP:))
+    }
+    
+    /// Maps the first element to the type sepcified, with all remaining elements mapped to the second type.
+    @inlinable
+    public func map<T1, T2>(firstAs t1: T1.Type, remainingAs t2: T2.Type) -> (T1?, [T2?])
+        where T1: RESPValueConvertible, T2: RESPValueConvertible
+    {
+        guard self.count > 1 else { return (nil, []) }
+        let first = self.first.map(T1.init(fromRESP:)) ?? nil
+        let remaining = self.dropFirst().map(T2.init(fromRESP:))
+        return (first, remaining)
+    }
+    
+    /// Maps the first and second elements to the types specified, with any remaining mapped to the third type.
+    @inlinable
+    public func map<T1, T2, T3>(
+        firstAs t1: T1.Type,
+        _ t2: T2.Type,
+        remainingAs t3: T3.Type
+    ) -> (T1?, T2?, [T3?])
+        where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible
+    {
+        guard self.count > 2 else { return (nil, nil, []) }
+        let first = self.first.map(T1.init(fromRESP:)) ?? nil
+        let second = T2.init(fromRESP: self[self.index(after: self.startIndex)])
+        let remaining = self.dropFirst(2).map(T3.init(fromRESP:))
+        return (first, second, remaining)
+    }
+    
+    /// Maps the first, second, and third elements to the types specified, with any remaining mapped to the fourth type.
+    @inlinable
+    public func map<T1, T2, T3, T4>(
+        firstAs t1: T1.Type,
+        _ t2: T2.Type,
+        _ t3: T3.Type,
+        remainingAs t4: T4.Type
+    ) -> (T1?, T2?, T3?, [T4?])
+        where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible, T4: RESPValueConvertible
+    {
+        guard self.count > 3 else { return (nil, nil, nil, []) }
+
+        let firstIndex = self.startIndex
+        let secondIndex = self.index(after: firstIndex)
+        let thirdIndex = self.index(after: secondIndex)
+
+        let first = T1.init(fromRESP: self[firstIndex])
+        let second = T2.init(fromRESP: self[secondIndex])
+        let third = T3.init(fromRESP: self[thirdIndex])
+        let remaining = self.dropFirst(3).map(T4.init(fromRESP:))
+
+        return (first, second, third, remaining)
+    }
+}
+
