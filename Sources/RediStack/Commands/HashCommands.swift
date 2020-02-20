@@ -53,7 +53,7 @@ extension RedisClient {
         args.append(convertingContentsOf: fields)
 
         return send(command: "HDEL", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Removes the specified fields from a hash.
@@ -82,7 +82,7 @@ extension RedisClient {
             .init(bulk: field)
         ]
         return send(command: "HEXISTS", with: args)
-            .convertFromRESPValue(to: Int.self)
+            .map(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -95,7 +95,7 @@ extension RedisClient {
     public func hlen(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "HLEN", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Gets the string length of a hash field's value.
@@ -112,7 +112,7 @@ extension RedisClient {
             .init(bulk: field)
         ]
         return send(command: "HSTRLEN", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Gets all field names in a hash.
@@ -124,7 +124,7 @@ extension RedisClient {
     public func hkeys(in key: RedisKey) -> EventLoopFuture<[String]> {
         let args = [RESPValue(bulk: key)]
         return send(command: "HKEYS", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Gets all values stored in a hash.
@@ -136,7 +136,7 @@ extension RedisClient {
     public func hvals(in key: RedisKey) -> EventLoopFuture<[RESPValue]> {
         let args = [RESPValue(bulk: key)]
         return send(command: "HVALS", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Incrementally iterates over all fields in a hash.
@@ -187,7 +187,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "HSET", with: args)
-            .convertFromRESPValue(to: Int.self)
+            .map(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -212,7 +212,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "HSETNX", with: args)
-            .convertFromRESPValue(to: Int.self)
+            .map(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -276,7 +276,7 @@ extension RedisClient {
         args.append(convertingContentsOf: fields)
 
         return send(command: "HMGET", with: args)
-            .convertFromRESPValue(to: [RESPValue].self)
+            .map(to: [RESPValue].self)
             .map { return $0.map(String.init) }
     }
     
@@ -301,7 +301,7 @@ extension RedisClient {
     public func hgetall(from key: RedisKey) -> EventLoopFuture<[String: String]> {
         let args = [RESPValue(bulk: key)]
         return send(command: "HGETALL", with: args)
-            .convertFromRESPValue(to: [String].self)
+            .map(to: [String].self)
             .map(Self._mapHashResponse)
     }
 }
@@ -352,6 +352,6 @@ extension RedisClient {
             amount.convertedToRESPValue()
         ]
         return send(command: command, with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }

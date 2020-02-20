@@ -26,7 +26,7 @@ extension RedisClient {
     public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "LLEN", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Gets the element from a list stored at the provided index position.
@@ -88,7 +88,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "LREM", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }
 
@@ -257,7 +257,7 @@ extension RedisClient {
             .init(bulk: lastIndex)
         ]
         return send(command: "LRANGE", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
@@ -502,7 +502,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "LINSERT", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }
 
@@ -536,7 +536,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "LPUSH", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Pushes all of the provided elements into a list.
@@ -567,7 +567,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "LPUSHX", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }
 
@@ -600,7 +600,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "RPUSH", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Pushes all of the provided elements into a list.
@@ -630,7 +630,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "RPUSHX", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }
 

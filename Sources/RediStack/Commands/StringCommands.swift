@@ -55,7 +55,7 @@ extension RedisClient {
 
         let args = keys.map(RESPValue.init)
         return send(command: "MGET", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -87,7 +87,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "APPEND", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -132,7 +132,7 @@ extension RedisClient {
     @inlinable
     public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
         return _mset(command: "MSETNX", operations)
-            .convertFromRESPValue(to: Int.self)
+            .map(to: Int.self)
             .map { return $0 == 1 }
     }
     
@@ -167,7 +167,7 @@ extension RedisClient {
     public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "INCR", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Increments the stored value by the amount desired .
@@ -184,7 +184,7 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "INCRBY", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Increments the stored value by the amount desired.
@@ -205,7 +205,7 @@ extension RedisClient {
             count.convertedToRESPValue()
         ]
         return send(command: "INCRBYFLOAT", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }
 
@@ -221,7 +221,7 @@ extension RedisClient {
     public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "DECR", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -237,6 +237,6 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "DECRBY", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 }

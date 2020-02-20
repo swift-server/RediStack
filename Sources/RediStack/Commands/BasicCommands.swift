@@ -24,7 +24,7 @@ extension RedisClient {
     public func echo(_ message: String) -> EventLoopFuture<String> {
         let args = [RESPValue(bulk: message)]
         return send(command: "ECHO", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Pings the server, which will respond with a message.
@@ -38,7 +38,7 @@ extension RedisClient {
             ? [.init(bulk: message!)] // safe because we did a nil pre-check
             : []
         return send(command: "PING", with: args)
-            .convertFromRESPValue()
+            .map()
     }
 
     /// Select the Redis logical database having the specified zero-based numeric index.
@@ -68,7 +68,7 @@ extension RedisClient {
             .init(bulk: second)
         ]
         return send(command: "SWAPDB", with: args)
-            .convertFromRESPValue(to: String.self)
+            .map(to: String.self)
             .map { return $0 == "OK" }
     }
     
@@ -95,7 +95,7 @@ extension RedisClient {
         
         let args = keys.map(RESPValue.init)
         return send(command: "DEL", with: args)
-            .convertFromRESPValue()
+            .map()
     }
     
     /// Removes the specified keys. A key is ignored if it does not exist.
@@ -123,7 +123,7 @@ extension RedisClient {
             .init(bulk: timeout.seconds)
         ]
         return send(command: "EXPIRE", with: args)
-            .convertFromRESPValue(to: Int.self)
+            .map(to: Int.self)
             .map { return $0 == 1 }
     }
 }
@@ -175,7 +175,7 @@ extension RedisClient {
             args.append(.init(bulk: c))
         }
 
-        let response = send(command: command, with: args).convertFromRESPValue(to: [RESPValue].self)
+        let response = send(command: command, with: args).map(to: [RESPValue].self)
         let position = response.flatMapThrowing { result -> Int in
             guard
                 let value = result[0].string,
@@ -187,7 +187,7 @@ extension RedisClient {
         }
         let elements = response
             .map { return $0[1] }
-            .convertFromRESPValue(to: resultType)
+            .map(to: resultType)
 
         return position.and(elements)
     }
