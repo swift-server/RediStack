@@ -21,7 +21,7 @@ extension RedisClient {
     /// - Parameter message: The message to echo.
     /// - Returns: The message sent with the command.
     public func echo(_ message: String) -> EventLoopFuture<String> {
-        return self.sendCommand(.echo(message))
+        return self.sendCommand(.echo(message)).convertFromRESPValue()
     }
     
     /// Pings the server, which will respond with a message.
@@ -30,7 +30,7 @@ extension RedisClient {
     /// - Parameter message: The optional message that the server should respond with.
     /// - Returns: The provided message or Redis' default response of `"PONG"`.
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
-        return self.sendCommand(.ping(with: message))
+        return self.sendCommand(.ping(with: message)).convertFromRESPValue()
     }
 
     /// Select the Redis logical database having the specified zero-based numeric index.
@@ -74,6 +74,7 @@ extension RedisClient {
     public func delete(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         return self.sendCommand(.del(keys))
+        .convertFromRESPValue()
     }
     
     /// Removes the specified keys. A key is ignored if it does not exist.
@@ -95,6 +96,7 @@ extension RedisClient {
     /// - Returns: `true` if the expiration was set.
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         return self.sendCommand(.expire(key, after: timeout))
+            .convertFromRESPValue(to: Int.self)
             .map { return $0 == 1 }
     }
     
@@ -120,6 +122,7 @@ extension RedisClient {
     ) -> EventLoopFuture<(UInt, T)>
     {
         return self.sendCommand(command)
+            .convertFromRESPValue(to: [RESPValue].self)
             .flatMapThrowing { result throws -> (UInt, T) in
                 guard result.count == 2 else {
                     throw RedisClientError.assertionFailure(message: "Unexpected response from scan: \(result)")

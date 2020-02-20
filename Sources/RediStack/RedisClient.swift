@@ -35,7 +35,7 @@ public protocol RedisClient {
     /// Sends the provided command to Redis.
     /// - Parameter command: The command to send.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the Redis command response.
-    func sendCommand<T: RESPValueConvertible>(_ command: NewRedisCommand<T>) -> EventLoopFuture<T>
+    func sendCommand<T: RESPValueConvertible>(_ command: NewRedisCommand<T>) -> EventLoopFuture<RESPValue>
     
     /// Updates the client's logger.
     /// - Parameter logger: The `Logging.Logger` that is desired to receive all client logs.

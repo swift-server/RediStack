@@ -23,7 +23,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list.
     /// - Returns: The number of elements in the list.
     public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
-        return self.sendCommand(.llen(of: key))
+        return self.sendCommand(.llen(of: key)).convertFromRESPValue()
     }
 
     /// Gets the element from a list stored at the provided index position.
@@ -69,7 +69,7 @@ extension RedisClient {
         from key: RedisKey,
         count: Int = 0
     ) -> EventLoopFuture<Int> {
-        return self.sendCommand(.lrem(value, from: key, count: count))
+        return self.sendCommand(.lrem(value, from: key, count: count)).convertFromRESPValue()
     }
 }
     
@@ -220,7 +220,7 @@ extension RedisClient {
     ///     - last: The index of the last element to include in the range of elements returned.
     /// - Returns: An array of elements found within the range specified.
     public func lrange(from key: RedisKey, firstIndex first: Int, lastIndex last: Int) -> EventLoopFuture<[RESPValue]> {
-        return self.sendCommand(.lrange(from: key, firstIndex: first, lastIndex: last))
+        return self.sendCommand(.lrange(from: key, firstIndex: first, lastIndex: last)).convertFromRESPValue()
     }
     
     /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
@@ -393,7 +393,7 @@ extension RedisClient {
         to dest: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<RESPValue?> {
-        return self.sendCommand(.brpoplpush(from: source, to: dest, timeout: timeout))
+        return self.sendCommand(.brpoplpush(from: source, to: dest, timeout: timeout)).convertFromRESPValue()
     }
 }
     

@@ -179,7 +179,7 @@ extension RedisConnection {
     /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result.
     ///     If a `RedisError` is returned, the future will be failed instead.
-    public func sendCommand<T: RESPValueConvertible>(_ command: NewRedisCommand<T>) -> EventLoopFuture<T> {
+    public func sendCommand<T: RESPValueConvertible>(_ command: NewRedisCommand<T>) -> EventLoopFuture<RESPValue> {
         self.logger.trace("Received \(command.keyword) command")
 
         // validate that we can send a command
@@ -211,7 +211,6 @@ extension RedisConnection {
             : self.channel.write(_:)
         return writeMethod((command.serialized(), promise)) // write the serialized command and promise to the channel
             .flatMap { return promise.futureResult } // chain the callback to the response's
-            .convertFromRESPValue(to: T.self)
     }
 }
 
