@@ -16,7 +16,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "redi-stack",
+    name: "RediStack",
     products: [
         .library(name: "RediStack", targets: ["RediStack"]),
         .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"])
