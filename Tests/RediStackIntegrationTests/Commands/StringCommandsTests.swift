@@ -21,12 +21,16 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
 
     func test_get() throws {
         try connection.set(#function, to: "value").wait()
-        let r1 = try connection.get(#function).wait()
+        let r1: String? = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(r1, "value")
         
         try connection.set(#function, to: 30).wait()
         let r2 = try connection.get(#function, as: Int.self).wait()
         XCTAssertEqual(r2, 30)
+        
+        _ = try connection.delete(#function).wait()
+        let r3: RESPValue = try connection.get(#function).wait()
+        XCTAssertEqual(r3, .null)
     }
 
     func test_mget() throws {
@@ -44,7 +48,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
 
     func test_set() throws {
         XCTAssertNoThrow(try connection.set(#function, to: "value").wait())
-        let val = try connection.get(#function).wait()
+        let val = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(val, "value")
     }
     
@@ -53,7 +57,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         XCTAssertNoThrow(try connection.append("value", to: #function).wait())
         let length = try connection.append(" appended", to: #function).wait()
         XCTAssertEqual(length, result.count)
-        let val = try connection.get(#function).wait()
+        let val = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(val, result)
     }
     
@@ -69,7 +73,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(values[1], "2")
 
         XCTAssertNoThrow(try connection.mset(["first": 10]).wait())
-        let val = try connection.get("first").wait()
+        let val = try connection.get("first", as: String.self).wait()
         XCTAssertEqual(val, "10")
     }
 

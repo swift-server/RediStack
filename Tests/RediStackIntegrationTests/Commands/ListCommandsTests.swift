@@ -95,7 +95,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
     func test_brpoplpush() throws {
         _ = try connection.lpush([10], into: "first").wait()
 
-        let element = try connection.brpoplpush(from: "first", to: "second").wait() ?? .null
+        let element = try connection.brpoplpush(from: "first", to: "second").wait()
         XCTAssertEqual(Int(fromRESP: element), 10)
 
         let blockingConnection = try self.makeNewConnection()
@@ -139,10 +139,10 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
 
     func test_blpop() throws {
         let nilPop = try connection.blpop(from: #function, timeout: .seconds(1)).wait()
-        XCTAssertNil(nilPop)
+        XCTAssertEqual(nilPop, .null)
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()
-        let pop1 = try connection.blpop(from: "first").wait() ?? .null
+        let pop1 = try connection.blpop(from: "first").wait()
         XCTAssertEqual(Int(fromRESP: pop1), 30)
 
         let pop2 = try connection.blpop(from: "fake", "first").wait()
@@ -198,10 +198,10 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
 
     func test_brpop() throws {
         let nilPop = try connection.brpop(from: #function, timeout: .seconds(1)).wait()
-        XCTAssertNil(nilPop)
+        XCTAssertEqual(nilPop, .null)
 
         _ = try connection.lpush([10, 20, 30], into: "first").wait()
-        let pop1 = try connection.brpop(from: "first").wait() ?? .null
+        let pop1 = try connection.brpop(from: "first").wait()
         XCTAssertEqual(Int(fromRESP: pop1), 10)
 
         let pop2 = try connection.brpop(from: "fake", "first").wait()

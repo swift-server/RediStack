@@ -22,7 +22,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/llen](https://redis.io/commands/llen)
     /// - Parameter key: The key of the list.
     /// - Returns: The number of elements in the list.
-    @inlinable
     public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "LLEN", with: args)
@@ -36,13 +35,30 @@ extension RedisClient {
     ///     - index: The 0-based index of the element to get.
     ///     - key: The key of the list.
     /// - Returns: The element stored at index, or `.null` if out of bounds.
-    @inlinable
     public func lindex(_ index: Int, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: index)
         ]
         return send(command: "LINDEX", with: args)
+    }
+    
+    /// Gets the element from a list stored at the provided index position.
+    ///
+    /// See [https://redis.io/commands/lindex](https://redis.io/commands/lindex)
+    /// - Parameters:
+    ///     - index: The 0-based index of the element to get.
+    ///     - key: The key of the list.
+    ///     - type: The type to convert the value to.
+    /// - Returns: The element stored at index. If the value fails the `RESPValue` conversion or if the index is out of bounds, the returned value will be `nil`.
+    @inlinable
+    public func lindex<Value: RESPValueConvertible>(
+        _ index: Int,
+        from key: RedisKey,
+        as type: Value.Type
+    ) -> EventLoopFuture<Value?> {
+        return self.lindex(index, from: key)
+            .map(Value.init(fromRESP:))
     }
 
     /// Sets the value of an element in a list at the provided index position.
@@ -103,7 +119,6 @@ extension RedisClient {
     ///     - start: The index of the first element to keep.
     ///     - stop: The index of the last element to keep.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -140,7 +155,6 @@ extension RedisClient {
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, keepingIndices range: ClosedRange<Int>) -> EventLoopFuture<Void> {
         return self.ltrim(key, before: range.lowerBound, after: range.upperBound)
     }
@@ -162,7 +176,6 @@ extension RedisClient {
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeFrom<Int>) -> EventLoopFuture<Void> {
         return self.ltrim(key, before: range.lowerBound, after: -1)
     }
@@ -184,7 +197,6 @@ extension RedisClient {
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeUpTo<Int>) -> EventLoopFuture<Void> {
         return self.ltrim(key, before: 0, after: range.upperBound - 1)
     }
@@ -206,7 +218,6 @@ extension RedisClient {
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeThrough<Int>) -> EventLoopFuture<Void> {
         return self.ltrim(key, before: 0, after: range.upperBound)
     }
@@ -232,7 +243,6 @@ extension RedisClient {
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func ltrim(_ key: RedisKey, keepingIndices range: Range<Int>) -> EventLoopFuture<Void> {
         return self.ltrim(key, before: range.lowerBound, after: range.upperBound - 1)
     }
@@ -249,7 +259,6 @@ extension RedisClient {
     ///     - firstIndex: The index of the first element to include in the range of elements returned.
     ///     - lastIndex: The index of the last element to include in the range of elements returned.
     /// - Returns: An array of elements found within the range specified.
-    @inlinable
     public func lrange(from key: RedisKey, firstIndex: Int, lastIndex: Int) -> EventLoopFuture<[RESPValue]> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -258,6 +267,26 @@ extension RedisClient {
         ]
         return send(command: "LRANGE", with: args)
             .map()
+    }
+
+    /// Gets all elements from a List within the the specified inclusive bounds of 0-based indices.
+    ///
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List.
+    ///     - firstIndex: The index of the first element to include in the range of elements returned.
+    ///     - lastIndex: The index of the last element to include in the range of elements returned.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements found within the range specified, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        firstIndex: Int,
+        lastIndex: Int,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, firstIndex: firstIndex, lastIndex: lastIndex)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
     
     /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
@@ -291,9 +320,30 @@ extension RedisClient {
     ///     - key: The key of the List to return elements from.
     ///     - range: The range of inclusive indices of elements to get.
     /// - Returns: An array of elements found within the range specified.
-    @inlinable
     public func lrange(from key: RedisKey, indices range: ClosedRange<Int>) -> EventLoopFuture<[RESPValue]> {
         return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
+    }
+    
+    /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
+    ///
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange).
+    /// - Warning: A `ClosedRange` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0...-1`,
+    ///     `ClosedRange` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - range: The range of inclusive indices of elements to get.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements found within the range specified, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        indices range: ClosedRange<Int>,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, indices: range)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
     
     /// Gets all the elements from a List starting with the first index bound up to, but not including, the element at the last index bound.
@@ -327,9 +377,30 @@ extension RedisClient {
     ///     - key: The key of the List to return elements from.
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
     /// - Returns: An array of elements found within the range specified.
-    @inlinable
     public func lrange(from key: RedisKey, indices range: Range<Int>) -> EventLoopFuture<[RESPValue]> {
         return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
+    }
+    
+    /// Gets all the elements from a List starting with the first index bound up to, but not including, the element at the last index bound.
+    ///
+    /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Warning: A `Range` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0..<(-1)`,
+    ///     `Range` will trigger a precondition failure.
+    ///
+    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements found within the range specified, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        indices range: Range<Int>,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, indices: range)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
 
     /// Gets all elements from the index specified to the end of a List.
@@ -349,9 +420,26 @@ extension RedisClient {
     ///     - key: The key of the List to return elements from.
     ///     - index: The index of the first element that will be in the returned values.
     /// - Returns: An array of elements from the List between the index and the end.
-    @inlinable
     public func lrange(from key: RedisKey, fromIndex index: Int) -> EventLoopFuture<[RESPValue]> {
         return self.lrange(from: key, firstIndex: index, lastIndex: -1)
+    }
+    
+    /// Gets all elements from the index specified to the end of a List.
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the first element that will be in the returned values.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements from the List between the index and the end, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        fromIndex index: Int,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, fromIndex: index)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
     
     /// Gets all elements from the the start of a List up to, and including, the element at the index specified.
@@ -371,9 +459,26 @@ extension RedisClient {
     ///     - key: The key of the List to return elements from.
     ///     - index: The index of the last element that will be in the returned values.
     /// - Returns: An array of elements from the start of a List to the index.
-    @inlinable
     public func lrange(from key: RedisKey, throughIndex index: Int) -> EventLoopFuture<[RESPValue]> {
         return self.lrange(from: key, firstIndex: 0, lastIndex: index)
+    }
+    
+    /// Gets all elements from the the start of a List up to, and including, the element at the index specified.
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the last element that will be in the returned values.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements from the start of a List to the index, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        throughIndex index: Int,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, throughIndex: index)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
     
     /// Gets all elements from the the start of a List up to, but not including, the element at the index specified.
@@ -393,9 +498,26 @@ extension RedisClient {
     ///     - key: The key of the List to return elements from.
     ///     - index: The index of the element to not include in the returned values.
     /// - Returns: An array of elements from the start of the List and up to the index.
-    @inlinable
     public func lrange(from key: RedisKey, upToIndex index: Int) -> EventLoopFuture<[RESPValue]> {
         return self.lrange(from: key, firstIndex: 0, lastIndex: index - 1)
+    }
+    
+    /// Gets all elements from the the start of a List up to, but not including, the element at the index specified.
+    ///
+    /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
+    /// - Parameters:
+    ///     - key: The key of the List to return elements from.
+    ///     - index: The index of the element to not include in the returned values.
+    ///     - type: The type to convert the values to.
+    /// - Returns: An array of elements from the start of the List and up to the index, otherwise `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func lrange<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        upToIndex index: Int,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        return self.lrange(from: key, upToIndex: index)
+            .map { return $0.map(Value.init(fromRESP:)) }
     }
 }
 
@@ -409,13 +531,30 @@ extension RedisClient {
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
     /// - Returns: The element that was moved.
-    @inlinable
     public func rpoplpush(from source: RedisKey, to dest: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(bulk: source),
             .init(bulk: dest)
         ]
         return send(command: "RPOPLPUSH", with: args)
+    }
+    
+    /// Pops the last element from a source list and pushes it to a destination list.
+    ///
+    /// See [https://redis.io/commands/rpoplpush](https://redis.io/commands/rpoplpush)
+    /// - Parameters:
+    ///     - source: The key of the list to pop from.
+    ///     - dest: The key of the list to push to.
+    ///     - type: The type to convert the value to.
+    /// - Returns: The element that was moved. This value is `nil` if the `RESPValue` conversion failed.
+    @inlinable
+    public func rpoplpush<Value: RESPValueConvertible>(
+        from source: RedisKey,
+        to dest: RedisKey,
+        valueType: Value.Type
+    ) -> EventLoopFuture<Value?> {
+        return self.rpoplpush(from: source, to: dest)
+            .map(Value.init(fromRESP:))
     }
 
     /// Pops the last element from a source list and pushes it to a destination list, blocking until
@@ -433,21 +572,48 @@ extension RedisClient {
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
     ///     - timeout: The max time to wait for a value to use. `0` seconds means to wait indefinitely.
-    /// - Returns: The element popped from the source list and pushed to the destination,
-    ///     or `nil` if the timeout was reached.
-    @inlinable
+    /// - Returns: The element popped from the source list and pushed to the destination or `.null` if the timeout was reached.
     public func brpoplpush(
         from source: RedisKey,
         to dest: RedisKey,
         timeout: TimeAmount = .seconds(0)
-    ) -> EventLoopFuture<RESPValue?> {
+    ) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(bulk: source),
             .init(bulk: dest),
             .init(bulk: timeout.seconds)
         ]
         return send(command: "BRPOPLPUSH", with: args)
-            .map { $0.isNull ? nil: $0 }
+    }
+    
+
+    /// Pops the last element from a source list and pushes it to a destination list, blocking until
+    /// an element is available from the source list.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the source list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpoplpush` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpoplpush](https://redis.io/commands/brpoplpush)
+    /// - Parameters:
+    ///     - source: The key of the list to pop from.
+    ///     - dest: The key of the list to push to.
+    ///     - timeout: The max time to wait for a value to use. `0` seconds means to wait indefinitely.
+    ///     - type: The type to convert the value to.
+    /// - Returns: The element popped from the source list and pushed to the destination.
+    ///     If the timeout was reached or `RESPValue` conversion failed, the returned value will be `nil`.
+    @inlinable
+    public func brpoplpush<Value: RESPValueConvertible>(
+        from source: RedisKey,
+        to dest: RedisKey,
+        timeout: TimeAmount = .seconds(0),
+        valueType: Value.Type
+    ) -> EventLoopFuture<Value?> {
+        return self.brpoplpush(from: source, to: dest, timeout: timeout)
+            .map(Value.init(fromRESP:))
     }
 }
 
@@ -514,10 +680,22 @@ extension RedisClient {
     /// See [https://redis.io/commands/lpop](https://redis.io/commands/lpop)
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, or `.null`.
-    @inlinable
     public func lpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args = [RESPValue(bulk: key)]
         return send(command: "LPOP", with: args)
+    }
+    
+    /// Removes the first element of a list.
+    ///
+    /// See [https://redis.io/commands/lpop](https://redis.io/commands/lpop)
+    /// - Parameters:
+    ///     - key: The key of the list to pop from.
+    ///     - type: The type to convert the value to.
+    /// - Returns: The element that was popped from the list. If the list is empty or the `RESPValue` conversion failed, this value is `nil`.
+    @inlinable
+    public func lpop<Value: RESPValueConvertible>(from key: RedisKey, as type: Value.Type) -> EventLoopFuture<Value?> {
+        return self.lpop(from: key)
+            .map(Value.init(fromRESP:))
     }
 
     /// Pushes all of the provided elements into a list.
@@ -579,10 +757,20 @@ extension RedisClient {
     /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, else `.null`.
-    @inlinable
     public func rpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args = [RESPValue(bulk: key)]
         return send(command: "RPOP", with: args)
+    }
+    
+    /// Removes the last element a list.
+    ///
+    /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
+    /// - Parameter key: The key of the list to pop from.
+    /// - Returns: The element that was popped from the list. If the list is empty or the `RESPValue` conversion fails, this value is `nil`.
+    @inlinable
+    public func rpop<Value: RESPValueConvertible>(from key: RedisKey, as type: Value.Type) -> EventLoopFuture<Value?> {
+        return self.rpop(from: key)
+            .map(Value.init(fromRESP:))
     }
 
     /// Pushes all of the provided elements into a list.
@@ -650,11 +838,35 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
-    /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
-    @inlinable
-    public func blpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue?> {
+    /// - Returns: The element that was popped from the list, or `.null` if the timeout was reached.
+    public func blpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue> {
         return blpop(from: [key], timeout: timeout)
-            .map { $0?.1 }
+            .map { return $0?.1 ?? .null }
+    }
+    
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - key: The key of the list to pop from.
+    ///     - type: The type to convert the value to.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The element that was popped from the list. If the timeout was reached or `RESPValue` conversion failed, `nil`.
+    @inlinable
+    public func blpop<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        as type: Value.Type,
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<Value?> {
+        return self.blpop(from: key, timeout: timeout)
+            .map(Value.init(fromRESP:))
     }
 
     /// Removes the first element of a list, blocking until an element is available.
@@ -674,9 +886,42 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    @inlinable
     public func blpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BLPOP", keys, timeout)
+    }
+    
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    ///     - valueType: The type to convert the value to.
+    /// - Returns:
+    ///     If timeout was reached or the `RESPValue` conversion failed, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func blpop<Value: RESPValueConvertible>(
+        from keys: [RedisKey],
+        timeout: TimeAmount = .seconds(0),
+        valueType: Value.Type
+    ) -> EventLoopFuture<(RedisKey, Value)?> {
+        return self.blpop(from: keys, timeout: timeout)
+            .map {
+                guard
+                    let result = $0,
+                    let value = Value(fromRESP: result.1)
+                else { return nil }
+                return (result.0, value)
+            }
     }
     
     /// Removes the first element of a list, blocking until an element is available.
@@ -696,9 +941,35 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    @inlinable
     public func blpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.blpop(from: keys, timeout: timeout)
+    }
+    
+    /// Removes the first element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `lpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/blpop](https://redis.io/commands/blpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    ///     - valueType: The type to convert the value to.
+    /// - Returns:
+    ///     If timeout was reached or `RESPValue` conversion failed, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func blpop<Value: RESPValueConvertible>(
+        from keys: RedisKey...,
+        timeout: TimeAmount = .seconds(0),
+        valueType: Value.Type
+    ) -> EventLoopFuture<(RedisKey, Value)?> {
+        return self.blpop(from: keys, timeout: timeout, valueType: valueType)
     }
 
     /// Removes the last element of a list, blocking until an element is available.
@@ -714,11 +985,35 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
-    /// - Returns: The element that was popped from the list, or `nil` if the timout was reached.
-    @inlinable
-    public func brpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue?> {
+    /// - Returns: The element that was popped from the list, or `.null` if the timeout was reached.
+    public func brpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue> {
         return brpop(from: [key], timeout: timeout)
-            .map { $0?.1 }
+            .map { return $0?.1 ?? .null }
+    }
+    
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the list.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - key: The key of the list to pop from.
+    ///     - type: The type to convert the value to.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The element that was popped from the list. If the timeout was reached or the `RESPValue` conversion fails, this value is `nil`.
+    @inlinable
+    public func brpop<Value: RESPValueConvertible>(
+        from key: RedisKey,
+        as type: Value.Type,
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<Value?> {
+        return self.brpop(from: key, timeout: timeout)
+            .map(Value.init(fromRESP:))
     }
 
     /// Removes the last element of a list, blocking until an element is available.
@@ -738,7 +1033,6 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    @inlinable
     public func brpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return _bpop(command: "BRPOP", keys, timeout)
     }
@@ -757,12 +1051,70 @@ extension RedisClient {
     ///     - keys: The keys of lists in Redis that should be popped from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns:
-    ///     If timeout was reached, `nil`.
+    ///     If timeout was reached or `RESPValue` conversion failed, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
     @inlinable
+    public func brpop<Value: RESPValueConvertible>(
+        from keys: [RedisKey],
+        timeout: TimeAmount = .seconds(0),
+        valueType: Value.Type
+    ) -> EventLoopFuture<(RedisKey, Value)?> {
+        return self.brpop(from: keys, timeout: timeout)
+            .map {
+                guard
+                    let result = $0,
+                    let value = Value(fromRESP: result.1)
+                else { return nil }
+                return (result.0, value)
+            }
+    }
+
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns:
+    ///     If timeout was reached, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
     public func brpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         return self.brpop(from: keys, timeout: timeout)
+    }
+    
+    /// Removes the last element of a list, blocking until an element is available.
+    ///
+    /// - Important:
+    ///     This will block the connection from completing further commands until an element
+    ///     is available to pop from the group of lists.
+    ///
+    ///     It is **highly** recommended to set a reasonable `timeout`
+    ///     or to use the non-blocking `rpop` method where possible.
+    ///
+    /// See [https://redis.io/commands/brpop](https://redis.io/commands/brpop)
+    /// - Parameters:
+    ///     - keys: The keys of lists in Redis that should be popped from.
+    ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns:
+    ///     If timeout was reached or `RESPValue` conversion failed, `nil`.
+    ///
+    ///     Otherwise, the key of the list the element was removed from and the popped element.
+    @inlinable
+    public func brpop<Value: RESPValueConvertible>(
+        from keys: RedisKey...,
+        timeout: TimeAmount = .seconds(0),
+        valueType: Value.Type
+    ) -> EventLoopFuture<(RedisKey, Value)?> {
+        return self.brpop(from: keys, timeout: timeout, valueType: valueType)
     }
 
     @usableFromInline
@@ -777,7 +1129,7 @@ extension RedisClient {
         return send(command: command, with: args)
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }
-                guard let response = [RESPValue](fromRESP: $0) else {
+                guard let response = $0.array else {
                     throw RedisClientError.failedRESPConversion(to: [RESPValue].self)
                 }
                 assert(response.count == 2, "Unexpected response size returned!")

@@ -26,7 +26,7 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
 
     func test_hmset() throws {
         XCTAssertNoThrow(try connection.hmset(["field": 30], in: #function).wait())
-        let value = try connection.hget("field", from: #function).wait()
+        let value = try connection.hget("field", from: #function, as: String.self).wait()
         XCTAssertEqual(value, "30")
     }
 
@@ -36,19 +36,19 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
         success = try connection.hsetnx("field", to: 30, in: #function).wait()
         XCTAssertFalse(success)
 
-        let value = try connection.hget("field", from: #function).wait()
+        let value = try connection.hget("field", from: #function, as: String.self).wait()
         XCTAssertEqual(value, "foo")
     }
 
     func test_hget() throws {
         _ = try connection.hset("test", to: 30, in: #function).wait()
-        let value = try connection.hget("test", from: #function).wait()
+        let value = try connection.hget("test", from: #function, as: String.self).wait()
         XCTAssertEqual(value, "30")
     }
 
     func test_hmget() throws {
         _ = try connection.hmset(["first": "foo", "second": "bar"], in: #function).wait()
-        let values = try connection.hmget("first", "second", "fake", from: #function).wait()
+        let values = try connection.hmget("first", "second", "fake", from: #function, as: String.self).wait()
         XCTAssertEqual(values[0], "foo")
         XCTAssertEqual(values[1], "bar")
         XCTAssertNil(values[2])
@@ -57,7 +57,7 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
     func test_hgetall() throws {
         let dataset = ["first": "foo", "second": "bar"]
         _ = try connection.hmset(dataset, in: #function).wait()
-        let hashes = try connection.hgetall(from: #function).wait()
+        let hashes = try connection.hgetall(from: #function, as: String.self).wait()
         XCTAssertEqual(hashes, dataset)
     }
 

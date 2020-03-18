@@ -21,10 +21,10 @@ extension RedisClient {
     ///
     /// [https://redis.io/commands/get](https://redis.io/commands/get)
     /// - Parameter key: The key to fetch the value from.
-    /// - Returns: The string value stored at the key provided, otherwise `nil` if the key does not exist.
-    @inlinable
-    public func get(_ key: RedisKey) -> EventLoopFuture<String?> {
-        return self.get(key, as: String.self)
+    /// - Returns: The value stored at the key provided. If the key does not exist, the value will be `.null`.
+    public func get(_ key: RedisKey) -> EventLoopFuture<RESPValue> {
+        let args = [RESPValue(bulk: key)]
+        return self.send(command: "GET", with: args)
     }
     
     /// Get the value of a key, converting it to the desired type.
@@ -33,14 +33,13 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key to fetch the value from.
     ///     - type: The desired type to convert the stored data to.
-    /// - Returns: The converted value stored at the key provided, otherwise `nil` if the key does not exist or fails the conversion.
+    /// - Returns: The converted value stored at the key provided, otherwise `nil` if the key does not exist or fails the type conversion.
     @inlinable
     public func get<StoredType: RESPValueConvertible>(
         _ key: RedisKey,
         as type: StoredType.Type
     ) -> EventLoopFuture<StoredType?> {
-        let args = [RESPValue(bulk: key)]
-        return send(command: "GET", with: args)
+        return self.get(key)
             .map { return StoredType(fromRESP: $0) }
     }
 
@@ -49,7 +48,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
-    @inlinable
     public func mget(_ keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
@@ -61,11 +59,35 @@ extension RedisClient {
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
     ///
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
+    /// - Parameters:
+    ///     - keys: The list of keys to fetch the values from.
+    ///     - type: The type to convert the values to.
+    /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
+    @inlinable
+    public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) -> EventLoopFuture<[Value?]> {
+        return self.mget(keys)
+            .map { return $0.map(Value.init(fromRESP:)) }
+    }
+    
+    /// Gets the values of all specified keys, using `.null` to represent non-existant values.
+    ///
+    /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
-    @inlinable
     public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
         return self.mget(keys)
+    }
+    
+    /// Gets the values of all specified keys, using `.null` to represent non-existant values.
+    ///
+    /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
+    /// - Parameters:
+    ///     - keys: The list of keys to fetch the values from.
+    ///     - type: The type to convert the values to.
+    /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
+    @inlinable
+    public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) -> EventLoopFuture<[Value?]> {
+        return self.mget(keys, as: type)
     }
 }
 
@@ -163,7 +185,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/incr](https://redis.io/commands/incr)
     /// - Parameter key: The key whose value should be incremented.
     /// - Returns: The new value after the operation.
-    @inlinable
     public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(bulk: key)]
         return send(command: "INCR", with: args)
@@ -178,7 +199,10 @@ extension RedisClient {
     ///     - count: The amount that this value should be incremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func increment(_ key: RedisKey, by count: Int) -> EventLoopFuture<Int> {
+    public func increment<Value: FixedWidthInteger & RESPValueConvertible>(
+        _ key: RedisKey,
+        by count: Value
+    ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: count)
@@ -195,11 +219,10 @@ extension RedisClient {
     ///     - count: The amount that this value should be incremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func increment<Value>(_ key: RedisKey, by count: Value) -> EventLoopFuture<Value>
-        where
-        Value: BinaryFloatingPoint,
-        Value: RESPValueConvertible
-    {
+    public func increment<Value: BinaryFloatingPoint & RESPValueConvertible>(
+        _ key: RedisKey,
+        by count: Value
+    ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(bulk: key),
             count.convertedToRESPValue()
@@ -231,7 +254,11 @@ extension RedisClient {
     ///     - key: The key whose value should be decremented.
     ///     - count: The amount that this value should be decremented, supporting both positive and negative values.
     /// - Returns: The new value after the operation.
-    public func decrement(_ key: RedisKey, by count: Int) -> EventLoopFuture<Int> {
+    @inlinable
+    public func decrement<Value: FixedWidthInteger & RESPValueConvertible>(
+        _ key: RedisKey,
+        by count: Value
+    ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(bulk: key),
             .init(bulk: count)

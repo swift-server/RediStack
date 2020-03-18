@@ -20,7 +20,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/echo](https://redis.io/commands/echo)
     /// - Parameter message: The message to echo.
     /// - Returns: The message sent with the command.
-    @inlinable
     public func echo(_ message: String) -> EventLoopFuture<String> {
         let args = [RESPValue(bulk: message)]
         return send(command: "ECHO", with: args)
@@ -32,7 +31,6 @@ extension RedisClient {
     /// See [https://redis.io/commands/ping](https://redis.io/commands/ping)
     /// - Parameter message: The optional message that the server should respond with.
     /// - Returns: The provided message or Redis' default response of `"PONG"`.
-    @inlinable
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
         let args: [RESPValue] = message != nil
             ? [.init(bulk: message!)] // safe because we did a nil pre-check
@@ -47,7 +45,6 @@ extension RedisClient {
     /// [https://redis.io/commands/select](https://redis.io/commands/select)
     /// - Parameter index: The 0-based index of the database that will receive later commands.
     /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
-    @inlinable
     public func select(database index: Int) -> EventLoopFuture<Void> {
         let args = [RESPValue(bulk: index)]
         return send(command: "SELECT", with: args)
@@ -61,7 +58,6 @@ extension RedisClient {
     ///     - first: The index of the first database.
     ///     - second: The index of the second database.
     /// - Returns: `true` if the swap was successful.
-    @inlinable
     public func swapDatabase(_ first: Int, with second: Int) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(bulk: first),
@@ -77,7 +73,6 @@ extension RedisClient {
     /// [https://redis.io/commands/auth](https://redis.io/commands/auth)
     /// - Parameter password: The password to authenticate with.
     /// - Returns: A `NIO.EventLoopFuture` that resolves if the password was accepted, otherwise it fails.
-    @inlinable
     public func authorize(with password: String) -> EventLoopFuture<Void> {
         let args = [RESPValue(bulk: password)]
         return send(command: "AUTH", with: args)
@@ -89,7 +84,6 @@ extension RedisClient {
     /// [https://redis.io/commands/del](https://redis.io/commands/del)
     /// - Parameter keys: A list of keys to delete from the database.
     /// - Returns: The number of keys deleted from the database.
-    @inlinable
     public func delete(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
@@ -103,7 +97,6 @@ extension RedisClient {
     /// [https://redis.io/commands/del](https://redis.io/commands/del)
     /// - Parameter keys: A list of keys to delete from the database.
     /// - Returns: The number of keys deleted from the database.
-    @inlinable
     public func delete(_ keys: RedisKey...) -> EventLoopFuture<Int> {
         return self.delete(keys)
     }
@@ -116,7 +109,6 @@ extension RedisClient {
     ///     - key: The key to set the expiration on.
     ///     - timeout: The time from now the key will expire at.
     /// - Returns: `true` if the expiration was set.
-    @inlinable
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(bulk: key),
@@ -136,16 +128,15 @@ extension RedisClient {
     /// [https://redis.io/commands/scan](https://redis.io/commands/scan)
     /// - Parameters:
     ///     - position: The cursor position to start from.
-    ///     - count: The number of elements to advance by. Redis default is 10.
     ///     - match: A glob-style pattern to filter values to be selected from the result set.
+    ///     - count: The number of elements to advance by. Redis default is 10.
     /// - Returns: A cursor position for additional invocations with a limited collection of keys found in the database.
-    @inlinable
     public func scan(
         startingFrom position: Int = 0,
-        count: Int? = nil,
-        matching match: String? = nil
+        matching match: String? = nil,
+        count: Int? = nil
     ) -> EventLoopFuture<(Int, [String])> {
-        return _scan(command: "SCAN", nil, position, count, match)
+        return _scan(command: "SCAN", nil, position, match, count)
     }
 
     @usableFromInline
@@ -154,8 +145,8 @@ extension RedisClient {
         resultType: T.Type = T.self,
         _ key: RedisKey?,
         _ pos: Int,
-        _ count: Int?,
-        _ match: String?
+        _ match: String?,
+        _ count: Int?
     ) -> EventLoopFuture<(Int, T)>
         where
         T: RESPValueConvertible

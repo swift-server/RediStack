@@ -41,7 +41,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         try connection.set(#function, to: "value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())
         XCTAssertTrue(try connection.expire(#function, after: .nanoseconds(1)).wait())
-        XCTAssertNil(try connection.get(#function).wait())
+        XCTAssertEqual(try connection.get(#function).wait(), .null)
         
         try connection.set(#function, to: "new value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())
@@ -64,25 +64,25 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
 
     func test_swapDatabase() throws {
         try connection.set("first", to: "3").wait()
-        var first = try connection.get("first").wait()
+        var first = try connection.get("first", as: String.self).wait()
         XCTAssertEqual(first, "3")
 
         try connection.select(database: 1).wait()
-        var second = try connection.get("first").wait()
+        var second = try connection.get("first", as: String.self).wait()
         XCTAssertEqual(second, nil)
 
         try connection.set("second", to: "100").wait()
-        second = try connection.get("second").wait()
+        second = try connection.get("second", as: String.self).wait()
         XCTAssertEqual(second, "100")
 
         let success = try connection.swapDatabase(0, with: 1).wait()
         XCTAssertEqual(success, true)
 
-        second = try connection.get("first").wait()
+        second = try connection.get("first", as: String.self).wait()
         XCTAssertEqual(second, "3")
 
         try connection.select(database: 0).wait()
-        first = try connection.get("second").wait()
+        first = try connection.get("second", as: String.self).wait()
         XCTAssertEqual(first, "100")
     }
 
