@@ -10,7 +10,6 @@ extension BasicCommandsTests {
         ("test_echo", test_echo),
         ("test_expire", test_expire),
         ("test_ping", test_ping),
-        ("test_scan", test_scan),
         ("test_select", test_select),
         ("test_swapDatabase", test_swapDatabase),
     ]
