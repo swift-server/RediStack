@@ -23,9 +23,6 @@ import NIO
 ///
 /// See [https://redis.io/commands](https://redis.io/commands)
 public protocol RedisClient {
-    /// Is the client currently connected to Redis?
-    var isConnected: Bool { get }
-    
     /// The `NIO.EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
     
