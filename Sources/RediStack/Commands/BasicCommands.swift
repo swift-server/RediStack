@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -36,7 +36,16 @@ extension RedisClient {
             ? [.init(bulk: message!)] // safe because we did a nil pre-check
             : []
         return send(command: "PING", with: args)
-            .tryConverting()
+            .flatMapThrowing {
+                // because PING is a special command allowed during pub/sub, we do manual conversion
+                // this is because the response format is different in pub/sub ([pong,<message>])
+                guard let response = $0.string ?? $0.array?[1].string else {
+                    throw RedisClientError.assertionFailure(message: "ping message not found")
+                }
+                // if no message was sent in the ping in pubsub, then the response will be an empty string
+                // so we mimic a normal PONG response as if we weren't in pubsub
+                return response.isEmpty ? "PONG" : response
+            }
     }
 
     /// Select the Redis logical database having the specified zero-based numeric index.

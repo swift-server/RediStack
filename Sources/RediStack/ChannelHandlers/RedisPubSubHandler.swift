@@ -1,0 +1,467 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the RediStack open source project
+//
+// Copyright (c) 2020 RediStack project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of RediStack project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
+import NIO
+
+/// A closure receiver of individual Pub/Sub messages from Redis subscriptions to channels and patterns.
+/// - Warning: The receiver is called on the same `NIO.EventLoop` that processed the message.
+///
+///     If you are doing non-trivial work in response to PubSub messages, it is **highly recommended** that the work be dispatched to another thread
+///     so as to not block further messages from being processed.
+/// - Parameters:
+///     - publisher: The name of the channel that published the message.
+///     - message: The message data that was received from the `publisher`.
+public typealias RedisSubscriptionMessageReceiver = (_ publisher: RedisChannelName, _ message: RESPValue) -> Void
+
+/// A closure handler invoked for Pub/Sub subscription changes.
+///
+/// This closure will be invoked only *once* for each individual channel or pattern that is having its subscription changed,
+/// even if it was done as a single PSUBSCRIBE, SUBSCRIBE, PUNSUBSCRIBE, or UNSUBSCRIBE command.
+/// - Warning: The receiver is called on the same `NIO.EventLoop` that processed the message.
+///
+///     If you are doing non-trivial work in response to PubSub messages, it is **highly recommended** that the work be dispatched to another thread
+///     so as to not block further messages from being processed.
+/// - Parameters:
+///     - subscriptionKey: The subscribed channel or pattern that had its subscription status changed.
+///     - currentSubscriptionCount: The current total number of subscriptions the connection has.
+public typealias RedisSubscriptionChangeHandler = (_ subscriptionKey: String, _ currentSubscriptionCount: Int) -> Void
+
+/// A list of patterns or channels that a Pub/Sub subscription change is targetting.
+///
+/// See `RedisChannelName`, [PSUBSCRIBE](https://redis.io/commands/psubscribe) and [SUBSCRIBE](https://redis.io/commands/subscribe)
+///
+/// Use the `values` property to quickly access the underlying list of the target for any purpose that requires a the `String` values.
+public enum RedisSubscriptionTarget: Equatable, CustomDebugStringConvertible {
+    case channels([RedisChannelName])
+    case patterns([String])
+
+    public var values: [String] {
+        switch self {
+        case let .channels(names): return names.map { $0.rawValue }
+        case let .patterns(values): return values
+        }
+    }
+    
+    public var debugDescription: String {
+        let values = self.values.joined(separator: ", ")
+        switch self {
+        case .channels: return "Channels '\(values)'"
+        case .patterns: return "Patterns '\(values)'"
+        }
+    }
+    
+    public static func ==(lhs: RedisSubscriptionTarget, rhs: RedisSubscriptionTarget) -> Bool {
+        switch (lhs, rhs) {
+        case let (.channels(left), .channels(right)): return left == right
+        case let (.patterns(left), .patterns(right)): return left == right
+        default: return false
+        }
+    }
+}
+
+/// A channel handler that stores a map of closures and channel or pattern names subscribed to in Redis using Pub/Sub.
+///
+/// These `RedisPubSubMessageReceiver` closures are added and removed using methods directly on an instance of this handler.
+///
+/// When a receiver is added or removed, the handler will send the appropriate subscribe or unsubscribe message to Redis so that the connection
+/// reflects the local Channel state.
+///
+/// # ChannelInboundHandler
+/// This handler is designed to be placed _before_ a `RedisCommandHandler` so that it can intercept Pub/Sub messages and dispatch them to the appropriate
+/// receiver.
+///
+/// If a response is not in the Pub/Sub message format as specified by Redis, then it is treated as a normal Redis command response and sent further into
+/// the pipeline so that eventually a `RedisCommandHandler` can process it.
+///
+/// # ChannelOutboundHandler
+/// This handler is what is defined as a "transparent" `NIO.ChannelOutboundHandler` in that it does absolutely nothing except forward outgoing commands
+/// in the pipeline.
+///
+/// The reason why this handler needs to conform to this protocol at all, is that subscribe and unsubscribe commands are executed outside of a normal
+/// `NIO.Channel.write(_:)` cycle, as message receivers aren't command arguments and need to be stored.
+///
+/// All of this is outside the responsibility of the `RedisCommandHandler`,
+/// so the `RedisPubSubHandler` uses its own `NIO.ChannelHandlerContext` being before the command handler to short circuit the pipeline.
+///
+/// # RemovableChannelHandler
+/// As a connection can move in and out of "PubSub mode", this handler is can be added and removed from a `NIO.ChannelPipeline` as needed.
+///
+/// When the handler has received a `removeHandler(context:removalToken:)` request, it will remove itself immediately.
+public final class RedisPubSubHandler {
+    private var state: State = .default
+
+    /// A map of channel names or patterns and their respective event registration.
+    private var subscriptions: [String: Subscription]
+    /// A queue of subscribe changes awaiting notification of completion.
+    private var pendingSubscribes: PendingSubscriptionChangeQueue
+    /// A queue of unsubscribe changes awaiting notification of completion.
+    private var pendingUnsubscribes: PendingSubscriptionChangeQueue
+    
+    // we need to be extra careful not to use this context before we know we've initialized
+    private var context: ChannelHandlerContext!
+    
+    /// - Parameter queueCapacity: The initial capacity of queues used for processing subscription changes. The initial value is `3`.
+    ///
+    ///     Unless you are subscribing and unsubscribing from a large volume of channels or patterns at a single time,
+    ///     such as a single SUBSCRIBE call, you do not need to modify this value.
+    public init(initialSubscriptionQueueCapacity queueCapacity: Int = 3) {
+        self.subscriptions = [:]
+        self.pendingSubscribes = [:]
+        self.pendingUnsubscribes = [:]
+        
+        self.pendingSubscribes.reserveCapacity(queueCapacity)
+        self.pendingUnsubscribes.reserveCapacity(queueCapacity)
+    }
+}
+
+// MARK: PubSub Message Handling
+
+extension RedisPubSubHandler {
+    private func handleSubscribeMessage(
+        withSubscriptionKey subscriptionKey: String,
+        reportedSubscriptionCount subscriptionCount: Int
+    ) {
+        defer { self.pendingSubscribes.removeValue(forKey: subscriptionKey)?.succeed(subscriptionCount) }
+        
+        guard let subscription = self.subscriptions[subscriptionKey] else { return }
+
+        subscription.onSubscribe?(subscriptionKey, subscriptionCount)
+        subscription.onSubscribe = nil // nil to free memory
+        self.subscriptions[subscriptionKey] = subscription
+        
+        subscription.type.gauge.increment()
+    }
+    
+    private func handleUnsubscribeMessage(
+        withSubscriptionKey subscriptionKey: String,
+        reportedSubscriptionCount subscriptionCount: Int
+    ) {
+        defer { self.pendingUnsubscribes.removeValue(forKey: subscriptionKey)?.succeed(subscriptionCount) }
+    
+        guard let subscription = self.subscriptions.removeValue(forKey: subscriptionKey) else { return }
+    
+        subscription.onUnsubscribe?(subscriptionKey, subscriptionCount)
+        subscription.type.gauge.decrement()
+    }
+    
+    private func handleMessage(
+        _ message: RESPValue,
+        from channel: RedisChannelName,
+        withSubscriptionKey subscriptionKey: String
+    ) {
+        guard let subscription = self.subscriptions[subscriptionKey] else { return }
+        subscription.onMessage(channel, message)
+        RedisMetrics.subscriptionMessagesReceivedCount.increment()
+    }
+}
+
+// MARK: Subscription Management
+
+extension RedisPubSubHandler {
+    /// Registers the provided subscription message receiver to receive messages from the specified subscription target.
+    /// - Important: Any previously registered receiver will be replaced and not notified.
+    /// - Parameters:
+    ///     - target: The channels or patterns that the receiver should receive messages for.
+    ///     - receiver: The closure that receives any future pub/sub messages.
+    ///     - subscribeHandler: An optional closure to invoke when the subscription first becomes active.
+    ///     - unsubscribeHandler: An optional closure to invoke when the subscription becomes inactive.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves the number of subscriptions the client has after the subscription has been added.
+    public func addSubscription(
+        for target: RedisSubscriptionTarget,
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+    ) -> EventLoopFuture<Int> {
+        switch self.state {
+        case let .error(e): return self.context.eventLoop.makeFailedFuture(e)
+            
+        case .default:
+            // go through all the target patterns/names and update the map with the new receiver if it's already registered
+            // if it was a new registration, not an update, we keep that name to send to Redis
+            // we do this so that we save on data transfer bandwidth
+
+            let newSubscriptionTargets = target.values
+                .compactMap { (targetKey) -> String? in
+                    let subscription = Subscription(
+                        type: target.subscriptionType,
+                        messageReceiver: receiver,
+                        subscribeHandler: subscribeHandler,
+                        unsubscribeHandler: unsubscribeHandler
+                    )
+                    guard self.subscriptions.updateValue(subscription, forKey: targetKey) == nil else { return nil }
+                    return targetKey
+                }
+
+            // if there aren't any new actual subscriptions,
+            // then we just short circuit and return our local count of subscriptions
+            guard !newSubscriptionTargets.isEmpty else {
+                return self.context.eventLoop.makeSucceededFuture(self.subscriptions.count)
+            }
+
+            return self.sendSubscriptionChange(
+                subscriptionChangeKeyword: target.subscribeKeyword,
+                subscriptionTargets: newSubscriptionTargets,
+                queue: \.pendingSubscribes
+            )
+        }
+    }
+
+    /// Removes the provided target as a subscription, stopping future messages from being received.
+    /// - Parameter target: The channel or pattern that a receiver should be removed for.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves the number of subscriptions the client has after the subscription has been removed.
+    public func removeSubscription(for target: RedisSubscriptionTarget) -> EventLoopFuture<Int> {
+        // if we're not in our default state,
+        // this essentially is a no-op because an error triggers all receivers to be removed
+        guard case .default = self.state else { return self.context.eventLoop.makeSucceededFuture(0) }
+
+        // we send the UNSUBSCRIBE message to Redis,
+        // and in the response we handle the actual removal of the receiver closure
+        
+        return self.sendSubscriptionChange(
+            subscriptionChangeKeyword: target.unsubscribeKeyword,
+            subscriptionTargets: target.values,
+            queue: \.pendingUnsubscribes
+        )
+    }
+    
+    private func sendSubscriptionChange(
+        subscriptionChangeKeyword keyword: String,
+        subscriptionTargets targets: [String],
+        queue pendingQueue: ReferenceWritableKeyPath<RedisPubSubHandler, PendingSubscriptionChangeQueue>
+    ) -> EventLoopFuture<Int> {
+        guard self.context.eventLoop.inEventLoop else {
+            return self.context.eventLoop.flatSubmit {
+                return self.sendSubscriptionChange(
+                    subscriptionChangeKeyword: keyword,
+                    subscriptionTargets: targets,
+                    queue: pendingQueue
+                )
+            }
+        }
+        
+        var command = [RESPValue(bulk: keyword)]
+        command.append(convertingContentsOf: targets)
+        
+        // the command does not respond in a normal command response fashion of the end count of subscriptions
+        // after all of them have been established (or removed)
+        //
+        // instead, it replies with a subscribe/unsubscribe message for each channel/pattern that was sent
+        //
+        // so we have to create a top-level future that synchronizes all of the responses
+        // where we take the last response from Redis as the count of active subscriptions
+        
+        // create them
+        let pendingSubscriptions: [(String, EventLoopPromise<Int>)] = targets.map {
+            return ($0, self.context.eventLoop.makePromise())
+        }
+        // add the subscription change handler to the appropriate queue for each individual subscription target
+        pendingSubscriptions.forEach { self[keyPath: pendingQueue].updateValue($1, forKey: $0) }
+
+        // synchronize all of the individual subscription changes
+        let subscriptionCountFuture = EventLoopFuture<Int>
+            .whenAllComplete(
+                pendingSubscriptions.map { $0.1.futureResult },
+                on: self.context.eventLoop
+            )
+            .flatMapThrowing { (results) -> Int in
+                // trust the last success response as the most current count
+                guard let latestSubscriptionCount = results
+                    .lazy
+                    .reversed() // reverse to save complexity, as we just need the last (first) successful value
+                    .compactMap({ try? $0.get() })
+                    .first
+                // if we have no success cases, we will still have at least one response that we can
+                // rely on the 'get' method to throw the error for us, rather than unwrapping it ourselves
+                else { return try results.first!.get() }
+
+                return latestSubscriptionCount
+            }
+        
+        return self.context.writeAndFlush(self.wrapOutboundOut(.array(command)))
+            .flatMap { return subscriptionCountFuture }
+    }
+}
+
+// MARK: ChannelHandler
+
+extension RedisPubSubHandler {
+    public func handlerAdded(context: ChannelHandlerContext) {
+        self.context = context
+    }
+
+    public func handlerRemoved(context: ChannelHandlerContext) {
+        self.context = nil // break ref cycles
+    }
+}
+
+// MARK: RemoveableChannelHandler
+
+extension RedisPubSubHandler: RemovableChannelHandler {
+    public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
+        // leave immediately so we don't get any more subscription requests
+        context.leavePipeline(removalToken: removalToken)
+        // "close" all subscription handlers
+        self.removeAllReceivers()
+    }
+}
+
+// MARK: ChannelInboundHandler
+
+extension RedisPubSubHandler: ChannelInboundHandler {
+    public typealias InboundIn = RESPValue
+    public typealias InboundOut = RESPValue
+    
+    public func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        let value = self.unwrapInboundIn(data)
+
+        // check to see if the value is in the expected PubSub message format
+        // if it isn't, then we forward on to the next handler to be treated as a normal command response
+        // if it is, we handle it here
+
+        // Redis defines the format as [messageKeyword: String, channelName: String, message: RESPValue]
+        // unless the messageType is 'pmessage', in which case it's [messageKeyword, pattern: String, channelName, message]
+
+        // these guards extract some of the basic details of a pubsub message
+        guard
+            let array = value.array,
+            !array.isEmpty,
+            let channelOrPattern = array[1].string,
+            let messageKeyword = array[0].string
+        else {
+            context.fireChannelRead(data)
+            return
+        }
+        
+        // safe because the array is guaranteed from the guard above to have at least 1 element
+        // and it is not to be used until we match the PubSub message keyword
+        let message = array.last!
+        
+        // the last check is to match one of the known pubsub message keywords
+        // if we have a match, we're definitely in a pubsub message and we should handle it
+
+        switch messageKeyword {
+        case "message": self.handleMessage(message, from: .init(channelOrPattern), withSubscriptionKey: channelOrPattern)
+
+        // the channel name is stored as the 3rd element in the array in 'pmessage' streams
+        case "pmessage": self.handleMessage(message, from: .init(array[2].string!), withSubscriptionKey: channelOrPattern)
+
+        // if the message keyword is for subscribing or unsubscribing,
+        // the message is guaranteed to be the count of subscriptions the connection still has
+        case "subscribe", "psubscribe":
+            self.handleSubscribeMessage(withSubscriptionKey: channelOrPattern, reportedSubscriptionCount: message.int!)
+
+        case "unsubscribe", "punsubscribe":
+            self.handleUnsubscribeMessage(withSubscriptionKey: channelOrPattern, reportedSubscriptionCount: message.int!)
+            
+        // if we don't have a match, fire a channel read to forward to the next handler
+        default: context.fireChannelRead(data)
+        }
+    }
+    
+    public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self.removeAllReceivers(because: error)
+        context.fireErrorCaught(error)
+    }
+    
+    public func channelInactive(context: ChannelHandlerContext) {
+        self.removeAllReceivers(because: RedisClientError.connectionClosed)
+        context.fireChannelInactive()
+    }
+    
+    private func removeAllReceivers(because error: Error? = nil) {
+        error.map { self.state = .error($0) }
+        
+        let receivers = self.subscriptions
+        self.subscriptions.removeAll()
+        receivers.forEach {
+            $0.value.onUnsubscribe?($0.key, 0)
+            $0.value.type.gauge.decrement()
+        }
+    }
+}
+
+// MARK: ChannelOutboundHandler
+
+extension RedisPubSubHandler: ChannelOutboundHandler {
+    public typealias OutboundIn = RESPValue
+    public typealias OutboundOut = RESPValue
+    
+    // the pub/sub handler is a transparent outbound handler
+    // we only conform to the protocol so we're appropriately placed in the pipeline
+    // to bypass the command handler for pub/sub subscription changes
+}
+
+// MARK: Private Types
+
+fileprivate enum SubscriptionType {
+    case channel, pattern
+    
+    var gauge: RedisMetrics.IncrementalGauge {
+        switch self {
+        case .channel: return RedisMetrics.activeChannelSubscriptions
+        case .pattern: return RedisMetrics.activePatternSubscriptions
+        }
+    }
+}
+
+extension RedisPubSubHandler {
+    private typealias PendingSubscriptionChangeQueue = [String: EventLoopPromise<Int>]
+
+    private final class Subscription {
+        let type: SubscriptionType
+        let onMessage: RedisSubscriptionMessageReceiver
+        var onSubscribe: RedisSubscriptionChangeHandler? // will be set to nil after first call
+        let onUnsubscribe: RedisSubscriptionChangeHandler?
+        
+        init(
+            type: SubscriptionType,
+            messageReceiver: @escaping RedisSubscriptionMessageReceiver,
+            subscribeHandler: RedisSubscriptionChangeHandler?,
+            unsubscribeHandler: RedisSubscriptionChangeHandler?
+        ) {
+            self.type = type
+            self.onMessage = messageReceiver
+            self.onSubscribe = subscribeHandler
+            self.onUnsubscribe = unsubscribeHandler
+        }
+    }
+
+    private enum State {
+        case `default`, error(Error)
+    }
+}
+
+// MARK: Subscription Management Helpers
+
+extension RedisSubscriptionTarget {
+    fileprivate var subscriptionType: SubscriptionType {
+        switch self {
+        case .channels: return .channel
+        case .patterns: return .pattern
+        }
+    }
+    
+    fileprivate var subscribeKeyword: String {
+        switch self {
+        case .channels: return "SUBSCRIBE"
+        case .patterns: return "PSUBSCRIBE"
+        }
+    }
+    fileprivate var unsubscribeKeyword: String {
+        switch self {
+        case .channels: return "UNSUBSCRIBE"
+        case .patterns: return "PUNSUBSCRIBE"
+        }
+    }
+}

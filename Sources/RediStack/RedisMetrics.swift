@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,6 +30,9 @@ public struct RedisMetrics {
     public enum Label: String, CustomStringConvertible {
         case totalConnectionCount
         case activeConnectionCount
+        case activeChannelSubscriptions
+        case activePatternSubscriptions
+        case subscriptionMessagesReceivedCount
         case commandSuccessCount
         case commandFailureCount
         case commandRoundTripTime
@@ -40,9 +43,15 @@ public struct RedisMetrics {
     }
 
     /// The wrapped `Metrics.Gauge` maintaining the current number of connections this library has active.
-    public static var activeConnectionCount = ActiveConnectionGauge()
+    public static var activeConnectionCount = IncrementalGauge(.activeConnectionCount)
+    /// The wrapped `Metrics.Gauge` maintaining the current number of subscriptions to channels.
+    public static var activeChannelSubscriptions = IncrementalGauge(.activeChannelSubscriptions)
+    /// The wrapped `Metrics.Gauge` maintaining the current number of subscriptions to channel patterns.
+    public static var activePatternSubscriptions = IncrementalGauge(.activePatternSubscriptions)
     /// The `Metrics.Counter` that retains the number of connections made since application startup.
     public static let totalConnectionCount = Counter(label: .totalConnectionCount)
+    /// The `Metrics.Counter` that retains the number of subscription messages that have been received.
+    public static let subscriptionMessagesReceivedCount = Counter(label: .subscriptionMessagesReceivedCount)
     /// The `Metrics.Counter` that retains the number of commands that successfully returned from Redis
     /// since application startup.
     public static let commandSuccessCount = Counter(label: .commandSuccessCount)
@@ -56,30 +65,42 @@ public struct RedisMetrics {
     private init() { }
 }
 
-/// A specialized wrapper class for working with `Metrics.Gauge` objects for the purpose of an incrementing or decrementing count of active Redis connections.
-public class ActiveConnectionGauge {
-    private let gauge = Gauge(label: .activeConnectionCount)
-    private let count:  NIOAtomic<Int> = .makeAtomic(value: 0)
-    
-    /// The number of the connections that are currently reported as active.
-    public var currentCount: Int { return count.load() }
-    
-    internal init() { }
-    
-    /// Increments the current count by the amount specified.
-    /// - Parameter amount: The number to increase the current count by. Default is `1`.
-    public func increment(by amount: Int = 1) {
-        _ = self.count.add(amount)
-        self.gauge.record(self.count.load())
-    }
-    
-    /// Decrements the current count by the amount specified.
-    /// - Parameter amount: The number to decrease the current count by. Default is `1`.
-    public func decrement(by amount: Int = 1) {
-        _ = self.count.sub(amount)
-        self.gauge.record(self.count.load())
+extension RedisMetrics {
+    /// A specialized wrapper class for working with `Metrics.Gauge` objects for the purpose of an incrementing or decrementing count of active objects.
+    public class IncrementalGauge {
+        private let gauge: Gauge
+        private let count = NIOAtomic<Int>.makeAtomic(value: 0)
+        
+        /// The number of the objects that are currently reported as active.
+        public var currentCount: Int { return count.load() }
+        
+        internal init(_ label: Label) {
+            self.gauge = .init(label: label)
+        }
+        
+        /// Increments the current count by the amount specified.
+        /// - Parameter amount: The number to increase the current count by. Default is `1`.
+        public func increment(by amount: Int = 1) {
+            _ = self.count.add(amount)
+            self.gauge.record(self.count.load())
+        }
+        
+        /// Decrements the current count by the amount specified.
+        /// - Parameter amount: The number to decrease the current count by. Default is `1`.
+        public func decrement(by amount: Int = 1) {
+            _ = self.count.sub(amount)
+            self.gauge.record(self.count.load())
+        }
+        
+        /// Resets the current count to `0`.
+        public func reset() {
+            _ = self.count.exchange(with: 0)
+            self.gauge.record(self.count.load())
+        }
     }
 }
+
+// MARK: SwiftMetrics Convenience
 
 extension Metrics.Counter {
     @inline(__always)

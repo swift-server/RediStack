@@ -40,7 +40,7 @@ internal final class ConnectionPool {
     private let connectionFactory: (EventLoop) -> EventLoopFuture<RedisConnection>
 
     /// A stack of connections that are active and suitable for use by clients.
-    private var availableConnections: ArraySlice<RedisConnection>
+    private(set) var availableConnections: ArraySlice<RedisConnection>
 
     /// A buffer of users waiting for connections to be handed over.
     private var connectionWaiters: CircularBuffer<Waiter>
@@ -66,7 +66,7 @@ internal final class ConnectionPool {
     private var pendingConnectionCount: Int
 
     /// The number of connections that have been handed out to users and are in active use.
-    private var leasedConnectionCount: Int
+    private(set) var leasedConnectionCount: Int
 
     /// Whether this connection pool is "leaky".
     ///

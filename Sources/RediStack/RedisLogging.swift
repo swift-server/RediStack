@@ -48,6 +48,8 @@ public enum RedisLogging {
         internal static var poolConnectionRetryBackoff: String { "rdstk_conn_retry_prev_backoff" }
         internal static var poolConnectionRetryNewBackoff: String { "rdstk_conn_retry_new_backoff" }
         internal static var poolConnectionCount: String { "rdstk_pool_active_connection_count" }
+        internal static let pubsubTarget = "rdstk_ps_target"
+        internal static let subscriptionCount = "rdstk_sub_count"
     }
     
     public static let baseConnectionLogger = Logger(label: Labels.connection)
@@ -70,6 +72,24 @@ extension Logger {
 /// An execution context includes things like a `Logging.Logger` instance for command activity logs.
 internal protocol RedisClientWithUserContext: RedisClient {
     func send(command: String, with arguments: [RESPValue], context: Context?) -> EventLoopFuture<RESPValue>
+
+    func subscribe(
+        to channels: [RedisChannelName],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        context: Context?
+    ) -> EventLoopFuture<Void>
+    func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void>
+
+    func psubscribe(
+        to patterns: [String],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        context: Context?
+    ) -> EventLoopFuture<Void>
+    func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void>
 }
 
 /// An internal implementation wrapper of a given `RedisClientWithUserContext` that enables users to pass a given `Logging.Logger`
@@ -85,15 +105,59 @@ internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: Redi
         self.context = context
     }
     
-    /// Forwards the command and arguments to an internal send method of the underlying connection.
+    // Create a new instance of the custom logging implementation reusing the same client.
+    
+    internal func logging(to logger: Logger) -> RedisClient {
+        return UserContextRedisClient(client: self.client, context: logger)
+    }
+    
+    // Forward the commands to the underlying client
+    
     internal func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
         return self.eventLoop.flatSubmit {
             return self.client.send(command: command, with: arguments, context: self.context)
         }
     }
     
-    /// Creates a new instance of the custom logging implementation reusing the same connection.
-    internal func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self.client, context: logger)
+    internal func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
+        return self.eventLoop.flatSubmit { self.client.unsubscribe(from: channels, context: self.context) }
+    }
+    
+    internal func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
+        return self.eventLoop.flatSubmit { self.client.punsubscribe(from: patterns, context: self.context) }
+    }
+
+    internal func subscribe(
+        to channels: [RedisChannelName],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+    ) -> EventLoopFuture<Void> {
+        return self.eventLoop.flatSubmit {
+            self.client.subscribe(
+                to: channels,
+                messageReceiver: receiver,
+                onSubscribe: subscribeHandler,
+                onUnsubscribe: unsubscribeHandler,
+                context: self.context
+            )
+        }
+    }
+    
+    internal func psubscribe(
+        to patterns: [String],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+    ) -> EventLoopFuture<Void> {
+        return self.eventLoop.flatSubmit {
+            self.client.psubscribe(
+                to: patterns,
+                messageReceiver: receiver,
+                onSubscribe: subscribeHandler,
+                onUnsubscribe: unsubscribeHandler,
+                context: self.context
+            )
+        }
     }
 }

@@ -29,6 +29,10 @@ import Logging
 public class RedisConnectionPool {
     /// A unique identifer to represent this connection.
     public let id = UUID()
+    /// The count of connections that are active and available for use.
+    public var availableConnectionCount: Int { self.pool?.availableConnections.count ?? 0 }
+    /// The number of connections that have been handed out and are in active use.
+    public var leasedConnectionCount: Int { self.pool?.leasedConnectionCount ?? 0 }
 
     // This needs to be var because we hand it a closure that references us strongly. This also
     // establishes a reference cycle which we need to break.
@@ -38,6 +42,8 @@ public class RedisConnectionPool {
     /// This needs to be var because it is updatable and mutable. As a result, aside from init,
     /// all use of this var must occur on the event loop.
     private var serverConnectionAddresses: ConnectionAddresses
+    /// This needs to be a var because we reuse the same connection
+    private var pubsubConnection: RedisConnection?
 
     private let connectionPassword: String?
     private let connectionSystemContext: Logger
@@ -130,6 +136,8 @@ extension RedisConnectionPool {
         self.loop.execute {
             self.pool?.close(promise: promise, logger: self.prepareLoggerForUse(logger))
 
+            self.pubsubConnection = nil
+
             // This breaks the cycle between us and the pool.
             self.pool = nil
         }
@@ -191,16 +199,185 @@ extension RedisConnectionPool: RedisClient {
     }
 
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        // Establish event loop context then jump to the in-loop version.
-        return self.loop.flatSubmit {
-            return self.send(command: command, with: arguments, context: nil)
-        }
+        return self.send(command: command, with: arguments, context: nil)
+    }
+    
+    public func subscribe(
+        to channels: [RedisChannelName],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+    ) -> EventLoopFuture<Void> {
+        return self.subscribe(
+            to: channels,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler,
+            context: nil
+        )
+    }
+    
+    public func psubscribe(
+        to patterns: [String],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+    ) -> EventLoopFuture<Void> {
+        return self.psubscribe(
+            to: patterns,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler,
+            context: nil
+        )
+    }
+    
+    public func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
+        return self.unsubscribe(from: channels, context: nil)
+    }
+    
+    public func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
+        return self.punsubscribe(from: patterns, context: nil)
     }
 }
 
 // MARK: RedisClientWithUserContext conformance
 extension RedisConnectionPool: RedisClientWithUserContext {
     internal func send(command: String, with arguments: [RESPValue], context: Logger?) -> EventLoopFuture<RESPValue> {
+        return self.forwardOperationToConnection(
+            { (connection, returnConnection, context) in
+
+                connection.sendCommandsImmediately = true
+
+                return connection
+                    .send(command: command, with: arguments, context: context)
+                    .always { _ in returnConnection(connection, context) }
+            },
+            preferredConnection: nil,
+            context: context
+        )
+    }
+
+    internal func subscribe(
+        to channels: [RedisChannelName],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        context: Context?
+    ) -> EventLoopFuture<Void> {
+        return self.subscribe(
+            using: {
+                $0.subscribe(
+                    to: channels,
+                    messageReceiver: receiver,
+                    onSubscribe: subscribeHandler,
+                    onUnsubscribe: $1,
+                    context: $2
+                )
+            },
+            onUnsubscribe: unsubscribeHandler,
+            context: context
+        )
+    }
+
+    internal func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void> {
+        return self.unsubscribe(using: { $0.unsubscribe(from: channels, context: $1) }, context: context)
+    }
+
+    internal func psubscribe(
+        to patterns: [String],
+        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
+        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        context: Context?
+    ) -> EventLoopFuture<Void> {
+        return self.subscribe(
+            using: {
+                $0.psubscribe(
+                    to: patterns,
+                    messageReceiver: receiver,
+                    onSubscribe: subscribeHandler,
+                    onUnsubscribe: $1,
+                    context: $2
+                )
+            },
+            onUnsubscribe: unsubscribeHandler,
+            context: context
+        )
+    }
+
+    internal func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void> {
+        return self.unsubscribe(using: { $0.punsubscribe(from: patterns, context: $1) }, context: context)
+    }
+
+    private func subscribe(
+        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Context) -> EventLoopFuture<Void>,
+        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        context: Context?
+    ) -> EventLoopFuture<Void> {
+        return self.forwardOperationToConnection(
+            { (connection, returnConnection, context) in
+
+                if self.pubsubConnection == nil { self.pubsubConnection = connection }
+                
+                let onUnsubscribe: RedisSubscriptionChangeHandler = { channelName, subCount in
+                    defer { unsubscribeHandler?(channelName, subCount) }
+                    
+                    guard
+                        subCount == 0,
+                        let connection = self.pubsubConnection
+                    else { return }
+                    
+                    returnConnection(connection, context)
+                    self.pubsubConnection = nil // break ref cycle
+                }
+                
+                return operation(connection, onUnsubscribe, context)
+            },
+            preferredConnection: self.pubsubConnection,
+            context: context
+        )
+    }
+
+    private func unsubscribe(
+        using operation: @escaping (RedisConnection, Context) -> EventLoopFuture<Void>,
+        context: Context?
+    ) -> EventLoopFuture<Void> {
+        return self.forwardOperationToConnection(
+            { (connection, returnConnection, context) in
+                return operation(connection, context)
+                    .always { _ in
+                        // we aren't responsible for releasing the connection, subscribing is
+                        // so we check if we have pubsub connection has been released, which indicates this might be
+                        // a "no-op" unsub, so we need to return this connection
+                        guard
+                            self.pubsubConnection == nil,
+                            self.leasedConnectionCount > 0
+                        else { return }
+                        returnConnection(connection, context)
+                    }
+            },
+            preferredConnection: self.pubsubConnection,
+            context: context
+        )
+    }
+
+    private func forwardOperationToConnection<T>(
+        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Context) -> Void, Context) -> EventLoopFuture<T>,
+        preferredConnection: RedisConnection?,
+        context: Context?
+    ) -> EventLoopFuture<T> {
+        // Establish event loop context then jump to the in-loop version.
+        guard self.loop.inEventLoop else {
+            return self.loop.flatSubmit {
+                return self.forwardOperationToConnection(
+                    operation,
+                    preferredConnection: preferredConnection,
+                    context: context
+                )
+            }
+        }
+
         self.loop.preconditionInEventLoop()
 
         guard let pool = self.pool else {
@@ -209,15 +386,14 @@ extension RedisConnectionPool: RedisClientWithUserContext {
 
         let logger = self.prepareLoggerForUse(context)
         
-        // For now we have to default the deadline.
-        // For maximum compatibility with the existing implementation, we use a fairly-long timeout: one minute.
-        return pool.leaseConnection(deadline: .now() + .seconds(60), logger: logger)
-            .flatMap { connection in
-                connection.sendCommandsImmediately = true
-                return connection
-                    .send(command: command, with: arguments, context: context)
-                    .always { _ in pool.returnConnection(connection, logger: logger) }
-            }
+        guard let connection = preferredConnection else {
+            // For now we have to default the deadline.
+            // For maximum compatibility with the existing implementation, we use a fairly-long timeout: one minute.
+            return pool.leaseConnection(deadline: .now() + .seconds(60), logger: logger)
+                .flatMap { operation($0, pool.returnConnection(_:logger:), logger) }
+        }
+
+        return operation(connection, pool.returnConnection(_:logger:), logger)
     }
 }
 

@@ -50,15 +50,7 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     /// See `XCTest.XCTestCase.setUp()`
     open override func setUp() {
         do {
-            let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
-            self.pool = RedisConnectionPool(
-                serverConnectionAddresses: [address],
-                loop: self.eventLoopGroup.next(),
-                maximumConnectionCount: .maximumActiveConnections(4),
-                minimumConnectionCount: 0,
-                connectionPassword: self.redisPassword
-            )
-            self.pool.activate()
+            self.pool = try self.makeNewPool()
         } catch {
             fatalError("Failed to make a RedisConnectionPool: \(error)")
         }
@@ -80,5 +72,19 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
 
         self.pool.close()
         self.pool = nil
+    }
+    
+    public func makeNewPool() throws -> RedisConnectionPool {
+        let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
+        let pool = RedisConnectionPool(
+            serverConnectionAddresses: [address],
+            loop: self.eventLoopGroup.next(),
+            maximumConnectionCount: .maximumActiveConnections(4),
+            minimumConnectionCount: 0,
+            connectionPassword: self.redisPassword
+        )
+        pool.activate()
+
+        return pool
     }
 }
