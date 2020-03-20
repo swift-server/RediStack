@@ -62,10 +62,10 @@ Ubuntu Bionic:
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab-ci/ubuntu-bionic.yml'
+    include: '/.gitlab/ci/ubuntu-bionic.yml'
 
 Ubuntu Xenial:
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab-ci/ubuntu-xenial.yml'
+    include: '/.gitlab/ci/ubuntu-xenial.yml'
