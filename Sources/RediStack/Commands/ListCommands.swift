@@ -23,7 +23,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list.
     /// - Returns: The number of elements in the list.
     public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "LLEN", with: args)
             .map()
     }
@@ -37,7 +37,7 @@ extension RedisClient {
     /// - Returns: The element stored at index, or `.null` if out of bounds.
     public func lindex(_ index: Int, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: index)
         ]
         return send(command: "LINDEX", with: args)
@@ -76,7 +76,7 @@ extension RedisClient {
         in key: RedisKey
     ) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: index),
             value.convertedToRESPValue()
         ]
@@ -99,7 +99,7 @@ extension RedisClient {
         count: Int = 0
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: count),
             value.convertedToRESPValue()
         ]
@@ -121,7 +121,7 @@ extension RedisClient {
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, before start: Int, after stop: Int) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: start),
             .init(bulk: stop)
         ]
@@ -261,7 +261,7 @@ extension RedisClient {
     /// - Returns: An array of elements found within the range specified.
     public func lrange(from key: RedisKey, firstIndex: Int, lastIndex: Int) -> EventLoopFuture<[RESPValue]> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: firstIndex),
             .init(bulk: lastIndex)
         ]
@@ -533,8 +533,8 @@ extension RedisClient {
     /// - Returns: The element that was moved.
     public func rpoplpush(from source: RedisKey, to dest: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
-            .init(bulk: source),
-            .init(bulk: dest)
+            .init(from: source),
+            .init(from: dest)
         ]
         return send(command: "RPOPLPUSH", with: args)
     }
@@ -579,9 +579,9 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
-            .init(bulk: source),
-            .init(bulk: dest),
-            .init(bulk: timeout.seconds)
+            .init(from: source),
+            .init(from: dest),
+            .init(from: timeout.seconds)
         ]
         return send(command: "BRPOPLPUSH", with: args)
     }
@@ -662,7 +662,7 @@ extension RedisClient {
         _ pivot: Value
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: pivotKeyword),
             pivot.convertedToRESPValue(),
             element.convertedToRESPValue()
@@ -681,7 +681,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, or `.null`.
     public func lpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "LPOP", with: args)
     }
     
@@ -710,7 +710,7 @@ extension RedisClient {
     public func lpush<Value: RESPValueConvertible>(_ elements: [Value], into key: RedisKey) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
         
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
         
         return send(command: "LPUSH", with: args)
@@ -741,7 +741,7 @@ extension RedisClient {
     @inlinable
     public func lpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             element.convertedToRESPValue()
         ]
         return send(command: "LPUSHX", with: args)
@@ -758,7 +758,7 @@ extension RedisClient {
     /// - Parameter key: The key of the list to pop from.
     /// - Returns: The element that was popped from the list, else `.null`.
     public func rpop(from key: RedisKey) -> EventLoopFuture<RESPValue> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "RPOP", with: args)
     }
     
@@ -784,7 +784,7 @@ extension RedisClient {
     public func rpush<Value: RESPValueConvertible>(_ elements: [Value], into key: RedisKey) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
 
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
         
         return send(command: "RPUSH", with: args)
@@ -814,7 +814,7 @@ extension RedisClient {
     @inlinable
     public func rpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             element.convertedToRESPValue()
         ]
         return send(command: "RPUSHX", with: args)

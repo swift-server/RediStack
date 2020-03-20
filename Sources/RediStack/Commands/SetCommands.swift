@@ -26,7 +26,7 @@ extension RedisClient {
     /// - Parameter key: The key of the set.
     /// - Returns: A list of elements found within the set.
     public func smembers(of key: RedisKey) -> EventLoopFuture<[RESPValue]> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "SMEMBERS", with: args)
             .map()
     }
@@ -57,7 +57,7 @@ extension RedisClient {
     @inlinable
     public func sismember<Value: RESPValueConvertible>(_ element: Value, of key: RedisKey) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             element.convertedToRESPValue()
         ]
         return send(command: "SISMEMBER", with: args)
@@ -71,7 +71,7 @@ extension RedisClient {
     /// - Parameter key: The key of the set.
     /// - Returns: The total count of elements in the set.
     public func scard(of key: RedisKey) -> EventLoopFuture<Int> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "SCARD", with: args)
             .map()
     }
@@ -87,7 +87,7 @@ extension RedisClient {
     public func sadd<Value: RESPValueConvertible>(_ elements: [Value], to key: RedisKey) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
 
         return send(command: "SADD", with: args)
@@ -117,7 +117,7 @@ extension RedisClient {
     public func srem<Value: RESPValueConvertible>(_ elements: [Value], from key: RedisKey) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
 
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
         
         return send(command: "SREM", with: args)
@@ -149,7 +149,7 @@ extension RedisClient {
         guard count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
         
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: count)
         ]
         return send(command: "SPOP", with: args)
@@ -189,7 +189,7 @@ extension RedisClient {
         guard count != 0 else { return self.eventLoop.makeSucceededFuture([]) }
 
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: count)
         ]
         return send(command: "SRANDMEMBER", with: args)
@@ -231,8 +231,8 @@ extension RedisClient {
         guard sourceKey != destKey else { return self.eventLoop.makeSucceededFuture(true) }
 
         let args: [RESPValue] = [
-            .init(bulk: sourceKey),
-            .init(bulk: destKey),
+            .init(from: sourceKey),
+            .init(from: destKey),
             element.convertedToRESPValue()
         ]
         return send(command: "SMOVE", with: args)
@@ -345,7 +345,7 @@ extension RedisClient {
     public func sdiffstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        var args: [RESPValue] = [.init(bulk: destination)]
+        var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
         
         return send(command: "SDIFFSTORE", with: args)
@@ -414,7 +414,7 @@ extension RedisClient {
     public func sinterstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        var args: [RESPValue] = [.init(bulk: destination)]
+        var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
         
         return send(command: "SINTERSTORE", with: args)
@@ -483,7 +483,7 @@ extension RedisClient {
     public func sunionstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
-        var args: [RESPValue] = [.init(bulk: destination)]
+        var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
         
         return send(command: "SUNIONSTORE", with: args)

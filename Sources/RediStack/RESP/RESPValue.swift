@@ -34,12 +34,25 @@ public enum RESPValue {
     case integer(Int)
     case array([RESPValue])
 
+    /// Stores the representation determined by the `RESPValueConvertible` value.
+    /// - Important: If you are sending this value to a Redis server, the type should be convertible to a `.bulkString`.
+    /// - Parameter value: The value that needs to be converted and stored in `RESPValue` format.
+    @_specialize(exported: true, where Value == RedisKey)
+    @_specialize(exported: true, where Value == String)
+    @_specialize(exported: true, where Value == Double)
+    @_specialize(exported: true, where Value == UInt)
+    @_specialize(exported: true, where Value == Int)
+    public init<Value: RESPValueConvertible>(from value: Value) {
+        self = value.convertedToRESPValue()
+    }
+
     /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString` and `.bulkString` representations directly, if needed.
-    static let allocator = ByteBufferAllocator()
+    internal static let allocator = ByteBufferAllocator()
 
     /// Initializes a `bulkString` value.
     /// - Parameter value: The `String` to store in a `.bulkString` representation.
-    public init(bulk value: String?) {
+    @usableFromInline
+    internal init(bulk value: String?) {
         guard let unwrappedValue = value else {
             self = .bulkString(nil)
             return
@@ -52,15 +65,9 @@ public enum RESPValue {
 
     /// Initializes a `bulkString` value.
     /// - Parameter value: The `Int` value to store in a `.bulkString` representation.
-    public init<Value: FixedWidthInteger>(bulk value: Value?) {
+    @usableFromInline
+    internal init<Value: FixedWidthInteger>(bulk value: Value?) {
         self.init(bulk: value?.description)
-    }
-
-    /// Stores the representation determined by the `RESPValueConvertible` value.
-    /// - Important: If you are sending this value to a Redis server, the type should be convertible to a `.bulkString`.
-    /// - Parameter value: The value that needs to be converted and stored in `RESPValue` format.
-    public init<Value: RESPValueConvertible>(_ value: Value) {
-        self = value.convertedToRESPValue()
     }
 }
 

@@ -20,9 +20,13 @@
 /// ```swift
 /// let key: RedisKey = "foo"
 /// ```
-public struct RedisKey: RawRepresentable {
-    public typealias RawValue = String
-    
+public struct RedisKey:
+    RESPValueConvertible,
+    RawRepresentable,
+    ExpressibleByStringLiteral,
+    CustomStringConvertible, CustomDebugStringConvertible,
+    Comparable, Hashable, Codable
+{
     public let rawValue: String
     
     /// Initializes a type-safe representation of a key to a value in a Redis instance.
@@ -31,84 +35,29 @@ public struct RedisKey: RawRepresentable {
         self.rawValue = key
     }
     
-    public init?(rawValue: String) {
-        self.rawValue = rawValue
-    }
-}
-
-// MARK: ExpressibleByStringLiteral
-
-extension RedisKey: ExpressibleByStringLiteral {
-    public init(stringLiteral value: String) {
-        self.rawValue = value
-    }
-}
-
-// MARK: CustomStringConvertible
-
-extension RedisKey: CustomStringConvertible {
     public var description: String { return self.rawValue }
-}
-
-// MARK: CustomDebugStringConvertible
-
-extension RedisKey: CustomDebugStringConvertible {
-    public var debugDescription: String { return "RedisKey: \(self.rawValue)" }
-}
-
-// MARK: Comparable && Equatable
-
-extension RedisKey: Comparable {
-    public static func <(lhs: RedisKey, rhs: RedisKey) -> Bool {
-        return lhs.rawValue < rhs.rawValue
-    }
+    public var debugDescription: String { return "\(String(describing: type(of: self))): \(self.rawValue)" }
     
-    public static func ==(lhs: RedisKey, rhs: RedisKey) -> Bool {
-        return lhs.rawValue == rhs.rawValue
+    public init?(fromRESP value: RESPValue) {
+        guard let string = value.string else { return nil }
+        self.rawValue = string
     }
-}
-
-// MARK: Hashable
-
-extension RedisKey: Hashable {
-    public func hash(into hasher: inout Hasher) {
-        hasher.combine(self.rawValue)
-    }
-}
-
-// MARK: Codable
-
-extension RedisKey: Codable {
+    public init?(rawValue: String) { self.rawValue = rawValue }
+    public init(stringLiteral value: String) { self.rawValue = value }
     public init(from decoder: Decoder) throws {
         let container = try decoder.singleValueContainer()
         self.rawValue = try container.decode(String.self)
     }
     
-    public func encode(to encoder: Encoder) throws {
-        var container = encoder.singleValueContainer()
-        try container.encode(self.rawValue)
-    }
-}
-
-// MARK: RESPValue
-
-extension RESPValue {
-    /// Initializes a `bulkString` value from the `RedisKey`.
-    /// - Prameter key: The RedisKey to store in a `.bulkString` representation.
-    public init(bulk key: RedisKey) {
-        self = .init(bulk: key.rawValue)
-    }
-}
-
-// MARK: RESPValueConvertible
-
-extension RedisKey: RESPValueConvertible {
-    public init?(fromRESP value: RESPValue) {
-        guard let string = value.string else { return nil }
-        self.rawValue = string
+    public static func <(lhs: RedisKey, rhs: RedisKey) -> Bool {
+        return lhs.rawValue < rhs.rawValue
     }
     
     public func convertedToRESPValue() -> RESPValue {
         return .init(bulk: self.rawValue)
+    }
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        try container.encode(self.rawValue)
     }
 }

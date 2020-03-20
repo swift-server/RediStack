@@ -111,7 +111,7 @@ extension RedisClient {
     /// - Returns: `true` if the expiration was set.
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: timeout.seconds)
         ]
         return send(command: "EXPIRE", with: args)
@@ -154,7 +154,7 @@ extension RedisClient {
         var args: [RESPValue] = [.init(bulk: pos)]
 
         if let k = key {
-            args.insert(.init(bulk: k), at: 0)
+            args.insert(.init(from: k), at: 0)
         }
 
         if let m = match {

@@ -52,7 +52,7 @@ extension RedisClient {
     public func hdel(_ fields: [String], from key: RedisKey) -> EventLoopFuture<Int> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
         
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: fields)
 
         return send(command: "HDEL", with: args)
@@ -79,7 +79,7 @@ extension RedisClient {
     /// - Returns: `true` if the hash contains the field, `false` if either the key or field do not exist.
     public func hexists(_ field: String, in key: RedisKey) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field)
         ]
         return send(command: "HEXISTS", with: args)
@@ -93,7 +93,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash to get field count of.
     /// - Returns: The number of fields in the hash, or `0` if the key doesn't exist.
     public func hlen(of key: RedisKey) -> EventLoopFuture<Int> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "HLEN", with: args)
             .map()
     }
@@ -107,7 +107,7 @@ extension RedisClient {
     /// - Returns: The string length of the hash field's value, or `0` if the field or hash do not exist.
     public func hstrlen(of field: String, in key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field)
         ]
         return send(command: "HSTRLEN", with: args)
@@ -120,7 +120,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash.
     /// - Returns: A list of field names stored within the hash.
     public func hkeys(in key: RedisKey) -> EventLoopFuture<[String]> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "HKEYS", with: args)
             .map()
     }
@@ -131,7 +131,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash.
     /// - Returns: A list of all values stored in a hash.
     public func hvals(in key: RedisKey) -> EventLoopFuture<[RESPValue]> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "HVALS", with: args)
             .map()
     }
@@ -216,7 +216,7 @@ extension RedisClient {
         in key: RedisKey
     ) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field),
             value.convertedToRESPValue()
         ]
@@ -241,7 +241,7 @@ extension RedisClient {
         in key: RedisKey
     ) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field),
             value.convertedToRESPValue()
         ]
@@ -264,7 +264,7 @@ extension RedisClient {
     ) -> EventLoopFuture<Void> {
         assert(fields.count > 0, "At least 1 key-value pair should be specified")
 
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.add(contentsOf: fields, overestimatedCountBeingAdded: fields.count * 2) { (array, element) in
             array.append(.init(bulk: element.key))
             array.append(element.value.convertedToRESPValue())
@@ -287,7 +287,7 @@ extension RedisClient {
     /// - Returns: The value of the hash field. If the key or field does not exist, it will be `.null`.
     public func hget(_ field: String, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field)
         ]
         return send(command: "HGET", with: args)
@@ -321,7 +321,7 @@ extension RedisClient {
     public func hmget(_ fields: [String], from key: RedisKey) -> EventLoopFuture<[RESPValue]> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
         
-        var args: [RESPValue] = [.init(bulk: key)]
+        var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: fields)
 
         return send(command: "HMGET", with: args)
@@ -380,7 +380,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash to pull from.
     /// - Returns: A key-value pair list of fields and their values.
     public func hgetall(from key: RedisKey) -> EventLoopFuture<[String: RESPValue]> {
-        let args = [RESPValue(bulk: key)]
+        let args = [RESPValue(from: key)]
         return send(command: "HGETALL", with: args)
             .map(to: [RESPValue].self)
             .flatMapThrowing(Self._mapHashResponse)
@@ -448,7 +448,7 @@ extension RedisClient {
         _ key: RedisKey
     ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
-            .init(bulk: key),
+            .init(from: key),
             .init(bulk: field),
             amount.convertedToRESPValue()
         ]
