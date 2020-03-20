@@ -134,30 +134,32 @@ final class HashCommandsTests: RediStackIntegrationTestCase {
         let float = try connection.hincrbyfloat(Float(-10.23523), field: "first", in: #function).wait()
         XCTAssertEqual(float, -3.95523)
     }
-
-    func test_hscan() throws {
-        var dataset: [String: String] = [:]
-        for index in 1...15 {
-            let key = "key\(index)\(index % 2 == 0 ? "_even" : "_odd")"
-            dataset[key] = "\(index)"
-        }
-        _ = try connection.hmset(dataset, in: #function).wait()
-
-        var (cursor, fields) = try connection.hscan(#function, count: 5).wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(fields.count, 5)
-
-        (_, fields) = try connection.hscan(#function, startingFrom: cursor, count: 8).wait()
-        XCTAssertGreaterThanOrEqual(fields.count, 8)
-
-        (cursor, fields) = try connection.hscan(#function, matching: "*_odd").wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(fields.count, 1)
-        XCTAssertLessThanOrEqual(fields.count, 8)
-
-        (cursor, fields) = try connection.hscan(#function, matching: "*_ev*").wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(fields.count, 1)
-        XCTAssertLessThanOrEqual(fields.count, 7)
-    }
+    
+    // TODO: #23 -- Rework Scan Unit Test
+    // This is extremely flakey, and causes non-deterministic failures because of the assert on key counts
+//    func test_hscan() throws {
+//        var dataset: [String: String] = [:]
+//        for index in 1...15 {
+//            let key = "key\(index)\(index % 2 == 0 ? "_even" : "_odd")"
+//            dataset[key] = "\(index)"
+//        }
+//        _ = try connection.hmset(dataset, in: #function).wait()
+//
+//        var (cursor, fields) = try connection.hscan(#function, count: 5).wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(fields.count, 5)
+//
+//        (_, fields) = try connection.hscan(#function, startingFrom: cursor, count: 8).wait()
+//        XCTAssertGreaterThanOrEqual(fields.count, 8)
+//
+//        (cursor, fields) = try connection.hscan(#function, matching: "*_odd").wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(fields.count, 1)
+//        XCTAssertLessThanOrEqual(fields.count, 8)
+//
+//        (cursor, fields) = try connection.hscan(#function, matching: "*_ev*").wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(fields.count, 1)
+//        XCTAssertLessThanOrEqual(fields.count, 7)
+//    }
 }

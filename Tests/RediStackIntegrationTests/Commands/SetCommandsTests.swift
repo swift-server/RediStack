@@ -212,44 +212,46 @@ final class SetCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(results[2].string, "3")
         XCTAssertEqual(results[3].string, "4")
     }
-
-    func test_sscan() throws {
-        let key: RedisKey = #function
-        let dataset = [
-            "Copenhagen, Denmark",
-            "Roskilde, Denmark",
-            "Herning, Denmark",
-            "Kolding, Denmark",
-            "Taastrup, Denmark",
-            "London, England",
-            "Bath, England",
-            "Birmingham, England",
-            "Cambridge, England",
-            "Durham, England",
-            "Seattle, United States",
-            "Austin, United States",
-            "New York City, United States",
-            "San Francisco, United States",
-            "Honolulu, United States"
-        ]
-
-        _ = try connection.sadd(dataset, to: key).wait()
-
-        var (cursor, results) = try connection.sscan(key, count: 5).wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(results.count, 5)
-
-        (_, results) = try connection.sscan(key, startingFrom: cursor, count: 8).wait()
-        XCTAssertGreaterThanOrEqual(results.count, 8)
-
-        (cursor, results) = try connection.sscan(key, matching: "*Denmark").wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(results.count, 1)
-        XCTAssertLessThanOrEqual(results.count, 5)
-
-        (cursor, results) = try connection.sscan(key, matching: "*ing*").wait()
-        XCTAssertGreaterThanOrEqual(cursor, 0)
-        XCTAssertGreaterThanOrEqual(results.count, 1)
-        XCTAssertLessThanOrEqual(results.count, 3)
-    }
+    
+    // TODO: #23 -- Rework Scan Unit Test
+    // This is extremely flakey, and causes non-deterministic failures because of the assert on key counts
+//    func test_sscan() throws {
+//        let key: RedisKey = #function
+//        let dataset = [
+//            "Copenhagen, Denmark",
+//            "Roskilde, Denmark",
+//            "Herning, Denmark",
+//            "Kolding, Denmark",
+//            "Taastrup, Denmark",
+//            "London, England",
+//            "Bath, England",
+//            "Birmingham, England",
+//            "Cambridge, England",
+//            "Durham, England",
+//            "Seattle, United States",
+//            "Austin, United States",
+//            "New York City, United States",
+//            "San Francisco, United States",
+//            "Honolulu, United States"
+//        ]
+//
+//        _ = try connection.sadd(dataset, to: key).wait()
+//
+//        var (cursor, results) = try connection.sscan(key, count: 5).wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(results.count, 5)
+//
+//        (_, results) = try connection.sscan(key, startingFrom: cursor, count: 8).wait()
+//        XCTAssertGreaterThanOrEqual(results.count, 8)
+//
+//        (cursor, results) = try connection.sscan(key, matching: "*Denmark").wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(results.count, 1)
+//        XCTAssertLessThanOrEqual(results.count, 5)
+//
+//        (cursor, results) = try connection.sscan(key, matching: "*ing*").wait()
+//        XCTAssertGreaterThanOrEqual(cursor, 0)
+//        XCTAssertGreaterThanOrEqual(results.count, 1)
+//        XCTAssertLessThanOrEqual(results.count, 3)
+//    }
 }

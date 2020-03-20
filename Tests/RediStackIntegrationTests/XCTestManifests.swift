@@ -30,7 +30,6 @@ extension HashCommandsTests {
         ("test_hlen", test_hlen),
         ("test_hmget", test_hmget),
         ("test_hmset", test_hmset),
-        ("test_hscan", test_hscan),
         ("test_hset", test_hset),
         ("test_hsetnx", test_hsetnx),
         ("test_hstrlen", test_hstrlen),
@@ -93,7 +92,6 @@ extension SetCommandsTests {
         ("test_spop", test_spop),
         ("test_srandmember", test_srandmember),
         ("test_srem", test_srem),
-        ("test_sscan", test_sscan),
         ("test_sunion", test_sunion),
         ("test_sunionstore", test_sunionstore),
     ]
@@ -126,7 +124,6 @@ extension SortedSetCommandsTests {
         ("test_zrevrangebylex", test_zrevrangebylex),
         ("test_zrevrangebyscore", test_zrevrangebyscore),
         ("test_zrevrank", test_zrevrank),
-        ("test_zscan", test_zscan),
         ("test_zscore", test_zscore),
         ("test_zunionstore", test_zunionstore),
     ]
