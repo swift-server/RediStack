@@ -12,7 +12,7 @@ swift 5.1:
 
 swift 5.2:
   extends: .unit-test
-  image: swiftlang/swift:nightly-5.2-bionic
+  image: swift:5.2-bionic
 
 swift trunk:
   extends: .unit-test

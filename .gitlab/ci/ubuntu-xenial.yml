@@ -12,7 +12,7 @@ swift 5.1:
 
 swift 5.2:
   extends: .unit-test
-  image: swiftlang/swift:nightly-5.2-xenial
+  image: swift:5.2-xenial
 
 swift trunk:
   extends: .unit-test
