@@ -62,7 +62,7 @@ public class ActiveConnectionGauge {
     private let count:  NIOAtomic<Int> = .makeAtomic(value: 0)
     
     /// The number of the connections that are currently reported as active.
-    var currentCount: Int { return count.load() }
+    public var currentCount: Int { return count.load() }
     
     internal init() { }
     
