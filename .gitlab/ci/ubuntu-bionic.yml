@@ -14,6 +14,11 @@ swift 5.2:
   extends: .unit-test
   image: swift:5.2-bionic
 
+swift 5.3:
+  extends: .unit-test
+  image: swiftlang/swift:nightly-5.3-bionic
+  allow_failure: true
+
 swift trunk:
   extends: .unit-test
   image: swiftlang/swift:nightly-master-bionic
