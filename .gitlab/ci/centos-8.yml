@@ -1,0 +1,6 @@
+include: '/.gitlab/ci/test-template.yml'
+
+swift trunk:
+  extends: .unit-test
+  image: swiftlang/swift:nightly-master-centos8
+  allow_failure: true

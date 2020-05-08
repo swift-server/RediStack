@@ -69,3 +69,21 @@ Ubuntu Xenial:
   trigger:
     strategy: depend
     include: '/.gitlab/ci/ubuntu-xenial.yml'
+
+Ubuntu Focal:
+  stage: Platform Tests
+  trigger:
+    strategy: depend
+    include: '/.gitlab/ci/ubuntu-focal.yml'
+
+CentOS 8:
+  stage: Platform Tests
+  trigger:
+    strategy: depend
+    include: '/.gitlab/ci/centos-8.yml'
+
+Amazon Linux 2:
+  stage: Platform Tests
+  trigger:
+    strategy: depend
+    include: '/.gitlab/ci/amazonlinux-2.yml'
