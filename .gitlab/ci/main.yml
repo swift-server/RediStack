@@ -1,6 +1,6 @@
 stages:
-  - Quality Checks
   - Platform Tests
+  - Quality Checks
   - Docs
  
 pages:
