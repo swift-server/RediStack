@@ -23,11 +23,11 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         try connection.set(#function, to: "value").wait()
         let r1: String? = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(r1, "value")
-        
+
         try connection.set(#function, to: 30).wait()
         let r2 = try connection.get(#function, as: Int.self).wait()
         XCTAssertEqual(r2, 30)
-        
+
         _ = try connection.delete(#function).wait()
         let r3: RESPValue = try connection.get(#function).wait()
         XCTAssertEqual(r3, .null)
@@ -51,7 +51,12 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         let val = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(val, "value")
     }
-    
+
+    func test_setnx() throws {
+        XCTAssertTrue(try connection.setnx(#function, to: "value").wait())
+        XCTAssertFalse(try connection.setnx(#function, to: "value").wait())
+    }
+
     func test_append() throws {
         let result = "value appended"
         XCTAssertNoThrow(try connection.append("value", to: #function).wait())
@@ -60,7 +65,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         let val = try connection.get(#function, as: String.self).wait()
         XCTAssertEqual(val, result)
     }
-    
+
     func test_mset() throws {
         let data: [RedisKey: Int] = [
             "first": 1,

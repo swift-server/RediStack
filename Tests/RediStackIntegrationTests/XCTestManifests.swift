@@ -148,6 +148,7 @@ extension StringCommandsTests {
         ("test_mset", test_mset),
         ("test_msetnx", test_msetnx),
         ("test_set", test_set),
+        ("test_setnx", test_setnx),
     ]
 }
 

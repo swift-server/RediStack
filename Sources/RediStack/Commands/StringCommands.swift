@@ -26,7 +26,7 @@ extension RedisClient {
         let args = [RESPValue(from: key)]
         return self.send(command: "GET", with: args)
     }
-    
+
     /// Get the value of a key, converting it to the desired type.
     ///
     /// [https://redis.io/commands/get](https://redis.io/commands/get)
@@ -55,7 +55,7 @@ extension RedisClient {
         return send(command: "MGET", with: args)
             .map()
     }
-    
+
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
     ///
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
@@ -68,7 +68,7 @@ extension RedisClient {
         return self.mget(keys)
             .map { return $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
     ///
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
@@ -77,7 +77,7 @@ extension RedisClient {
     public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
         return self.mget(keys)
     }
-    
+
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
     ///
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
@@ -111,7 +111,7 @@ extension RedisClient {
         return send(command: "APPEND", with: args)
             .map()
     }
-    
+
     /// Sets the value stored in the key provided, overwriting the previous value.
     ///
     /// Any previous expiration set on the key is discarded if the SET operation was successful.
@@ -131,6 +131,27 @@ extension RedisClient {
         ]
         return send(command: "SET", with: args)
             .map { _ in () }
+    }
+
+    /// Sets the key to the provided value if the key does not exist.
+    ///
+    /// [https://redis.io/commands/setnx](https://redis.io/commands/setnx)
+    /// - Important: Regardless of the type of data stored at the key, it will be overwritten to a "string" data type.
+    ///
+    /// ie. If the key is a reference to a Sorted Set, its value will be overwritten to be a "string" data type.
+    /// - Parameters:
+    ///     - key: The key to use to uniquely identify this value.
+    ///     - value: The value to set the key to.
+    /// - Returns: `true` if the operation successfully completed.
+    @inlinable
+    public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Bool> {
+        let args: [RESPValue] = [
+            .init(from: key),
+            value.convertedToRESPValue()
+        ]
+        return self.send(command: "SETNX", with: args)
+            .map(to: Int.self)
+            .map { $0 == 1 }
     }
 
     /// Sets each key to their respective new value, overwriting existing values.
@@ -157,7 +178,7 @@ extension RedisClient {
             .map(to: Int.self)
             .map { return $0 == 1 }
     }
-    
+
     @usableFromInline
     func _mset<Value: RESPValueConvertible>(
         command: String,
