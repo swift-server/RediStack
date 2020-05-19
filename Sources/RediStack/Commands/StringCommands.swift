@@ -293,6 +293,60 @@ extension RedisClient {
             .map { $0 == 1 }
     }
 
+    /// Sets a key to the provided value and an expiration timeout in seconds.
+    ///
+    /// See [https://redis.io/commands/setex](https://redis.io/commands/setex)
+    /// - Important: Regardless of the type of data stored at the key, it will be overwritten to a "string" data type.
+    ///
+    /// ie. If the key is a reference to a Sorted Set, its value will be overwritten to be a "string" data type.
+    /// - Important: The actual expiration used will be the specified value or `1`, whichever is larger.
+    /// - Parameters:
+    ///     - key: The key to use to uniquely identify this value.
+    ///     - value: The value to set the key to.
+    ///     - expiration: The number of seconds after which to expire the key.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves if the operation was successful.
+    @inlinable
+    public func setex<Value: RESPValueConvertible>(
+        _ key: RedisKey,
+        to value: Value,
+        expirationInSeconds expiration: Int
+    ) -> EventLoopFuture<Void> {
+        let args: [RESPValue] = [
+            .init(from: key),
+            .init(from: max(1, expiration)),
+            value.convertedToRESPValue()
+        ]
+        return self.send(command: "SETEX", with: args)
+            .map { _ in () }
+    }
+
+    /// Sets a key to the provided value and an expiration timeout in milliseconds.
+    ///
+    /// See [https://redis.io/commands/psetex](https://redis.io/commands/psetex)
+    /// - Important: Regardless of the type of data stored at the key, it will be overwritten to a "string" data type.
+    ///
+    /// ie. If the key is a reference to a Sorted Set, its value will be overwritten to be a "string" data type.
+    /// - Important: The actual expiration used will be the specified value or `1`, whichever is larger.
+    /// - Parameters:
+    ///     - key: The key to use to uniquely identify this value.
+    ///     - value: The value to set the key to.
+    ///     - expiration: The number of milliseconds after which to expire the key.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves if the operation was successful.
+    @inlinable
+    public func psetex<Value: RESPValueConvertible>(
+        _ key: RedisKey,
+        to value: Value,
+        expirationInMilliseconds expiration: Int
+    ) -> EventLoopFuture<Void> {
+        let args: [RESPValue] = [
+            .init(from: key),
+            .init(from: max(1, expiration)),
+            value.convertedToRESPValue()
+        ]
+        return self.send(command: "PSETEX", with: args)
+            .map { _ in () }
+    }
+
     /// Sets each key to their respective new value, overwriting existing values.
     /// - Note: Use `msetnx(_:)` if you don't want to overwrite values.
     ///

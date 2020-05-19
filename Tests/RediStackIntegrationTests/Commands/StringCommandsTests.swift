@@ -121,6 +121,30 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         XCTAssertFalse(try connection.setnx(#function, to: "value").wait())
     }
 
+    func test_setex() throws {
+        XCTAssertNoThrow(try connection.setex(#function, to: "value", expirationInSeconds: 42).wait())
+        let ttl = try connection.ttl(#function).wait()
+        switch ttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Unexpected TTL for \(#function)")
+        case .limited(let lifetime):
+            XCTAssertGreaterThan(lifetime.timeAmount, .nanoseconds(0))
+            XCTAssertLessThanOrEqual(lifetime.timeAmount, .seconds(42))
+        }
+    }
+
+    func test_psetex() throws {
+        XCTAssertNoThrow(try connection.psetex(#function, to: "value", expirationInMilliseconds: 42_000).wait())
+        let ttl = try connection.pttl(#function).wait()
+        switch ttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Unexpected TTL for \(#function)")
+        case .limited(let lifetime):
+            XCTAssertGreaterThan(lifetime.timeAmount, .nanoseconds(0))
+            XCTAssertLessThanOrEqual(lifetime.timeAmount, .milliseconds(42_000))
+        }
+    }
+
     func test_append() throws {
         let result = "value appended"
         XCTAssertNoThrow(try connection.append("value", to: #function).wait())
