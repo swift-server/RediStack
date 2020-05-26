@@ -123,8 +123,8 @@ extension RESPTranslator {
     /// - Returns: The parsed `RESPValue` or nil.
     public func parseBytes(from buffer: inout ByteBuffer) throws -> RESPValue? {
         var copy = buffer
-        
-        guard let token = copy.readBytes(length: 1)?.first else { return nil }
+
+        guard let token = copy.readInteger(as: UInt8.self) else { return nil }
         
         let result: RESPValue?
         switch token {
