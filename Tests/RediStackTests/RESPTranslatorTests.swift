@@ -317,41 +317,49 @@ extension RESPTranslatorTests {
 
 extension RESPTranslatorTests {
     func testParsing_integer_withAllBytes() {
-        XCTAssertEqual(integerParseTest(":100\r\n"), 100)
-        XCTAssertEqual(integerParseTest(":-100\r\n"), -100)
-        XCTAssertEqual(integerParseTest(":\(Int.min)\r\n"), Int.min)
-        XCTAssertEqual(integerParseTest(":\(Int.max)\r\n"), Int.max)
+        XCTAssertEqual(try integerParseTest(":100\r\n"), 100)
+        XCTAssertEqual(try integerParseTest(":-100\r\n"), -100)
+        XCTAssertEqual(try integerParseTest(":\(Int.min)\r\n"), Int.min)
+        XCTAssertEqual(try integerParseTest(":\(Int.max)\r\n"), Int.max)
     }
     
     func testParsing_integer_missingBytes() {
-        XCTAssertNil(integerParseTest(":\r"))
-        XCTAssertNil(integerParseTest(":"))
-        XCTAssertNil(integerParseTest(":\n"))
-        XCTAssertNil(integerParseTest(":\r\n"))
+        XCTAssertNil(try integerParseTest(":\r"))
+        XCTAssertNil(try integerParseTest(":"))
+        XCTAssertNil(try integerParseTest(":\n"))
+        XCTAssertThrowsError(try integerParseTest(":\r\n")) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidIntegerFormat)
+        }
     }
     
-    func testParsing_integer_recursively() {
+    func testParsing_integer_recursively() throws {
         let testString = ":1\r\n:300\r\n"
         
         var buffer = allocator.buffer(capacity: testString.count)
         buffer.writeString(testString)
         
         buffer.mimicTokenParse()
-        let first = parser.parseInteger(from: &buffer)
+        let first = try parser.parseInteger(from: &buffer)
         XCTAssertEqual(buffer.readerIndex, 4) // position of the 2nd ':'
         XCTAssertEqual(first, 1)
         
         buffer.mimicTokenParse()
-        let second = parser.parseInteger(from: &buffer)
+        let second = try parser.parseInteger(from: &buffer)
         XCTAssertEqual(buffer.readerIndex, 10)
         XCTAssertEqual(second, 300)
     }
+
+    func testParsing_integer_nonBase10() throws {
+        XCTAssertThrowsError(try integerParseTest(":0xa\r\n")) { error in
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidIntegerFormat)
+        }
+    }
     
-    private func integerParseTest(_ inputRESP: String) -> Int? {
+    private func integerParseTest(_ inputRESP: String) throws -> Int? {
         var buffer = allocator.buffer(capacity: inputRESP.count)
         buffer.writeString(inputRESP)
         buffer.mimicTokenParse()
-        return parser.parseInteger(from: &buffer)
+        return try parser.parseInteger(from: &buffer)
     }
 }
 
@@ -381,7 +389,7 @@ extension RESPTranslatorTests {
         buffer.writeString("$FOO\r\nwhat\r\n")
         buffer.mimicTokenParse()
         XCTAssertThrowsError(try self.parser.parseBulkString(from: &buffer)) { error in
-            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidBulkStringSize)
+            XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidIntegerFormat)
         }
     }
     

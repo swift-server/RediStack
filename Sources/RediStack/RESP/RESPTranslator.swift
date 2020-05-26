@@ -104,6 +104,7 @@ extension RESPTranslator {
         case invalidToken
         case invalidBulkStringSize
         case bulkStringSizeMismatch
+        case invalidIntegerFormat
         
         /// See `LocalizedError.errorDescription`
         public var errorDescription: String? {
@@ -111,6 +112,7 @@ extension RESPTranslator {
             case .invalidToken: return "Cannot parse RESP: Invalid Token"
             case .invalidBulkStringSize: return "Cannot parse RESP Bulk String: Received invalid size."
             case .bulkStringSizeMismatch: return "Cannot parse RESP Bulk String: Declared Size and Content Size do not match."
+            case .invalidIntegerFormat: return "Cannot parse RESP integer: invalid integer format"
             }
         }
     }
@@ -133,7 +135,7 @@ extension RESPTranslator {
             result = .simpleString(value)
             
         case .colon:
-            guard let value = self.parseInteger(from: &copy) else { return nil }
+            guard let value = try self.parseInteger(from: &copy) else { return nil }
             result = .integer(value)
             
         case .dollar:
@@ -182,23 +184,19 @@ extension RESPTranslator {
     }
     
     /// See [https://redis.io/topics/protocol#resp-integers](https://redis.io/topics/protocol#resp-integers)
-    internal func parseInteger(from buffer: inout ByteBuffer) -> Int? {
+    internal func parseInteger(from buffer: inout ByteBuffer) throws -> Int? {
         guard
             var stringBuffer = parseSimpleString(from: &buffer),
             let string = stringBuffer.readString(length: stringBuffer.readableBytes)
         else { return nil }
-        return Int(string)
+
+        guard let result = Int(string) else { throw ParsingError.invalidIntegerFormat }
+        return result
     }
     
     /// See [https://redis.io/topics/protocol#resp-bulk-strings](https://redis.io/topics/protocol#resp-bulk-strings)
     internal func parseBulkString(from buffer: inout ByteBuffer) throws -> RESPValue? {
-        let startingReaderIndex = buffer.readerIndex
-        
-        guard let size = self.parseInteger(from: &buffer) else {
-            // if the reader index changed, that means that a valid string parse happened, but it's not a number.
-            guard startingReaderIndex == buffer.readerIndex else {
-                throw ParsingError.invalidBulkStringSize
-            }
+        guard let size = try self.parseInteger(from: &buffer) else {
             return nil
         }
         
@@ -237,7 +235,7 @@ extension RESPTranslator {
     
     /// See [https://redis.io/topics/protocol#resp-arrays](https://redis.io/topics/protocol#resp-arrays)
     internal func parseArray(from buffer: inout ByteBuffer) throws -> RESPValue? {
-        guard let elementCount = parseInteger(from: &buffer) else { return nil }
+        guard let elementCount = try parseInteger(from: &buffer) else { return nil }
         guard elementCount > -1 else { return .null } // '*-1\r\n'
         guard elementCount > 0 else { return .array([]) } // '*0\r\n'
         

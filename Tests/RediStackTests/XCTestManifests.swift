@@ -28,6 +28,7 @@ extension RESPTranslatorTests {
         ("testParsing_error", testParsing_error),
         ("testParsing_integer_chunked", testParsing_integer_chunked),
         ("testParsing_integer_missingBytes", testParsing_integer_missingBytes),
+        ("testParsing_integer_nonBase10", testParsing_integer_nonBase10),
         ("testParsing_integer_recursively", testParsing_integer_recursively),
         ("testParsing_integer_withAllBytes", testParsing_integer_withAllBytes),
         ("testParsing_integer", testParsing_integer),
