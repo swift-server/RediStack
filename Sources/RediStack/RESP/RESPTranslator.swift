@@ -167,7 +167,7 @@ extension RESPTranslator {
         let bytes = buffer.readableBytesView
         guard
             let newlineIndex = bytes.firstIndex(of: .newline),
-            newlineIndex >= 2 // strings should at least have a CRLF ending
+            newlineIndex - bytes.startIndex >= 1 // strings should at least have a CRLF ending
         else { return nil }
         
         // grab the bytes that we've determined is the full simple string,

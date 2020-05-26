@@ -299,6 +299,18 @@ extension RESPTranslatorTests {
         
         return RESPValue.simpleString(stringBuffer).string
     }
+
+    func testSimpleStringWithoutRemovingToken() {
+        var buffer = allocator.buffer(capacity: 2)
+        buffer.writeString("\r\n")
+
+        guard let stringBuffer = parser.parseSimpleString(from: &buffer) else {
+            XCTFail("Did not return")
+            return
+        }
+
+        XCTAssertEqual(RESPValue.simpleString(stringBuffer).string, "")
+    }
 }
 
 // MARK: Integers

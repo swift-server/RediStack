@@ -39,6 +39,7 @@ extension RESPTranslatorTests {
         ("testParsing_simpleString_withContent", testParsing_simpleString_withContent),
         ("testParsing_simpleString_withNoContent", testParsing_simpleString_withNoContent),
         ("testParsing_simpleString", testParsing_simpleString),
+        ("testSimpleStringWithoutRemovingToken", testSimpleStringWithoutRemovingToken),
         ("testWriting_arrays", testWriting_arrays),
         ("testWriting_bulkStrings", testWriting_bulkStrings),
         ("testWriting_errors", testWriting_errors),
