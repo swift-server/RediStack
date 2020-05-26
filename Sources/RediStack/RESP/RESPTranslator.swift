@@ -216,7 +216,7 @@ extension RESPTranslator {
         
         // sanity check that the declared content size matches the actual size.
         guard
-            buffer.viewBytes(at: buffer.readerIndex + expectedRemainingMessageSize - 1, length: 1)?.first == .newline
+            buffer.getInteger(at: buffer.readerIndex + expectedRemainingMessageSize - 1, as: UInt8.self) == .newline
         else { throw ParsingError.bulkStringSizeMismatch }
         
         // empty content bulk strings are different from null, and represented as .bulkString(nil)
