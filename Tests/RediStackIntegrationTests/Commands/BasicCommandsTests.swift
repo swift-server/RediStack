@@ -37,6 +37,22 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(third, 2)
     }
 
+    func test_exists() throws {
+        try self.connection.set("first", to: "1").wait()
+        let first = try connection.exists("first").wait()
+        XCTAssertEqual(first, 1)
+
+        try self.connection.set("second", to: "2").wait()
+        let firstAndSecond = try connection.exists("first", "second").wait()
+        XCTAssertEqual(firstAndSecond, 2)
+
+        let secondAndThird = try connection.exists("second", "third").wait()
+        XCTAssertEqual(secondAndThird, 1)
+
+        let third = try connection.exists("third").wait()
+        XCTAssertEqual(third, 0)
+    }
+
     func test_expire() throws {
         try connection.set(#function, to: "value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())

@@ -8,6 +8,7 @@ extension BasicCommandsTests {
     static let __allTests__BasicCommandsTests = [
         ("test_delete", test_delete),
         ("test_echo", test_echo),
+        ("test_exists", test_exists),
         ("test_expire", test_expire),
         ("test_ping", test_ping),
         ("test_select", test_select),

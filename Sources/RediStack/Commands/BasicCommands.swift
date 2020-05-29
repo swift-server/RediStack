@@ -101,6 +101,28 @@ extension RedisClient {
         return self.delete(keys)
     }
 
+    /// Checks the existence of the provided keys in the database.
+    ///
+    /// [https://redis.io/commands/exists](https://redis.io/commands/exists)
+    /// - Parameter keys: A list of keys whose existence will be checked for in the database.
+    /// - Returns: The number of provided keys which exist in the database.
+    public func exists(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
+        let args: [RESPValue] = keys.map {
+            RESPValue(from: $0)
+        }
+        return self.send(command: "EXISTS", with: args)
+            .map(to: Int.self)
+    }
+
+    /// Checks the existence of the provided keys in the database.
+    ///
+    /// [https://redis.io/commands/exists](https://redis.io/commands/exists)
+    /// - Parameter keys: A list of keys whose existence will be checked for in the database.
+    /// - Returns: The number of provided keys which exist in the database.
+    public func exists(_ keys: RedisKey...) -> EventLoopFuture<Int> {
+        return self.exists(keys)
+    }
+
     /// Sets a timeout on key. After the timeout has expired, the key will automatically be deleted.
     /// - Note: A key with an associated timeout is often said to be "volatile" in Redis terminology.
     ///
