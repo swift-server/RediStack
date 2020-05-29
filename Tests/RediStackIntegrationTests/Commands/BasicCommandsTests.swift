@@ -65,6 +65,68 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         XCTAssertNotNil(try connection.get(#function).wait())
     }
 
+    func test_ttl() throws {
+        try self.connection.set("first", to: "value").wait()
+        let expire = try self.connection.expire("first", after: .minutes(1)).wait()
+        XCTAssertTrue(expire)
+
+        let ttl = try self.connection.ttl("first").wait()
+        switch ttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Expected an expiry to be set on key 'first'")
+        case .limited(let lifetime):
+            XCTAssertGreaterThanOrEqual(lifetime.timeAmount.nanoseconds, 0)
+        }
+
+        let doesNotExist = try self.connection.ttl("second").wait()
+        switch doesNotExist {
+        case .keyDoesNotExist:
+            ()  // Expected
+        case .unlimited, .limited:
+            XCTFail("Expected '.keyDoesNotExist' but lifetime was \(doesNotExist)")
+        }
+
+        try self.connection.set("second", to: "value").wait()
+        let hasNoExpire = try self.connection.ttl("second").wait()
+        switch hasNoExpire {
+        case .unlimited:
+            ()  // Expected
+        case .keyDoesNotExist, .limited:
+            XCTFail("Expected '.noExpiry' but lifetime was \(hasNoExpire)")
+        }
+    }
+
+    func test_pttl() throws {
+        try self.connection.set("first", to: "value").wait()
+        let expire = try self.connection.expire("first", after: .minutes(1)).wait()
+        XCTAssertTrue(expire)
+
+        let pttl = try self.connection.pttl("first").wait()
+        switch pttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Expected an expiry to be set on key 'first'")
+        case .limited(let lifetime):
+            XCTAssertGreaterThanOrEqual(lifetime.timeAmount.nanoseconds, 0)
+        }
+
+        let doesNotExist = try self.connection.ttl("second").wait()
+        switch doesNotExist {
+        case .keyDoesNotExist:
+            ()  // Expected
+        case .unlimited, .limited:
+            XCTFail("Expected '.keyDoesNotExist' but lifetime was \(doesNotExist)")
+        }
+
+        try self.connection.set("second", to: "value").wait()
+        let hasNoExpire = try self.connection.ttl("second").wait()
+        switch hasNoExpire {
+        case .unlimited:
+            ()  // Expected
+        case .keyDoesNotExist, .limited:
+            XCTFail("Expected '.noExpiry' but lifetime was \(hasNoExpire)")
+        }
+    }
+
     func test_ping() throws {
         let first = try connection.ping().wait()
         XCTAssertEqual(first, "PONG")

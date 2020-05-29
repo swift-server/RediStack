@@ -11,8 +11,10 @@ extension BasicCommandsTests {
         ("test_exists", test_exists),
         ("test_expire", test_expire),
         ("test_ping", test_ping),
+        ("test_pttl", test_pttl),
         ("test_select", test_select),
         ("test_swapDatabase", test_swapDatabase),
+        ("test_ttl", test_ttl),
     ]
 }
 
