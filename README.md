@@ -1,22 +1,22 @@
 <div align="center">
-<p><img src="https://gitlab.com/Mordil/swift-redi-stack/wikis/uploads/cb4c517e40bd2f5ab796f1093efbd697/RediStack_social-preview_transparent.png" width="350" alt="RediStack logo"></p>
+<p><img src="https://gitlab.com/Mordil/RediStack/wikis/uploads/cb4c517e40bd2f5ab796f1093efbd697/RediStack_social-preview_transparent.png" width="350" alt="RediStack logo"></p>
 
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
-    <a href="https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
+    <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
     <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.0+-orange.svg" alt="Swift 5.0+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 
 <p>
-    <a href="https://gitlab.com/Mordil/swift-redi-stack/pipelines"><img src="https://gitlab.com/Mordil/swift-redi-stack/badges/master/pipeline.svg" alt="Build Status"></a>
+    <a href="https://gitlab.com/Mordil/RediStack/pipelines"><img src="https://gitlab.com/Mordil/RediStack/badges/master/pipeline.svg" alt="Build Status"></a>
     <a href="https://docs.redistack.info"><img src="https://docs.redistack.info/badge.svg" alt="Documentation Coverage"></a>
     <a href="https://codeclimate.com/github/Mordil/RediStack/maintainability"><img src="https://api.codeclimate.com/v1/badges/b6fd5e7a3e669165a21b/maintainability" /></a>
 </p>
 </div>
 
 <table><thead><tr align="center"><th width="9999">
-The <a href="https://github.com/Mordil/swift-redi-stack" rel="nofollow noreferrer noopener" target="_blank">GitHub repository</a> is a <b>read-only</b> mirror of the GitLab repository. For issues and merge requests, <a href="https://gitlab.com/mordil/swift-redi-stack" rel="nofollow noreferrer noopener" target="_blank">please visit GitLab</a>.
+The <a href="https://github.com/Mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitHub repository</a> is a <b>read-only</b> mirror of the GitLab repository. For issues and merge requests, <a href="https://gitlab.com/mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitLab</a>.
 </th></tr></thead></table>
 
 ## Introduction
@@ -47,7 +47,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://gitlab.com/mordil/swift-redi-stack.git", from: "1.0.0-alpha.5")
+    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "1.0.0-alpha.5")
 ]
 ```
 
@@ -80,21 +80,21 @@ The docs for the latest tagged release are always available at [docs.redistack.i
 
 ## Questions
 
-For bugs or feature requests, file a new [issue](https://gitlab.com/mordil/swift-redi-stack/issues).
+For bugs or feature requests, file a new [issue](https://gitlab.com/mordil/RediStack/-/issues).
 
 For all other support requests, please email [support@redistack.info](mailto:support@redistack.info).
 
 ## Changelog
 
-[SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://gitlab.com/Mordil/swift-redi-stack/-/releases).
+[SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://gitlab.com/Mordil/RediStack/-/releases).
 
 ## Contributing
 
-Check out [CONTRIBUTING.md](https://gitlab.com/Mordil/swift-redi-stack/blob/master/CONTRIBUTING.md) for more information on how to help with **RediStack**.
+Check out [CONTRIBUTING.md](https://gitlab.com/Mordil/RediStack/blob/master/CONTRIBUTING.md) for more information on how to help with **RediStack**.
 
 ## Contributors
 
-Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/swift-redi-stack/blob/master/CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
+Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/RediStack/blob/master/CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
 
 ## Swift on Server Ecosystem
 
@@ -117,11 +117,11 @@ receive regular unit testing (either in development, or with CI).
 
 ## License
 
-[Apache 2.0](https://gitlab.com/Mordil/swift-redi-stack/blob/master/LICENSE.txt)
+[Apache 2.0](https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt)
 
 Copyright (c) 2019-present, Nathan Harris (@mordil)
 
-_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](https://gitlab.com/Mordil/swift-redi-stack/blob/master/NOTICE.txt)_
+_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](https://gitlab.com/Mordil/RediStack/blob/master/NOTICE.txt)_
 
 _**Redis** is a registered trademark of **Redis Labs**. Any use of their trademark is under the established [trademark guidelines](https://redis.io/topics/trademark) and does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
 
