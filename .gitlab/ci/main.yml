@@ -69,7 +69,7 @@ Code Coverage:
 #     - schedules
   extends: .unit-test
   stage: Quality Checks
-  image: swift-lang/swift:nightly
+  image: swiftlang/swift:nightly
 #   before_script:
 #     - apt-get update
 #     - apt-get install -y curl
