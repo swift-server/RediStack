@@ -78,8 +78,8 @@ Code Coverage:
     
     swift test --enable-code-coverage
     
-    BINARY_PATH=".build/x86_64-unknown-linux/debug/redi-stackPackageTests.xctest"
-    PROF_DATA_PATH=".build/x86_64-unknown-linux/debug/codecov/default.profdata"
+    BINARY_PATH=".build/x86_64-unknown-linux-gnu/debug/RediStackPackageTests.xctest"
+    PROF_DATA_PATH=".build/x86_64-unknown-linux-gnu/debug/codecov/default.profdata"
     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
 
     echo "Snooping"
