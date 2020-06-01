@@ -1,4 +1,4 @@
-include: '/.gitlab-ci/test-template.yml'
+include: '/.gitlab/ci/test-template.yml'
 
 stages:
   - Quality Checks
@@ -69,7 +69,7 @@ Code Coverage:
 #     - schedules
   extends: .unit-test
   stage: Quality Checks
-  image: registry.gitlab.com/mordil/swift-redi-stack/swift:5.1
+  image: swift-lang/swift:nightly
 #   before_script:
 #     - apt-get update
 #     - apt-get install -y curl
@@ -98,10 +98,10 @@ Code Coverage:
       -instr-profile="$PROF_DATA_PATH" \
       -ignore-filename-regex="$IGNORE_FILENAME_REGEX"
 
-#     llvm-cov show \
-#       $BINARY_PATH \
-#       -instr-profile="$PROF_DATA_PATH" \
-#       -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
+    llvm-cov show \
+      $BINARY_PATH \
+      -instr-profile="$PROF_DATA_PATH" \
+      -ignore-filename-regex="$IGNORE_FILENAME_REGEX" > coverage.txt
 
 #     bash <(curl -s https://codecov.io/bash) \
 #       -J "RediStack" \
