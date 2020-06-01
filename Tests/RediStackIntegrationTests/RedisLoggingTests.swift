@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
+import ServiceDiscovery
+import NIO
 import RediStack
 import RediStackTestUtils
 import XCTest
@@ -65,6 +67,38 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         XCTAssertEqual(
             handler.metadata[RedisLogging.MetadataKeys.connectionPoolID],
             .string(pool.id.uuidString)
+        )
+    }
+
+    func test_serviceDiscoveryMetadata() throws {
+        let handler = TestLogHandler()
+        let logger = Logger(label: #function, factory: { _ in return handler })
+        let hosts = InMemoryServiceDiscovery<String, SocketAddress>(configuration: .init())
+        let config = RedisConnectionPool.Configuration(
+            initialServerConnectionAddresses: [],
+            maximumConnectionCount: .maximumActiveConnections(1),
+            connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword)
+        )
+        let client = RedisConnectionPool.activatedServiceDiscoveryPool(
+            service: "default.local",
+            discovery: hosts,
+            configuration: config,
+            boundEventLoop: self.connection.eventLoop)
+        defer {
+            client.close()
+        }
+
+        let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
+        hosts.register("default.local", instances: [address])
+
+        _ = try client
+            .logging(to: logger)
+            .ping()
+            .wait()
+        XCTAssertTrue(handler.metadata.keys.contains(RedisLogging.MetadataKeys.connectionID))
+        XCTAssertEqual(
+            handler.metadata[RedisLogging.MetadataKeys.connectionPoolID],
+            .string(client.id.uuidString)
         )
     }
 }

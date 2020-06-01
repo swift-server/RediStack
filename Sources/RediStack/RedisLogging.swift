@@ -21,6 +21,7 @@ public enum RedisLogging {
     public struct Labels {
         public static var connection: String { "RediStack.RedisConnection" }
         public static var connectionPool: String { "RediStack.RedisConnectionPool" }
+        public static var serviceDiscovery: String { "RediStack.RedisServiceDiscoveryClient" }
     }
     /// The key values used in RediStack for storing `Logging.Logger.Metadata` in log messages.
     ///
@@ -53,6 +54,7 @@ public enum RedisLogging {
     
     public static let baseConnectionLogger = Logger(label: Labels.connection)
     public static let baseConnectionPoolLogger = Logger(label: Labels.connectionPool)
+    public static let baseServiceDiscoveryLogger = Logger(label: Labels.serviceDiscovery)
 }
 
 // MARK: Logger integration

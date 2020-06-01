@@ -15,6 +15,7 @@ import struct Foundation.UUID
 import NIO
 import NIOConcurrencyHelpers
 import Logging
+import ServiceDiscovery
 
 /// A `RedisConnectionPool` is an implementation of `RedisClient` backed by a pool of connections to Redis,
 /// rather than a single one.
@@ -50,6 +51,15 @@ public class RedisConnectionPool {
     // This array buffers any request for a connection that cannot be succeeded right away in the case where we have no target.
     // We never allow this to get larger than a specific bound, to resist DoS attacks. Past that bound we will fast-fail.
     private var requestsForConnections: [EventLoopPromise<RedisConnection>] = []
+    // This is var because if we're using service discovery, we don't start doing that until activate is called.
+    private var cancellationToken: CancellationToken? {
+        willSet {
+            guard let token = self.cancellationToken, !token.isCancelled, token !== newValue else {
+                return
+            }
+            token.cancel()
+        }
+    }
 
     /// The maximum number of connection requests we'll buffer in `requestsForConnections` before we start fast-failing. These
     /// are buffered only when there are no available addresses to connect to, so in practice it's highly unlikely this will be
@@ -88,6 +98,33 @@ public class RedisConnectionPool {
     }
 }
 
+// MARK: Alternative initializers
+extension RedisConnectionPool {
+    /// Constructs a `RedisConnectionPool` that updates its addresses based on information from
+    /// service discovery.
+    ///
+    /// This constructor behaves similarly to the regular constructor. However, it also activates the
+    /// connection pool before returning it to the user. This is necessary because the act of subscribing
+    /// to service discovery forms a reference cycle between the service discovery instance and the
+    /// `RedisConnectionPool`. Pools constructed via this constructor _must_ always have `close` called
+    /// on them.
+    ///
+    /// Pools created via this constructor will be auto-closed when the service discovery instance is completed for
+    /// any reason, including on error. Users should still always call `close` in their own code during teardown.
+    public static func activatedServiceDiscoveryPool<Discovery: ServiceDiscovery>(
+        service: Discovery.Service,
+        discovery: Discovery,
+        configuration: Configuration,
+        boundEventLoop: EventLoop,
+        logger: Logger? = nil
+    ) -> RedisConnectionPool where Discovery.Instance == SocketAddress {
+        let pool = RedisConnectionPool(configuration: configuration, boundEventLoop: boundEventLoop)
+        pool.beginSubscribingToServiceDiscovery(service: service, discovery: discovery, logger: logger)
+        pool.activate(logger: logger)
+        return pool
+    }
+}
+
 // MARK: General helpers.
 extension RedisConnectionPool {
     /// Starts the connection pool.
@@ -122,6 +159,9 @@ extension RedisConnectionPool {
             for request in self.requestsForConnections {
                 request.fail(RedisConnectionPoolError.poolClosed)
             }
+
+            // This cancels service discovery.
+            self.cancellationToken = nil
         }
     }
 
@@ -246,6 +286,36 @@ extension RedisConnectionPool {
         guard var logger = logger else { return self.configuration.poolDefaultLogger }
         logger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         return logger
+    }
+
+    /// A private helper function used for the service discovery constructor.
+    private func beginSubscribingToServiceDiscovery<Discovery: ServiceDiscovery>(
+        service: Discovery.Service,
+        discovery: Discovery,
+        logger: Logger?
+    ) where Discovery.Instance == SocketAddress {
+        self.loop.execute {
+            let logger = self.prepareLoggerForUse(logger)
+
+            self.cancellationToken = discovery.subscribe(
+                to: service,
+                onNext: { result in
+                    // This closure may execute on any thread.
+                    self.loop.execute {
+                        switch result {
+                        case .success(let targets):
+                            self.updateConnectionAddresses(targets, logger: logger)
+                        case .failure(let error):
+                            logger.error("Service discovery error", metadata: [RedisLogging.MetadataKeys.error: "\(error)"])
+                        }
+                    }
+                },
+                onComplete: { (_: CompletionReason) in
+                    // We don't really care about the reason, we just want to brick this client.
+                    self.close(logger: logger)
+                }
+            )
+        }
     }
 }
 
