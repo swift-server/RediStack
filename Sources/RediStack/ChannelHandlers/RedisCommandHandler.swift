@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,6 +37,7 @@ public struct RedisCommand {
 public final class RedisCommandHandler {
     /// FIFO queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
+    private var state: State = .default
 
     deinit {
         if !self.commandResponseQueue.isEmpty {
@@ -50,31 +51,45 @@ public final class RedisCommandHandler {
     public init(initialQueueCapacity: Int = 3) {
         self.commandResponseQueue = CircularBuffer(initialCapacity: initialQueueCapacity)
     }
+    
+    private enum State {
+        case `default`, error(Error)
+    }
 }
 
 // MARK: ChannelInboundHandler
 
 extension RedisCommandHandler: ChannelInboundHandler {
-    /// See `NIO.ChannelInboundHandler.InboundIn`
     public typealias InboundIn = RESPValue
 
-    /// Invoked by SwiftNIO when an error has been thrown. The command queue will be drained, with each promise in the queue being failed with the error thrown.
+    /// Invoked by SwiftNIO when an error has been thrown. The command queue will be drained
+    ///     with each promise in the queue being failed with the error thrown.
     ///
     /// See `NIO.ChannelInboundHandler.errorCaught(context:error:)`
     /// - Important: This will also close the socket connection to Redis.
-    /// - Note:`RedisMetrics.commandFailureCount` is **not** incremented from this error.
-    ///
-    /// A `Logging.LogLevel.critical` message will be written with the caught error.
+    /// - Note:`RedisMetrics.commandFailureCount` is **not** incremented from this method.
     public func errorCaught(context: ChannelHandlerContext, error: Error) {
+        self._failCommandQueue(because: error)
+        context.close(promise: nil)
+    }
+    
+    /// Invoked by SwiftNIO when the channel's active state has changed, such as when it is closed. The command queue will be drained
+    ///     with each promise in the queue being failed from a connection closed error.
+    ///
+    /// See `NIO.ChannelInboundHandler.channelInactive(context:)`
+    /// - Note: `RedisMetrics.commandFailureCount` is **not** incremented from this method.
+    public func channelInactive(context: ChannelHandlerContext) {
+        self._failCommandQueue(because: RedisClientError.connectionClosed)
+    }
+    
+    private func _failCommandQueue(because error: Error) {
         let queue = self.commandResponseQueue
-        
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
-
-        context.close(promise: nil)
     }
 
     /// Invoked by SwiftNIO when a read has been fired from earlier in the response chain.
+    ///
     /// This forwards the decoded `RESPValue` response message to the promise waiting to be fulfilled at the front of the command queue.
     /// - Note: `RedisMetrics.commandFailureCount` and `RedisMetrics.commandSuccessCount` are incremented from this method.
     ///
@@ -94,6 +109,11 @@ extension RedisCommandHandler: ChannelInboundHandler {
             RedisMetrics.commandSuccessCount.increment()
         }
     }
+    
+//    public func channelUnregistered(context: ChannelHandlerContext) {
+//        self._drainCommandQueue(because: RedisClientError.connectionClosed)
+//    }
+    
 }
 
 // MARK: ChannelOutboundHandler
@@ -105,16 +125,23 @@ extension RedisCommandHandler: ChannelOutboundHandler {
     public typealias OutboundOut = RESPValue
 
     /// Invoked by SwiftNIO when a `write` has been requested on the `Channel`.
+    ///
     /// This unwraps a `RedisCommand`, storing the `NIO.EventLoopPromise` in a command queue,
     /// to fulfill later with the response to the command that is about to be sent through the `NIO.Channel`.
     ///
     /// See `NIO.ChannelOutboundHandler.write(context:data:promise:)`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let commandContext = self.unwrapOutboundIn(data)
-        self.commandResponseQueue.append(commandContext.responsePromise)
-        context.write(
-            self.wrapOutboundOut(commandContext.message),
-            promise: promise
-        )
+        
+        switch self.state {
+        case let .error(e): commandContext.responsePromise.fail(e)
+            
+        case .default:
+            self.commandResponseQueue.append(commandContext.responsePromise)
+            context.write(
+                self.wrapOutboundOut(commandContext.message),
+                promise: promise
+            )
+        }
     }
 }
