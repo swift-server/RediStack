@@ -83,8 +83,8 @@ Code Coverage:
     IGNORE_FILENAME_REGEX="(.build|TestUtils|Tests)"
 
     echo "Snooping"
-    echo "Profdata: " $(ls -l --size-block=MB $PROF_DATA_PATH)
-    echo "Test binary: " $(ls -l --size-block=MB $BINARY_PATH)
+    echo "Profdata: " $(ls -l --block-size=MB $PROF_DATA_PATH)
+    echo "Test binary: " $(ls -l --block-size=MB $BINARY_PATH)
 
     llvm-cov report \
       -dump \
