@@ -23,3 +23,12 @@ class RediStackIntegrationTestCase: RedisIntegrationTestCase {
         return ProcessInfo.processInfo.environment["REDIS_PW"]
     }
 }
+
+class RediStackConnectionPoolIntegrationTestCase: RedisConnectionPoolIntegrationTestCase {
+    override var redisHostname: String {
+        return ProcessInfo.processInfo.environment["REDIS_URL"] ?? "localhost"
+    }
+    override var redisPassword: String? {
+        return ProcessInfo.processInfo.environment["REDIS_PW"]
+    }
+}
