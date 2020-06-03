@@ -16,14 +16,16 @@
 ///
 /// `RedisKey` is a thin wrapper around `String`, to provide stronger type-safety at compile-time.
 ///
-/// It conforms to `ExpressibleByStringLiteral`, so creating a key is simple:
+/// It conforms to `ExpressibleByStringLiteral` and `ExpressibleByStringInterpolation`, so creating
+/// a key is simple:
 /// ```swift
-/// let key: RedisKey = "foo"
+/// let key: RedisKey = "foo" // or "\(someVar)"
 /// ```
 public struct RedisKey:
     RESPValueConvertible,
     RawRepresentable,
     ExpressibleByStringLiteral,
+    ExpressibleByStringInterpolation,
     CustomStringConvertible, CustomDebugStringConvertible,
     Comparable, Hashable, Codable
 {
