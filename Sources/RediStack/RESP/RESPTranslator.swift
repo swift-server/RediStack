@@ -95,28 +95,37 @@ extension UInt8 {
 }
 
 extension RESPTranslator {
-    /// Representation of a `Swift.Error` found during RESP parsing.
+    /// Possible errors thrown while parsing RESP messages.
     /// - Important: Any of these errors should be considered a **BUG**.
     ///
-    /// If you believe this is a bug from the `RESPTranslator`, file a bug at
-    /// [https://www.gitlab.com/mordil/swift-redis-nio-client/issues](https://www.gitlab.com/mordil/swift-redis-nio-client/issues)
-    public enum ParsingError: LocalizedError {
-        case invalidToken
-        case invalidBulkStringSize
-        case bulkStringSizeMismatch
-        case invalidIntegerFormat
+    /// Please file a bug at [https://www.gitlab.com/mordil/RediStack/-/issues](https://www.gitlab.com/mordil/RediStack/-/issues).
+    public struct ParsingError: LocalizedError, Equatable {
+        /// An invalid RESP data type identifier was found.
+        public static let invalidToken = ParsingError(.invalidToken)
+        /// A bulk string size did not match the RESP schema.
+        public static let invalidBulkStringSize = ParsingError(.invalidBulkStringSize)
+        /// A bulk string's declared size did not match its content size.
+        public static let bulkStringSizeMismatch = ParsingError(.bulkStringSizeMismatch)
+        /// A RESP integer did not follow the RESP schema.
+        public static let invalidIntegerFormat = ParsingError(.invalidIntegerFormat)
         
-        /// See `LocalizedError.errorDescription`
         public var errorDescription: String? {
-            switch self {
-            case .invalidToken: return "Cannot parse RESP: Invalid Token"
-            case .invalidBulkStringSize: return "Cannot parse RESP Bulk String: Received invalid size."
-            case .bulkStringSizeMismatch: return "Cannot parse RESP Bulk String: Declared Size and Content Size do not match."
-            case .invalidIntegerFormat: return "Cannot parse RESP integer: invalid integer format"
-            }
+            return self.base.rawValue
+        }
+        
+        private let base: Base
+        private init(_ base: Base) { self.base = base }
+        
+        private enum Base: String, Equatable {
+            case invalidToken = "Cannot parse RESP: invalid token"
+            case invalidBulkStringSize = "Cannot parse RESP Bulk String: received invalid size"
+            case bulkStringSizeMismatch = "Cannot parse RESP Bulk String: declared size and content size do not match"
+            case invalidIntegerFormat = "Cannot parse RESP Integer: invalid integer format"
         }
     }
-    
+}
+
+extension RESPTranslator {
     /// Attempts to parse a `RESPValue` from the `ByteBuffer`.
     /// - Important: The provided `buffer` will have its reader index moved on a successful parse.
     /// - Throws:
