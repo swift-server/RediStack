@@ -37,11 +37,7 @@ public enum RESPValue {
     /// Stores the representation determined by the `RESPValueConvertible` value.
     /// - Important: If you are sending this value to a Redis server, the type should be convertible to a `.bulkString`.
     /// - Parameter value: The value that needs to be converted and stored in `RESPValue` format.
-    @_specialize(exported: true, where Value == RedisKey)
-    @_specialize(exported: true, where Value == String)
-    @_specialize(exported: true, where Value == Double)
-    @_specialize(exported: true, where Value == UInt)
-    @_specialize(exported: true, where Value == Int)
+    @inlinable
     public init<Value: RESPValueConvertible>(from value: Value) {
         self = value.convertedToRESPValue()
     }
