@@ -93,6 +93,106 @@ extension RedisClient {
 
 // MARK: Set
 
+/// A condition which must hold true in order for a key to be set.
+///
+/// See [https://redis.io/commands/set](https://redis.io/commands/set)
+public struct RedisSetCommandCondition: Hashable {
+    private enum Condition: String, Hashable {
+        case keyExists = "XX"
+        case keyDoesNotExist = "NX"
+    }
+
+    private let condition: Condition?
+    private init(_ condition: Condition?) {
+        self.condition = condition
+    }
+
+    /// The `RESPValue` representation of the condition.
+    @usableFromInline
+    internal var commandArgument: RESPValue? {
+        return self.condition.map { RESPValue(from: $0.rawValue) }
+    }
+}
+
+extension RedisSetCommandCondition {
+    /// No condition is required to be met in order to set the key's value.
+    public static let none = RedisSetCommandCondition(.none)
+
+    /// Only set the key if it already exists.
+    ///
+    /// Redis documentation refers to this as the option "XX".
+    public static let keyExists = RedisSetCommandCondition(.keyExists)
+
+    /// Only set the key if it does not already exist.
+    ///
+    /// Redis documentation refers to this as the option "NX".
+    public static let keyDoesNotExist = RedisSetCommandCondition(.keyDoesNotExist)
+}
+
+/// The expiration to apply when setting a key.
+///
+/// See [https://redis.io/commands/set](https://redis.io/commands/set)
+public struct RedisSetCommandExpiration: Hashable {
+    private enum Expiration: Hashable {
+        case keepExisting
+        case seconds(Int)
+        case milliseconds(Int)
+    }
+
+    private let expiration: Expiration
+    private init(_ expiration: Expiration) {
+        self.expiration = expiration
+    }
+
+    /// An array of `RESPValue`s representing this expiration.
+    @usableFromInline
+    internal func asCommandArguments() -> [RESPValue] {
+        switch self.expiration {
+        case .keepExisting:
+            return [RESPValue(from: "KEEPTTL")]
+        case .seconds(let amount):
+            return [RESPValue(from: "EX"), amount.convertedToRESPValue()]
+        case .milliseconds(let amount):
+            return [RESPValue(from: "PX"), amount.convertedToRESPValue()]
+        }
+    }
+}
+
+extension RedisSetCommandExpiration {
+    /// Retain the existing expiration associated with the key, if one exists.
+    ///
+    /// Redis documentation refers to this as "KEEPTTL".
+    /// - Important: This is option is only available in Redis 6.0+. An error will be returned if this value is sent in lower versions of Redis.
+    public static let keepExisting = RedisSetCommandExpiration(.keepExisting)
+
+    /// Expire the key after the given number of seconds.
+    ///
+    /// Redis documentation refers to this as the option "EX".
+    /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
+    public static func seconds(_ amount: Int) -> RedisSetCommandExpiration {
+        return RedisSetCommandExpiration(.seconds(max(amount, 1)))
+    }
+
+    /// Expire the key after the given number of milliseconds.
+    ///
+    /// Redis documentation refers to this as the option "PX".
+    /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
+    public static func milliseconds(_ amount: Int) -> RedisSetCommandExpiration {
+        return RedisSetCommandExpiration(.milliseconds(max(amount, 1)))
+    }
+}
+
+/// The result of a `SET` command.
+public enum RedisSetCommandResult: Hashable {
+    /// The command completed successfully.
+    case ok
+
+    /// The command was not performed because a condition was not met.
+    ///
+    /// See `RedisSetCommandCondition`.
+    case conditionNotMet
+}
+
 extension RedisClient {
     /// Append a value to the end of an existing entry.
     /// - Note: If the key does not exist, it is created and set as an empty string, so `APPEND` will be similar to `SET` in this special case.
@@ -131,6 +231,45 @@ extension RedisClient {
         ]
         return send(command: "SET", with: args)
             .map { _ in () }
+    }
+
+    /// Sets the key to the provided value with options to control how it is set.
+    ///
+    /// [https://redis.io/commands/set](https://redis.io/commands/set)
+    /// - Important: Regardless of the type of data stored at the key, it will be overwritten to a "string" data type.
+    ///
+    ///   ie. If the key is a reference to a Sorted Set, its value will be overwritten to be a "string" data type.
+    ///
+    /// - Parameters:
+    ///     - key: The key to use to uniquely identify this value.
+    ///     - value: The value to set the key to.
+    ///     - condition: The condition under which the key should be set.
+    ///     - expiration: The expiration to use when setting the key. No expiration is set if `nil`.
+    /// - Returns: A `NIO.EventLoopFuture` indicating the result of the operation;
+    ///     `.ok` if the operation was successful and `.conditionNotMet` if the specified `condition` was not met.
+    ///
+    ///     If the condition `.none` was used, then the result value will always be `.ok`.
+    public func set<Value: RESPValueConvertible>(
+        _ key: RedisKey,
+        to value: Value,
+        onCondition condition: RedisSetCommandCondition,
+        expiration: RedisSetCommandExpiration? = nil
+    ) -> EventLoopFuture<RedisSetCommandResult> {
+        var args: [RESPValue] = [
+            .init(from: key),
+            value.convertedToRESPValue()
+        ]
+
+        if let conditionArgument = condition.commandArgument {
+            args.append(conditionArgument)
+        }
+
+        if let expiration = expiration {
+            args.append(contentsOf: expiration.asCommandArguments())
+        }
+
+        return self.send(command: "SET", with: args)
+            .map { return $0.isNull ? .conditionNotMet : .ok }
     }
 
     /// Sets the key to the provided value if the key does not exist.

@@ -157,6 +157,9 @@ extension StringCommandsTests {
         ("test_mget", test_mget),
         ("test_mset", test_mset),
         ("test_msetnx", test_msetnx),
+        ("test_set_condition_and_expiration", test_set_condition_and_expiration),
+        ("test_set_condition", test_set_condition),
+        ("test_set_expiration", test_set_expiration),
         ("test_set", test_set),
         ("test_setnx", test_setnx),
     ]

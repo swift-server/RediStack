@@ -52,6 +52,70 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(val, "value")
     }
 
+    func test_set_condition() throws {
+        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyExists).wait(), .conditionNotMet)
+        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyDoesNotExist).wait(), .ok)
+        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyDoesNotExist).wait(), .conditionNotMet)
+        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyExists).wait(), .ok)
+        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .none).wait(), .ok)
+    }
+
+    func test_set_expiration() throws {
+        let expireInSecondsKey = RedisKey("\(#function)-seconds")
+        let expireInSecondsResult = connection.set(
+            expireInSecondsKey,
+            to: "value",
+            onCondition: .none,
+            expiration: .seconds(42)
+        )
+        XCTAssertEqual(try expireInSecondsResult.wait(), .ok)
+
+        let ttl = try connection.ttl(expireInSecondsKey).wait()
+        switch ttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Unexpected TTL for key \(expireInSecondsKey)")
+        case .limited(let lifetime):
+            XCTAssertGreaterThan(lifetime.timeAmount, .nanoseconds(0))
+            XCTAssertLessThanOrEqual(lifetime.timeAmount, .seconds(42))
+        }
+
+        let expireInMillisecondsKey = RedisKey("\(#function)-milliseconds")
+        let expireInMillisecondsResult = connection.set(
+            expireInMillisecondsKey,
+            to: "value",
+            onCondition: .none,
+            expiration: .milliseconds(42_000)
+        )
+
+        XCTAssertEqual(try expireInMillisecondsResult.wait(), .ok)
+
+        let pttl = try connection.ttl(expireInMillisecondsKey).wait()
+        switch pttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Unexpected TTL for key \(expireInMillisecondsKey)")
+        case .limited(let lifetime):
+            XCTAssertGreaterThan(lifetime.timeAmount, .nanoseconds(0))
+            XCTAssertLessThanOrEqual(lifetime.timeAmount, .milliseconds(42_000))
+        }
+    }
+
+    func test_set_condition_and_expiration() throws {
+        let setFailedResult = connection.set(#function, to: "value", onCondition: .keyExists, expiration: .seconds(42))
+        XCTAssertEqual(try setFailedResult.wait(), .conditionNotMet)
+
+        let setResult = connection.set(#function, to: "value", onCondition: .keyDoesNotExist, expiration: .seconds(42))
+        XCTAssertEqual(try setResult.wait(), .ok)
+
+        let ttl = try connection.ttl(#function).wait()
+        switch ttl {
+        case .keyDoesNotExist, .unlimited:
+            XCTFail("Unexpected TTL for key \(#function)")
+        case .limited(let lifetime):
+            XCTAssertGreaterThan(lifetime.timeAmount, .nanoseconds(0))
+            XCTAssertLessThanOrEqual(lifetime.timeAmount, .seconds(42))
+        }
+    }
+
     func test_setnx() throws {
         XCTAssertTrue(try connection.setnx(#function, to: "value").wait())
         XCTAssertFalse(try connection.setnx(#function, to: "value").wait())
