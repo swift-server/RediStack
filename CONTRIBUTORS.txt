@@ -7,8 +7,13 @@ needs to be listed here.
 
 ## COPYRIGHT HOLDERS
 
+- Apple Inc. (all contributors with '@apple.com')
+- Globant Inc. (all contributors with '@globant.com')
+
 ### Contributors
 
+- Cory Benfield <lukasa@apple.com>
+- George Barnett <gbarnett@apple.com>
 - Nathan Harris <nathan@mordil.info>
 - Ondrej Rafaj <ondrej.rafaj@gmail.com>
 - tanner0101 <me@tanner.xyz>

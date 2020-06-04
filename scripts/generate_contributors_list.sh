@@ -40,6 +40,9 @@ cat > "$here/../CONTRIBUTORS.txt" <<- EOF
 
 	## COPYRIGHT HOLDERS
 
+	- Apple Inc. (all contributors with '@apple.com')
+	- Globant Inc. (all contributors with '@globant.com')
+
 	### Contributors
 
 	$contributors
