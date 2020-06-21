@@ -171,20 +171,20 @@ extension RESPValue: RESPValueConvertible {
 import NIO
 
 extension EventLoopFuture where Value == RESPValue {
-    /// Attempts to convert the `RESPValue` to the desired `RESPValueConvertible` type.
-    /// If the `RESPValueConvertible.init(_:)` returns `nil`, then the `EventLoopFuture` will fail.
+    /// Attempts to convert the resolved RESPValue to the desired type.
+    ///
+    /// This method is intended to be used much like a precondition in synchronous code, where a value is expected to be available from the `RESPValue`.
+    /// - Important: If the `RESPValueConvertible` initializer fails, then the `NIO.EventLoopFuture` will fail.
     /// - Parameter to: The desired type to convert to.
-    /// - Returns: An `EventLoopFuture` that resolves a value of the desired type.
-    @inlinable
-    public func map<T>(
+    /// - Throws: `RedisClientError.failedRESPConversion(to:)`
+    /// - Returns: A `NIO.EventLoopFuture` that resolves a value of the desired type or fails if the conversion does.
+    @usableFromInline
+    internal func tryConverting<T: RESPValueConvertible>(
         to type: T.Type = T.self,
-        file: StaticString = #function,
-        function: StaticString = #function,
+        file: StaticString = #file,
         line: UInt = #line
-    ) -> EventLoopFuture<T>
-        where T: RESPValueConvertible
-    {
-        return self.flatMapThrowing {
+    ) -> EventLoopFuture<T> {
+        return self.flatMapThrowing(file: file, line: line) {
             guard let value = T(fromRESP: $0) else {
                 throw RedisClientError.failedRESPConversion(to: type)
             }

@@ -28,7 +28,7 @@ extension RedisClient {
     public func smembers(of key: RedisKey) -> EventLoopFuture<[RESPValue]> {
         let args = [RESPValue(from: key)]
         return send(command: "SMEMBERS", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Gets all of the elements contained in a set.
@@ -61,7 +61,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "SISMEMBER", with: args)
-            .map(to: Int.self)
+            .tryConverting(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -73,7 +73,7 @@ extension RedisClient {
     public func scard(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(from: key)]
         return send(command: "SCARD", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Adds elements to a set.
@@ -91,7 +91,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
 
         return send(command: "SADD", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Adds elements to a set.
@@ -121,7 +121,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "SREM", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes elements from a set.
@@ -153,7 +153,7 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "SPOP", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -193,7 +193,7 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "SRANDMEMBER", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Randomly selects one or more elements in a set.
@@ -236,7 +236,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "SMOVE", with: args)
-            .map()
+            .tryConverting()
             .map { return $0 == 1 }
     }
 
@@ -297,7 +297,7 @@ extension RedisClient {
 
         let args = keys.map(RESPValue.init)
         return send(command: "SDIFF", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Calculates the difference between two or more sets.
@@ -349,7 +349,7 @@ extension RedisClient {
         args.append(convertingContentsOf: keys)
         
         return send(command: "SDIFFSTORE", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -366,7 +366,7 @@ extension RedisClient {
 
         let args = keys.map(RESPValue.init)
         return send(command: "SINTER", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Calculates the intersection of two or more sets.
@@ -418,7 +418,7 @@ extension RedisClient {
         args.append(convertingContentsOf: keys)
         
         return send(command: "SINTERSTORE", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -435,7 +435,7 @@ extension RedisClient {
         
         let args = keys.map(RESPValue.init)
         return send(command: "SUNION", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Calculates the union of two or more sets.
@@ -487,6 +487,6 @@ extension RedisClient {
         args.append(convertingContentsOf: keys)
         
         return send(command: "SUNIONSTORE", with: args)
-            .map()
+            .tryConverting()
     }
 }

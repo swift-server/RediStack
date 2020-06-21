@@ -23,7 +23,7 @@ extension RedisClient {
     public func echo(_ message: String) -> EventLoopFuture<String> {
         let args = [RESPValue(bulk: message)]
         return send(command: "ECHO", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Pings the server, which will respond with a message.
@@ -36,7 +36,7 @@ extension RedisClient {
             ? [.init(bulk: message!)] // safe because we did a nil pre-check
             : []
         return send(command: "PING", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Select the Redis logical database having the specified zero-based numeric index.
@@ -64,7 +64,7 @@ extension RedisClient {
             .init(bulk: second)
         ]
         return send(command: "SWAPDB", with: args)
-            .map(to: String.self)
+            .tryConverting(to: String.self)
             .map { return $0 == "OK" }
     }
     
@@ -89,7 +89,7 @@ extension RedisClient {
         
         let args = keys.map(RESPValue.init)
         return send(command: "DEL", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes the specified keys. A key is ignored if it does not exist.
@@ -111,7 +111,7 @@ extension RedisClient {
             RESPValue(from: $0)
         }
         return self.send(command: "EXISTS", with: args)
-            .map(to: Int.self)
+            .tryConverting(to: Int.self)
     }
 
     /// Checks the existence of the provided keys in the database.
@@ -137,7 +137,7 @@ extension RedisClient {
             .init(bulk: timeout.seconds)
         ]
         return send(command: "EXPIRE", with: args)
-            .map(to: Int.self)
+            .tryConverting(to: Int.self)
             .map { return $0 == 1 }
     }
 }
@@ -153,7 +153,7 @@ extension RedisClient {
     public func ttl(_ key: RedisKey) -> EventLoopFuture<RedisKeyLifetime> {
         let args: [RESPValue] = [RESPValue(from: key)]
         return self.send(command: "TTL", with: args)
-            .map(to: Int64.self)
+            .tryConverting(to: Int64.self)
             .map { RedisKeyLifetime(seconds: $0) }
     }
 
@@ -165,7 +165,7 @@ extension RedisClient {
     public func pttl(_ key: RedisKey) -> EventLoopFuture<RedisKeyLifetime> {
         let args: [RESPValue] = [RESPValue(from: key)]
         return self.send(command: "PTTL", with: args)
-            .map(to: Int64.self)
+            .tryConverting(to: Int64.self)
             .map { RedisKeyLifetime(milliseconds: $0) }
     }
 }
@@ -287,7 +287,7 @@ extension RedisClient {
             args.append(.init(bulk: c))
         }
 
-        let response = send(command: command, with: args).map(to: [RESPValue].self)
+        let response = send(command: command, with: args).tryConverting(to: [RESPValue].self)
         let position = response.flatMapThrowing { result -> Int in
             guard
                 let value = result[0].string,
@@ -299,7 +299,7 @@ extension RedisClient {
         }
         let elements = response
             .map { return $0[1] }
-            .map(to: resultType)
+            .tryConverting(to: resultType)
 
         return position.and(elements)
     }

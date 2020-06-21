@@ -123,7 +123,7 @@ extension RedisClient {
         }
 
         return self.send(command: "ZADD", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Adds elements to a sorted set, assigning their score to the values provided.
@@ -177,7 +177,7 @@ extension RedisClient {
     public func zcard(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(from: key)]
         return send(command: "ZCARD", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Gets the score of the specified element in a stored set.
@@ -268,7 +268,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "ZRANK", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Returns the rank (index) of the specified element in a sorted set.
@@ -287,7 +287,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "ZREVRANK", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -369,7 +369,7 @@ extension RedisClient {
             .init(bulk: range.max.description)
         ]
         return self.send(command: "ZCOUNT", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Returns the count of elements in a SortedSet with a score within the inclusive range specified.
@@ -498,7 +498,7 @@ extension RedisClient {
             .init(bulk: range.max.description)
         ]
         return self.send(command: "ZLEXCOUNT", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Returns the count of elements in a SortedSet whose lexiographical value is greater than a minimum value.
@@ -611,7 +611,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .map(to: [RESPValue].self)
+            .tryConverting(to: [RESPValue].self)
             .flatMapThrowing { return try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
     }
 }
@@ -779,7 +779,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "ZINCRBY", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -867,7 +867,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -1266,7 +1266,7 @@ extension RedisClient {
         if withScores { args.append(.init(bulk: "WITHSCORES")) }
 
         return send(command: command, with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -1544,7 +1544,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -1736,7 +1736,7 @@ extension RedisClient {
         }
 
         return send(command: command, with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -1758,7 +1758,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "ZREM", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes the specified elements from a sorted set.
@@ -1803,7 +1803,7 @@ extension RedisClient {
             .init(bulk: range.max.description)
         ]
         return send(command: "ZREMRANGEBYLEX", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes elements from a SortedSet whose lexiographical values are greater than a minimum value.
@@ -1871,7 +1871,7 @@ extension RedisClient {
             .init(bulk: lastIndex)
         ]
         return self.send(command: "ZREMRANGEBYRANK", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
@@ -1959,7 +1959,7 @@ extension RedisClient {
             .init(bulk: range.max.description)
         ]
         return self.send(command: "ZREMRANGEBYSCORE", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Removes elements from a SortedSet whose score is within the inclusive range specified.

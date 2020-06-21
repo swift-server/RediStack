@@ -53,7 +53,7 @@ extension RedisClient {
 
         let args = keys.map(RESPValue.init)
         return send(command: "MGET", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -209,7 +209,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "APPEND", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -289,7 +289,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return self.send(command: "SETNX", with: args)
-            .map(to: Int.self)
+            .tryConverting(to: Int.self)
             .map { $0 == 1 }
     }
 
@@ -368,7 +368,7 @@ extension RedisClient {
     @inlinable
     public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
         return _mset(command: "MSETNX", operations)
-            .map(to: Int.self)
+            .tryConverting(to: Int.self)
             .map { return $0 == 1 }
     }
 
@@ -402,7 +402,7 @@ extension RedisClient {
     public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(from: key)]
         return send(command: "INCR", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Increments the stored value by the amount desired .
@@ -422,7 +422,7 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "INCRBY", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Increments the stored value by the amount desired.
@@ -442,7 +442,7 @@ extension RedisClient {
             count.convertedToRESPValue()
         ]
         return send(command: "INCRBYFLOAT", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -458,7 +458,7 @@ extension RedisClient {
     public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(from: key)]
         return send(command: "DECR", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -478,6 +478,6 @@ extension RedisClient {
             .init(bulk: count)
         ]
         return send(command: "DECRBY", with: args)
-            .map()
+            .tryConverting()
     }
 }

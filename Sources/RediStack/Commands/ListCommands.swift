@@ -25,7 +25,7 @@ extension RedisClient {
     public func llen(of key: RedisKey) -> EventLoopFuture<Int> {
         let args = [RESPValue(from: key)]
         return send(command: "LLEN", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Gets the element from a list stored at the provided index position.
@@ -104,7 +104,7 @@ extension RedisClient {
             value.convertedToRESPValue()
         ]
         return send(command: "LREM", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -266,7 +266,7 @@ extension RedisClient {
             .init(bulk: lastIndex)
         ]
         return send(command: "LRANGE", with: args)
-            .map()
+            .tryConverting()
     }
 
     /// Gets all elements from a List within the the specified inclusive bounds of 0-based indices.
@@ -668,7 +668,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "LINSERT", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -714,7 +714,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "LPUSH", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Pushes all of the provided elements into a list.
@@ -745,7 +745,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "LPUSHX", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
@@ -788,7 +788,7 @@ extension RedisClient {
         args.append(convertingContentsOf: elements)
         
         return send(command: "RPUSH", with: args)
-            .map()
+            .tryConverting()
     }
     
     /// Pushes all of the provided elements into a list.
@@ -818,7 +818,7 @@ extension RedisClient {
             element.convertedToRESPValue()
         ]
         return send(command: "RPUSHX", with: args)
-            .map()
+            .tryConverting()
     }
 }
 
