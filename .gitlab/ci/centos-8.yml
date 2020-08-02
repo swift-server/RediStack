@@ -4,3 +4,7 @@ swift trunk:
   extends: .unit-test
   image: swiftlang/swift:nightly-master-centos8
   allow_failure: true
+
+swift 5.2:
+  extends: .unit-test
+  image: swift:5.2-centos8
