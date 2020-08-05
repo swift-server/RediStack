@@ -26,6 +26,7 @@ public struct RedisConnectionPoolError: LocalizedError, Equatable {
         case poolClosed
         case timedOutWaitingForConnection
         case noAvailableConnectionTargets
+        case poolHasActiveConnections
     }
 
     /// The connection pool has already been closed, but the user has attempted to perform another operation on it.
@@ -36,4 +37,7 @@ public struct RedisConnectionPoolError: LocalizedError, Equatable {
 
     /// The pool has been configured without available connection targets, so there is nowhere to connect to.
     public static let noAvailableConnectionTargets = RedisConnectionPoolError(baseError: .noAvailableConnectionTargets)
+
+    /// Waiting for connections to be returned to the pool, not closing.
+    public static let poolHasActiveConnections = RedisConnectionPoolError(baseError: .poolHasActiveConnections)
 }

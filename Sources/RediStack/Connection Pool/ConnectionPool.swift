@@ -145,12 +145,12 @@ internal final class ConnectionPool {
 
     /// Deactivates this connection pool. Once this is called, no further connections can be obtained
     /// from the pool. Leased connections are not deactivated and can continue to be used.
-    func close() {
+    func close(promise: EventLoopPromise<Void>? = nil) {
         if self.loop.inEventLoop {
-            self.closePool()
+            self.closePool(promise: promise)
         } else {
             self.loop.execute {
-                self.closePool()
+                self.closePool(promise: promise)
             }
         }
     }
@@ -308,12 +308,13 @@ extension ConnectionPool {
         waiter.succeed(connection)
     }
 
-    private func closePool() {
+    private func closePool(promise: EventLoopPromise<Void>?) {
         self.loop.preconditionInEventLoop()
 
         // Pool closure must be monotonic.
         guard case .active = self.state else {
             self.logger.warning("Duplicate attempt to close connection pool")
+            promise?.succeed(())
             return
         }
 
@@ -322,7 +323,7 @@ extension ConnectionPool {
         // To close the pool we need to drop all active connections.
         let connections = self.availableConnections
         self.availableConnections = []
-        connections.forEach { _ = $0.close() }
+        let closeFutures = connections.map { $0.close() }
 
         // We also cancel all pending leases.
         while let pendingLease = self.connectionWaiters.popFirst() {
@@ -331,12 +332,15 @@ extension ConnectionPool {
 
         guard self.activeConnectionCount == 0 else {
             self.logger.trace("Waiting for connections to be returned to the pool, not closing.", metadata: ["active-connections": "\(self.activeConnectionCount)"])
+            promise?.fail(RedisConnectionPoolError.poolHasActiveConnections)
             return
         }
 
         // That was all the connections, so this is now closed.
         self.logger.trace("Pool closed")
         self.state = .closed
+        EventLoopFuture<Void>.andAllSucceed(closeFutures, on: self.loop)
+            .cascade(to: promise)
     }
 
     /// This is the on-thread implementation for leasing connections out to users. Here we work out how to get a new

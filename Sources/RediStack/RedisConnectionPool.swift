@@ -120,9 +120,14 @@ extension RedisConnectionPool {
         }
     }
 
-    public func close() {
+    /// Closes all connections in the pool and deactivates the pool from creating new connections.
+    ///
+    /// This method is safe to call multiple times.
+    /// - Important: If the pool has connections in active use, the close process will not complete.
+    /// - Parameter promise: A notification promise to resolve once the close process has completed.
+    public func close(promise: EventLoopPromise<Void>? = nil) {
         self.loop.execute {
-            self.pool?.close()
+            self.pool?.close(promise: promise)
 
             // This breaks the cycle between us and the pool.
             self.pool = nil
