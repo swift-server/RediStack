@@ -109,11 +109,6 @@ extension RedisCommandHandler: ChannelInboundHandler {
             RedisMetrics.commandSuccessCount.increment()
         }
     }
-    
-//    public func channelUnregistered(context: ChannelHandlerContext) {
-//        self._drainCommandQueue(because: RedisClientError.connectionClosed)
-//    }
-    
 }
 
 // MARK: ChannelOutboundHandler

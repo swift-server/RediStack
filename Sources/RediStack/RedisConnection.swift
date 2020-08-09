@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,13 +60,13 @@ extension RedisConnection {
         to socket: SocketAddress,
         on eventLoop: EventLoop,
         password: String? = nil,
-        logger: Logger = .init(label: "RediStack.RedisConnection"),
+        logger: Logger = .redisBaseConnectionLogger,
         tcpClient: ClientBootstrap? = nil
     ) -> EventLoopFuture<RedisConnection> {
         let client = tcpClient ?? ClientBootstrap.makeRedisTCPClient(group: eventLoop)
         
         return client.connect(to: socket)
-            .map { return RedisConnection(configuredRESPChannel: $0, logger: logger) }
+            .map { return RedisConnection(configuredRESPChannel: $0, context: logger) }
             .flatMap { connection in
                 guard let pw = password else {
                     return connection.eventLoop.makeSucceededFuture(connection)
@@ -95,15 +95,10 @@ extension RedisConnection {
 ///
 /// Note: `wait()` is used in the example for simplicity. Never call `wait()` on an event loop.
 ///
-/// See `NIO.SocketAddress`, `NIO.EventLoop`, and `RedisClient`
-public final class RedisConnection: RedisClient {
+/// See `NIO.SocketAddress`, `NIO.EventLoop`, and `RedisClient`.
+public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     /// A unique identifer to represent this connection.
     public let id = UUID()
-    public private(set) var logger: Logger {
-        didSet {
-            self.logger[metadataKey: String(describing: RedisConnection.self)] = .string(self.id.description)
-        }
-    }
     public var eventLoop: EventLoop { return self.channel.eventLoop }
     /// Is the connection to Redis still open?
     public var isConnected: Bool {
@@ -126,6 +121,8 @@ public final class RedisConnection: RedisClient {
     }
     
     internal let channel: Channel
+    private let systemContext: Context
+    private var logger: Logger { self.systemContext }
     
     private let autoflush: NIOAtomic<Bool> = .makeAtomic(value: true)
     private let _stateLock = Lock()
@@ -138,13 +135,18 @@ public final class RedisConnection: RedisClient {
     deinit {
         if isConnected {
             assertionFailure("close() was not called before deinit!")
-            logger.warning("RedisConnection did not properly shutdown before deinit!")
+            self.logger.warning("connection was not properly shutdown before deinit")
         }
     }
     
-    internal init(configuredRESPChannel: Channel, logger: Logger) {
+    internal init(configuredRESPChannel: Channel, context: Context) {
         self.channel = configuredRESPChannel
-        self.logger = logger
+        // there is a mix of verbiage here as the API is forward thinking towards "baggage context"
+        // while right now it's just an alias of a 'Logging.logger'
+        // in the future this will probably be a property _on_ the context
+        var logger = context
+        logger[metadataKey: RedisLogging.MetadataKeys.connectionID] = "\(self.id.description)"
+        self.systemContext = logger
 
         RedisMetrics.activeConnectionCount.increment()
         RedisMetrics.totalConnectionCount.increment()
@@ -157,11 +159,11 @@ public final class RedisConnection: RedisClient {
             guard self.state == .open else { return }
             
             self.state = .closed
-            self.logger.error("Channel was closed unexpectedly.")
+            self.logger.error("connection was closed unexpectedly")
             RedisMetrics.activeConnectionCount.decrement()
         }
 
-        self.logger.trace("Connection created.")
+        self.logger.trace("connection created")
     }
     
     internal enum ConnectionState {
@@ -177,18 +179,35 @@ extension RedisConnection {
     /// Sends the command with the provided arguments to Redis.
     ///
     /// See `RedisClient.send(command:with:)`.
-    ///
     /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        self.logger.trace("Received command")
+        self.eventLoop.flatSubmit {
+            return self.send(command: command, with: arguments, context: nil)
+        }
+    }
+
+    internal func send(
+        command: String,
+        with arguments: [RESPValue],
+        context: Context?
+    ) -> EventLoopFuture<RESPValue> {
+        self.eventLoop.preconditionInEventLoop()
+
+        let logger = self.prepareLoggerForUse(context)
 
         guard self.isConnected else {
             let error = RedisClientError.connectionClosed
             logger.warning("\(error.localizedDescription)")
             return self.channel.eventLoop.makeFailedFuture(error)
         }
+        logger.trace("received command request")
+        
+        logger.debug("sending command", metadata: [
+            RedisLogging.MetadataKeys.commandKeyword: "\(command)",
+            RedisLogging.MetadataKeys.commandArguments: "\(arguments)"
+        ])
         
         var message: [RESPValue] = [.init(bulk: command)]
         message.append(contentsOf: arguments)
@@ -204,17 +223,21 @@ extension RedisConnection {
             let duration = DispatchTime.now().uptimeNanoseconds - startTime
             RedisMetrics.commandRoundTripTime.recordNanoseconds(duration)
             
-            // log the error here instead
-            guard case let .failure(error) = result else {
-                self.logger.trace("Command completed.")
-                return
+            // log data based on the result
+            switch result {
+            case let .failure(error):
+                logger.error("command failed", metadata: [
+                    RedisLogging.MetadataKeys.error: "\(error.localizedDescription)"
+                ])
+                
+            case let .success(value):
+                logger.debug("command succeeded", metadata: [
+                    RedisLogging.MetadataKeys.commandResult: "\(value)"
+                ])
             }
-            self.logger.error("\(error.localizedDescription)")
         }
         
-        self.logger.debug("Sending command \"\(command)\"\(arguments.count > 0 ? " with \(arguments)" : "")")
-        
-        defer { self.logger.trace("Command sent through channel.") }
+        defer { logger.trace("command sent") }
 
         if self.sendCommandsImmediately {
             return channel.writeAndFlush(command).flatMap { promise.futureResult }
@@ -232,26 +255,34 @@ extension RedisConnection {
     /// See [https://redis.io/commands/quit](https://redis.io/commands/quit)
     /// - Important: Regardless if the returned `NIO.EventLoopFuture` fails or succeeds - after calling this method the connection should no longer be
     ///     used for sending commands to Redis.
+    /// - Parameter logger: An optional logger instance to use while trying to close the connection.
+    ///         If one is not provided, the pool will use its default logger.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the connection has been closed.
     @discardableResult
-    public func close() -> EventLoopFuture<Void> {
-        self.logger.trace("Received request to close the connection.")
+    public func close(logger: Logger? = nil) -> EventLoopFuture<Void> {
+        let logger = self.prepareLoggerForUse(logger)
 
         guard self.isConnected else {
             // return the channel's close future, which is resolved as the last step in channel shutdown
+            logger.info("received duplicate request to close connection")
             return self.channel.closeFuture
         }
+        logger.trace("received request to close the connection")
 
         // we're now in a shutdown state, starting with the command queue.
         self.state = .shuttingDown
         
-        let notification = self.sendQuitCommand() // send "QUIT" so that all the responses are written out
+        let notification = self.sendQuitCommand(logger: logger) // send "QUIT" so that all the responses are written out
             .flatMap { self.closeChannel() } // close the channel from our end
         
-        notification.whenFailure { self.logger.error("Encountered error during close(): \($0)") }
+        notification.whenFailure {
+            logger.error("error while closing connection", metadata: [
+                RedisLogging.MetadataKeys.error: "\($0)"
+            ])
+        }
         notification.whenSuccess {
             self.state = .closed
-            self.logger.debug("Connection closed.")
+            logger.trace("connection is now closed")
             RedisMetrics.activeConnectionCount.decrement()
         }
         
@@ -260,19 +291,19 @@ extension RedisConnection {
     
     /// Bypasses everything for a normal command and explicitly just sends a "QUIT" command to Redis.
     /// - Note: If the command fails, the `NIO.EventLoopFuture` will still succeed - as it's not critical for the command to succeed.
-    private func sendQuitCommand() -> EventLoopFuture<Void> {
+    private func sendQuitCommand(logger: Logger) -> EventLoopFuture<Void> {
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let command = RedisCommand(
             message: .array([RESPValue(bulk: "QUIT")]),
             responsePromise: promise
         )
 
-        logger.trace("Sending QUIT command.")
+        logger.trace("sending QUIT command")
 
         return channel.writeAndFlush(command) // write the command
             .flatMap { promise.futureResult } // chain the callback to the response's
-            .map { _ in () } // ignore the result's value
-            .recover { _ in () } // if there's an error, just return to void
+            .map { _ in logger.trace("sent QUIT command") } // ignore the result's value
+            .recover { _ in logger.debug("recovered from error sending QUIT") } // if there's an error, just return to void
     }
     
     /// Attempts to close the `NIO.Channel`.
@@ -303,11 +334,13 @@ extension RedisConnection {
 // MARK: Logging
 
 extension RedisConnection {
-    /// Updates the client's logger, attaching this connection's ID to the metadata.
-    ///
-    /// See `RedisClient.setLogging(to:)` and `RedisConnection.id`.
-    /// - Parameter logger: The `Logging.Logger` that is desired to receive all client logs.
-    public func setLogging(to logger: Logger) {
-        self.logger = logger
+    public func logging(to logger: Logger) -> RedisClient {
+        return UserContextRedisClient(client: self, context: self.prepareLoggerForUse(logger))
+    }
+
+    private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
+        guard var logger = logger else { return self.logger }
+        logger[metadataKey: RedisLogging.MetadataKeys.connectionID] = "\(self.id)"
+        return logger
     }
 }

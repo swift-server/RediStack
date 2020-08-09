@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,6 +16,8 @@ import protocol Foundation.LocalizedError
 import struct Logging.Logger
 import NIO
 
+// - Important: Any RedisClient defined by RediStack should conform to the RedisClientWithUserContext protocol as well
+
 /// An object capable of sending commands and receiving responses.
 ///
 ///     let client = ...
@@ -26,9 +28,6 @@ import NIO
 public protocol RedisClient {
     /// The `NIO.EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
-    
-    /// The `Logging.Logger` that this client uses.
-    var logger: Logger { get }
 
     /// Sends the desired command with the specified arguments.
     /// - Parameters:
@@ -37,9 +36,10 @@ public protocol RedisClient {
     /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
     func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
     
-    /// Updates the client's logger.
-    /// - Parameter logger: The `Logging.Logger` that is desired to receive all client logs.
-    func setLogging(to logger: Logger)
+    /// Temporarily overrides the default logger for command logs to the provided instance.
+    /// - Parameter logger: The `Logging.Logger` instance to use for command logs.
+    /// - Returns: A RedisClient with the temporary override for command logging.
+    func logging(to logger: Logger) -> RedisClient
 }
 
 extension RedisClient {
@@ -51,16 +51,7 @@ extension RedisClient {
     }
 }
 
-extension RedisClient {
-    /// Updates the client's logger and returns a reference to itself for chaining method calls.
-    /// - Parameter logger: The `Logging.Logger` that is desired to receive all client logs.
-    /// - Returns: A reference to the client for chaining method calls.
-    @inlinable
-    public func logging(to logger: Logger) -> Self {
-        self.setLogging(to: logger)
-        return self
-    }
-}
+// MARK: Errors
 
 /// When working with `RedisClient`, runtime errors can be thrown to indicate problems with connection state, decoding assertions, or otherwise.
 public struct RedisClientError: LocalizedError, Equatable, Hashable {
@@ -84,8 +75,8 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
     public var errorDescription: String? {
         let message: String
         switch self.baseError {
-        case .connectionClosed: message = "Connection was closed while trying to send command."
-        case let .failedRESPConversion(type): message = "Failed to convert RESP to \(type)"
+        case .connectionClosed: message = "trying to send command with a closed connection"
+        case let .failedRESPConversion(type): message = "failed to convert RESP to \(type)"
         case let .assertionFailure(text): message = text
         }
         return "(RediStack) \(message)"

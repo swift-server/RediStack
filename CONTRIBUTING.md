@@ -9,6 +9,10 @@ All contributors are expected to adhere to this project's [Code of Conduct](CODE
 
 ## Development
 
+### Project Vision
+
+For clarification behind certain API design decisions, or to get up to speed on the vision of the project, check out the [API Design](./docs/api-design) pages.
+
 ### File Copyright Headers
 
 When adding a new file to the project, add the following heading to the top of the file:

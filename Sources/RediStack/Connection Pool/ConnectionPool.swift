@@ -48,9 +48,6 @@ internal final class ConnectionPool {
     /// The event loop we're on.
     private let loop: EventLoop
 
-    /// A logger.
-    private(set) var logger: Logger
-
     /// The exponential backoff factor for connection attempts.
     internal let backoffFactor: Float32
 
@@ -101,17 +98,20 @@ internal final class ConnectionPool {
         }
     }
 
-    init(
+    internal init(
         maximumConnectionCount: Int,
         minimumConnectionCount: Int,
         leaky: Bool,
         loop: EventLoop,
-        logger: Logger = .init(label: "RediStack.ConnectionPool"),
+        systemContext: Context,
         connectionBackoffFactor: Float32 = 2,
         initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
         connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>
     ) {
-        precondition(minimumConnectionCount <= maximumConnectionCount, "Minimum connection count must not exceed maximum")
+        guard minimumConnectionCount <= maximumConnectionCount else {
+            systemContext.critical("pool's minimum connection count is higher than the maximum")
+            preconditionFailure("Minimum connection count must not exceed maximum")
+        }
 
         self.connectionFactory = connectionFactory
         self.availableConnections = []
@@ -120,7 +120,6 @@ internal final class ConnectionPool {
         // 8 is a good number to skip the first few buffer resizings
         self.connectionWaiters = CircularBuffer(initialCapacity: 8)
         self.loop = loop
-        self.logger = logger
         self.backoffFactor = connectionBackoffFactor
         self.initialBackoffDelay = initialConnectionBackoffDelay
 
@@ -133,54 +132,44 @@ internal final class ConnectionPool {
     }
 
     /// Activates this connection pool by causing it to populate its backlog of connections.
-    func activate() {
+    func activate(logger: Logger) {
         if self.loop.inEventLoop {
-            self.refillConnections()
+            self.refillConnections(logger: logger)
         } else {
             self.loop.execute {
-                self.refillConnections()
+                self.refillConnections(logger: logger)
             }
         }
     }
 
     /// Deactivates this connection pool. Once this is called, no further connections can be obtained
     /// from the pool. Leased connections are not deactivated and can continue to be used.
-    func close(promise: EventLoopPromise<Void>? = nil) {
+    func close(promise: EventLoopPromise<Void>? = nil, logger: Logger) {
         if self.loop.inEventLoop {
-            self.closePool(promise: promise)
+            self.closePool(promise: promise, logger: logger)
         } else {
             self.loop.execute {
-                self.closePool(promise: promise)
+                self.closePool(promise: promise, logger: logger)
             }
         }
     }
 
-    func leaseConnection(deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
+    func leaseConnection(deadline: NIODeadline, logger: Logger) -> EventLoopFuture<RedisConnection> {
         if self.loop.inEventLoop {
-            return self._leaseConnection(deadline)
+            return self._leaseConnection(deadline, logger: logger)
         } else {
             return self.loop.flatSubmit {
-                return self._leaseConnection(deadline)
+                return self._leaseConnection(deadline, logger: logger)
             }
         }
     }
 
-    func returnConnection(_ connection: RedisConnection) {
+    func returnConnection(_ connection: RedisConnection, logger: Logger) {
         if self.loop.inEventLoop {
-            self._returnLeasedConnection(connection)
+            self._returnLeasedConnection(connection, logger: logger)
         } else {
             return self.loop.execute {
-                self._returnLeasedConnection(connection)
-            }
-        }
-    }
-
-    func setLogger(_ logger: Logger) {
-        if self.loop.inEventLoop {
-            self.logger = logger
-        } else {
-            self.loop.execute {
-                self.logger = logger
+                self._returnLeasedConnection(connection, logger: logger)
             }
         }
     }
@@ -189,7 +178,7 @@ internal final class ConnectionPool {
 // MARK: Internal implementation
 extension ConnectionPool {
     /// Ensures that sufficient connections are available in the pool.
-    private func refillConnections() {
+    private func refillConnections(logger: Logger) {
         self.loop.assertInEventLoop()
 
         guard case .active = self.state else {
@@ -198,37 +187,43 @@ extension ConnectionPool {
         }
 
         var neededConnections = self.minimumConnectionCount - self.activeConnectionCount
-
-        self.logger.trace("Refilling connections", metadata: ["connection-count": "\(neededConnections)"])
+        logger.trace("refilling connections", metadata: [
+            RedisLogging.MetadataKeys.connectionCount: "\(neededConnections)"
+        ])
         while neededConnections > 0 {
-            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0))
+            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
             neededConnections -= 1
         }
     }
 
-    private func _createConnection(backoff: TimeAmount, startIn delay: TimeAmount) {
+    private func _createConnection(backoff: TimeAmount, startIn delay: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
         self.pendingConnectionCount += 1
 
         self.loop.scheduleTask(in: delay) {
-            self.connectionFactory(self.loop).whenComplete { result in
-                self.loop.preconditionInEventLoop()
+            self.connectionFactory(self.loop)
+                .whenComplete { result in
+                    self.loop.preconditionInEventLoop()
 
-                self.pendingConnectionCount -= 1
+                    self.pendingConnectionCount -= 1
 
-                switch result {
-                case .success(let connection):
-                    self.connectionCreationSucceeded(connection)
-                case .failure(let error):
-                    self.connectionCreationFailed(error, backoff: backoff)
+                    switch result {
+                    case .success(let connection):
+                        self.connectionCreationSucceeded(connection, logger: logger)
+
+                    case .failure(let error):
+                        self.connectionCreationFailed(error, backoff: backoff, logger: logger)
+                    }
                 }
-            }
         }
     }
 
-    private func connectionCreationSucceeded(_ connection: RedisConnection) {
+    private func connectionCreationSucceeded(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
-        self.logger.trace("Connection creation succeeded", metadata: ["connection-id": "\(connection.id)"])
+        
+        logger.trace("connection creation succeeded", metadata: [
+            RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+        ])
 
         switch self.state {
         case .closing:
@@ -236,24 +231,28 @@ extension ConnectionPool {
             _ = connection.close()
         case .closed:
             // This is programmer error, we shouldn't have entered this state.
-            self.logger.critical("FATAL ERROR: Pool is closed but we received successful created connection.", metadata: ["connection-id": "\(connection.id)"])
+            logger.critical("new connection created on a closed pool", metadata: [
+                RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+            ])
             preconditionFailure("In closed while pending connections were outstanding.")
         case .active:
             // Great, we want this. We'll be "returning" it to the pool. First,
             // attach the close callback to it.
-            connection.channel.closeFuture.whenComplete { _ in self.poolConnectionClosed(connection) }
-            self._returnConnection(connection)
+            connection.channel.closeFuture.whenComplete { _ in self.poolConnectionClosed(connection, logger: logger) }
+            self._returnConnection(connection, logger: logger)
         }
     }
 
-    private func connectionCreationFailed(_ error: Error, backoff: TimeAmount) {
+    private func connectionCreationFailed(_ error: Error, backoff: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
 
-        self.logger.error("Error creating Redis connection for pool", metadata: ["error": "\(error)"])
+        logger.error("failed to create connection for pool", metadata: [
+            RedisLogging.MetadataKeys.error: "\(error)"
+        ])
 
         guard case .active = self.state else {
             // No point continuing connection creation if we're not active.
-            self.logger.trace("Not creating new connections due to inactivity")
+            logger.trace("not creating new connections due to inactivity")
             return
         }
 
@@ -267,24 +266,29 @@ extension ConnectionPool {
         // 3. For either kind, if the number of active connections is less than the minimum.
         let shouldReconnect: Bool
         if self.leaky {
-            shouldReconnect = (self.connectionWaiters.count > self.pendingConnectionCount) || (self.minimumConnectionCount > self.activeConnectionCount)
+            shouldReconnect = (self.connectionWaiters.count > self.pendingConnectionCount)
+                || (self.minimumConnectionCount > self.activeConnectionCount)
         } else {
-            shouldReconnect = (!self.connectionWaiters.isEmpty && self.maximumConnectionCount > self.activeConnectionCount) || (self.minimumConnectionCount > self.activeConnectionCount)
+            shouldReconnect = (!self.connectionWaiters.isEmpty && self.maximumConnectionCount > self.activeConnectionCount)
+                || (self.minimumConnectionCount > self.activeConnectionCount)
         }
 
         guard shouldReconnect else {
-            self.logger.debug("Not reconnecting due to sufficient existing connection attempts")
+            logger.debug("not reconnecting due to sufficient existing connection attempts")
             return
         }
 
         // Ok, we need the new connection.
         let newBackoff = TimeAmount.nanoseconds(Int64(Float32(backoff.nanoseconds) * self.backoffFactor))
-        logger.debug("Reconnecting after failed connection attempt", metadata: ["backoff": "\(backoff)", "new-backoff": "\(newBackoff)"])
-        self._createConnection(backoff: newBackoff, startIn: backoff)
+        logger.debug("reconnecting after failed connection attempt", metadata: [
+            RedisLogging.MetadataKeys.poolConnectionRetryBackoff: "\(backoff)ns",
+            RedisLogging.MetadataKeys.poolConnectionRetryNewBackoff: "\(newBackoff)ns"
+        ])
+        self._createConnection(backoff: newBackoff, startIn: backoff, logger: logger)
     }
 
     /// A connection that was monitored by this pool has been closed.
-    private func poolConnectionClosed(_ connection: RedisConnection) {
+    private func poolConnectionClosed(_ connection: RedisConnection, logger: Logger) {
         self.loop.preconditionInEventLoop()
 
         // We need to work out what kind of connection this was. This is easily done: if the connection is in the
@@ -299,7 +303,7 @@ extension ConnectionPool {
         }
 
         // We may need to refill connections to keep at our minimum connection count.
-        self.refillConnections()
+        self.refillConnections(logger: logger)
     }
 
     private func leaseConnection(_ connection: RedisConnection, to waiter: Waiter) {
@@ -308,12 +312,12 @@ extension ConnectionPool {
         waiter.succeed(connection)
     }
 
-    private func closePool(promise: EventLoopPromise<Void>?) {
+    private func closePool(promise: EventLoopPromise<Void>?, logger: Logger) {
         self.loop.preconditionInEventLoop()
 
         // Pool closure must be monotonic.
         guard case .active = self.state else {
-            self.logger.warning("Duplicate attempt to close connection pool")
+            logger.info("received duplicate request to close connection pool")
             promise?.succeed(())
             return
         }
@@ -331,25 +335,28 @@ extension ConnectionPool {
         }
 
         guard self.activeConnectionCount == 0 else {
-            self.logger.trace("Waiting for connections to be returned to the pool, not closing.", metadata: ["active-connections": "\(self.activeConnectionCount)"])
+            logger.debug("not closing pool, waiting for all connections to be returned", metadata: [
+                RedisLogging.MetadataKeys.poolConnectionCount: "\(self.activeConnectionCount)"
+            ])
             promise?.fail(RedisConnectionPoolError.poolHasActiveConnections)
             return
         }
 
         // That was all the connections, so this is now closed.
-        self.logger.trace("Pool closed")
+        logger.trace("pool is now closed")
         self.state = .closed
-        EventLoopFuture<Void>.andAllSucceed(closeFutures, on: self.loop)
+        EventLoopFuture<Void>
+            .andAllSucceed(closeFutures, on: self.loop)
             .cascade(to: promise)
     }
 
     /// This is the on-thread implementation for leasing connections out to users. Here we work out how to get a new
     /// connection, and attempt to do so.
-    private func _leaseConnection(_ deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
+    private func _leaseConnection(_ deadline: NIODeadline, logger: Logger) -> EventLoopFuture<RedisConnection> {
         self.loop.assertInEventLoop()
 
         guard case .active = self.state else {
-            self.logger.warning("Attempted to lease connection from closed pool")
+            logger.trace("attempted to lease connection from closed pool")
             return self.loop.makeFailedFuture(RedisConnectionPoolError.poolClosed)
         }
 
@@ -378,7 +385,7 @@ extension ConnectionPool {
         // below the max, or the pool is leaky, we can create a new connection. Otherwise, we just have
         // to wait for a connection to come back.
         if self.activeConnectionCount < self.maximumConnectionCount || self.leaky {
-            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0))
+            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
         }
 
         return waiter.futureResult
@@ -386,20 +393,20 @@ extension ConnectionPool {
 
     /// This is the on-thread implementation for returning connections to the pool that were previously leased to users.
     /// It delegates to `_returnConnection`.
-    private func _returnLeasedConnection(_ connection: RedisConnection) {
+    private func _returnLeasedConnection(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
         self.leasedConnectionCount -= 1
-        self._returnConnection(connection)
+        self._returnConnection(connection, logger: logger)
     }
 
     /// This is the on-thread implementation for returning connections to the pool. Here we work out what to do with a newly-acquired
     /// connection.
-    private func _returnConnection(_ connection: RedisConnection) {
+    private func _returnConnection(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
 
         guard connection.isConnected else {
             // This connection isn't active anymore. We'll dump it and potentially kick off a reconnection.
-            self.refillConnections()
+            self.refillConnections(logger: logger)
             return
         }
 
@@ -424,7 +431,9 @@ extension ConnectionPool {
             // In general we shouldn't see leased connections return in .closed, as we should only be able to
             // transition to .closed when all the leases are back. We tolerate this in production builds by just closing the
             // connection, but in debug builds we assert to be sure.
-            self.logger.error("Returned connection to closed pool", metadata: ["connection-id": "\(connection.id)"])
+            logger.warning("connection returned to closed pool", metadata: [
+                RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+            ])
             assertionFailure("Returned connection to closed pool")
             fallthrough
         case .closing:

@@ -27,6 +27,9 @@ import Logging
 /// single `EventLoop`: if callers call the API from a different `EventLoop` (or from no `EventLoop` at all)
 /// `RedisConnectionPool` will ensure that the call is dispatched to the correct loop.
 public class RedisConnectionPool {
+    /// A unique identifer to represent this connection.
+    public let id = UUID()
+
     // This needs to be var because we hand it a closure that references us strongly. This also
     // establishes a reference cycle which we need to break.
     // Aside from on init, all other operations on this var must occur on the event loop.
@@ -36,22 +39,11 @@ public class RedisConnectionPool {
     /// all use of this var must occur on the event loop.
     private var serverConnectionAddresses: ConnectionAddresses
 
-    private let loop: EventLoop
-
-    private var poolLogger: Logger
-
-    /// This lock exists only to access the pool logger. We don't use the pool logger here at all, but
-    /// we need to be able to give it to users in a way that is thread-safe, as users can also set it from
-    /// any thread they want.
-    private let poolLoggerLock: Lock
-
     private let connectionPassword: String?
-
-    private let connectionLogger: Logger
-
+    private let connectionSystemContext: Logger
+    private let poolSystemContext: Context
+    private let loop: EventLoop
     private let connectionTCPClient: ClientBootstrap?
-
-    private let poolID: UUID
 
     /// Create a new `RedisConnectionPool`.
     ///
@@ -77,34 +69,35 @@ public class RedisConnectionPool {
         maximumConnectionCount: RedisConnectionPoolSize,
         minimumConnectionCount: Int = 1,
         connectionPassword: String? = nil,
-        connectionLogger: Logger = .init(label: "RediStack.RedisConnection"),
+        connectionLogger: Logger = .redisBaseConnectionLogger,
         connectionTCPClient: ClientBootstrap? = nil,
-        poolLogger: Logger = .init(label: "RediStack.RedisConnectionPool"),
+        poolLogger: Logger = .redisBaseConnectionPoolLogger,
         connectionBackoffFactor: Float32 = 2,
         initialConnectionBackoffDelay: TimeAmount = .milliseconds(100)
     ) {
-        self.poolID = UUID()
         self.loop = loop
         self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: serverConnectionAddresses)
         self.connectionPassword = connectionPassword
+        
+        // mix of terminology here with the loggers
+        // as we're being "forward thinking" in terms of the 'baggage context' future type
 
         var connectionLogger = connectionLogger
-        connectionLogger[metadataKey: String(describing: RedisConnectionPool.self)] = "\(self.poolID)"
-        self.connectionLogger = connectionLogger
+        connectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
+        self.connectionSystemContext = connectionLogger
 
         var poolLogger = poolLogger
-        poolLogger[metadataKey: String(describing: RedisConnectionPool.self)] = "\(self.poolID)"
-        self.poolLogger = poolLogger
+        poolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
+        self.poolSystemContext = poolLogger
 
         self.connectionTCPClient = connectionTCPClient
-        self.poolLoggerLock = Lock()
 
         self.pool = ConnectionPool(
             maximumConnectionCount: maximumConnectionCount.size,
             minimumConnectionCount: minimumConnectionCount,
             leaky: maximumConnectionCount.leaky,
             loop: loop,
-            logger: poolLogger,
+            systemContext: poolLogger,
             connectionBackoffFactor: connectionBackoffFactor,
             initialConnectionBackoffDelay: initialConnectionBackoffDelay,
             connectionFactory: self.connectionFactory(_:)
@@ -114,9 +107,14 @@ public class RedisConnectionPool {
 
 // MARK: General helpers.
 extension RedisConnectionPool {
-    public func activate() {
+    /// Starts the connection pool.
+    ///
+    /// This method is safe to call multiple times.
+    /// - Parameter logger: An optional logger to use for any log statements generated while starting up the pool.
+    ///         If one is not provided, the pool will use its default logger.
+    public func activate(logger: Logger? = nil) {
         self.loop.execute {
-            self.pool?.activate()
+            self.pool?.activate(logger: self.prepareLoggerForUse(logger))
         }
     }
 
@@ -124,10 +122,13 @@ extension RedisConnectionPool {
     ///
     /// This method is safe to call multiple times.
     /// - Important: If the pool has connections in active use, the close process will not complete.
-    /// - Parameter promise: A notification promise to resolve once the close process has completed.
-    public func close(promise: EventLoopPromise<Void>? = nil) {
+    /// - Parameters:
+    ///     - promise: A notification promise to resolve once the close process has completed.
+    ///     - logger: An optional logger to use for any log statements generated while closing the pool.
+    ///         If one is not provided, the pool will use its default logger.
+    public func close(promise: EventLoopPromise<Void>? = nil, logger: Logger? = nil) {
         self.loop.execute {
-            self.pool?.close(promise: promise)
+            self.pool?.close(promise: promise, logger: self.prepareLoggerForUse(logger))
 
             // This breaks the cycle between us and the pool.
             self.pool = nil
@@ -136,12 +137,19 @@ extension RedisConnectionPool {
 
     /// Updates the list of valid connection addresses.
     ///
-    /// This does not invalidate existing connections: as long as those connections continue to stay up, they will be kept by
-    /// this client. However, no new connections will be made to any endpoint that is not in `newTargets`.
-    public func updateConnectionAddresses(_ newAddresses: [SocketAddress]) {
-        self.poolLoggerLock.withLockVoid {
-            self.poolLogger.info("Updated pool with new addresses", metadata: ["new-addresses": "\(newAddresses)"])
-        }
+    /// - Note: This does not invalidate existing connections: as long as those connections continue to stay up, they will be kept by
+    /// this client.
+    ///
+    /// However, no new connections will be made to any endpoint that is not in `newAddresses`.
+    /// - Parameters:
+    ///     - newAddresses: The new addresses to connect to in future connections.
+    ///     - logger: An optional logger to use for any log statements generated while updating the target addresses.
+    ///         If one is not provided, the pool will use its default logger.
+    public func updateConnectionAddresses(_ newAddresses: [SocketAddress], logger: Logger? = nil) {
+        self.prepareLoggerForUse(logger)
+            .info("pool updated with new target addresses", metadata: [
+                RedisLogging.MetadataKeys.newConnectionPoolTargetAddresses: "\(newAddresses)"
+            ])
         
         self.loop.execute {
             self.serverConnectionAddresses.update(newAddresses)
@@ -162,60 +170,54 @@ extension RedisConnectionPool {
             to: nextTarget,
             on: targetLoop,
             password: self.connectionPassword,
-            logger: self.connectionLogger,
+            logger: self.connectionSystemContext,
             tcpClient: self.connectionTCPClient
         )
+    }
+
+    private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
+        guard var logger = logger else { return self.poolSystemContext }
+        logger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
+        return logger
     }
 }
 
 // MARK: RedisClient conformance
 extension RedisConnectionPool: RedisClient {
-    public var eventLoop: EventLoop {
-        return self.loop
-    }
+    public var eventLoop: EventLoop { self.loop }
 
-    public var logger: Logger {
-        return self.poolLoggerLock.withLock {
-            return self.poolLogger
-        }
-    }
-
-    public func setLogging(to logger: Logger) {
-        var logger = logger
-        logger[metadataKey: String(describing: RedisConnectionPool.self)] = "\(self.poolID)"
-
-        self.poolLoggerLock.withLock {
-            self.poolLogger = logger
-
-            // We must enqueue this before we drop the lock to prevent a race on setting this logger.
-            self.loop.execute {
-                self.pool?.setLogger(logger)
-            }
-        }
+    public func logging(to logger: Logger) -> RedisClient {
+        return UserContextRedisClient(client: self, context: self.prepareLoggerForUse(logger))
     }
 
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
         // Establish event loop context then jump to the in-loop version.
         return self.loop.flatSubmit {
-            return self._send(command: command, with: arguments)
+            return self.send(command: command, with: arguments, context: nil)
         }
     }
+}
 
-    private func _send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
+// MARK: RedisClientWithUserContext conformance
+extension RedisConnectionPool: RedisClientWithUserContext {
+    internal func send(command: String, with arguments: [RESPValue], context: Logger?) -> EventLoopFuture<RESPValue> {
         self.loop.preconditionInEventLoop()
 
         guard let pool = self.pool else {
             return self.loop.makeFailedFuture(RedisConnectionPoolError.poolClosed)
         }
 
-        // For now we have to default the deadline. For maximum compatibility with the existing implementation, we use a fairly-long timeout:
-        // one minute.
-        return pool.leaseConnection(deadline: .now() + .seconds(60)).flatMap { connection in
-            connection.sendCommandsImmediately = true
-            return connection.send(command: command, with: arguments).always { _ in
-                pool.returnConnection(connection)
+        let logger = self.prepareLoggerForUse(context)
+        
+        // For now we have to default the deadline.
+        // For maximum compatibility with the existing implementation, we use a fairly-long timeout: one minute.
+        return pool.leaseConnection(deadline: .now() + .seconds(60), logger: logger)
+            .flatMap { connection in
+                connection.sendCommandsImmediately = true
+                return connection
+                    .send(command: command, with: arguments, context: context)
+                    .always { _ in pool.returnConnection(connection, logger: logger) }
             }
-        }
     }
 }
 
@@ -254,7 +256,6 @@ extension RedisConnectionPool {
         }
     }
 }
-
 
 /// `RedisConnectionPoolSize` controls how the maximum number of connections in a pool are interpreted.
 public enum RedisConnectionPoolSize {

@@ -36,7 +36,7 @@ final class ConnectionPoolTests: XCTestCase {
         let channel = self.server.createConnectedChannel()
 
         // Wrap it
-        return RedisConnection(configuredRESPChannel: channel, logger: .init(label: "RediStack.RedisConnection"))
+        return RedisConnection(configuredRESPChannel: channel, context: .redisBaseConnectionLogger)
     }
 
     func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool) -> ConnectionPool {
@@ -44,7 +44,8 @@ final class ConnectionPoolTests: XCTestCase {
             maximumConnectionCount: maximumConnectionCount,
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
-            loop: self.server.loop
+            loop: self.server.loop,
+            systemContext: .redisBaseConnectionPoolLogger
         ) { loop in
             return loop.makeSucceededFuture(self.createAConnection())
         }
@@ -56,6 +57,7 @@ final class ConnectionPoolTests: XCTestCase {
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
             loop: self.server.loop,
+            systemContext: .redisBaseConnectionPoolLogger,
             connectionFactory: connectionFactory
         )
     }
@@ -705,6 +707,26 @@ extension ConnectionPoolTests {
         try self.stopReconnectingIfThereAreNoWaiters(leaky: false)
     }
 }
+
+// MARK: ConnectionPool context erasing overloads
+
+extension ConnectionPool {
+    func activate() { self.activate(logger: .redisBaseConnectionPoolLogger) }
+    
+    func leaseConnection(deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
+        return self.leaseConnection(deadline: deadline, logger: .redisBaseConnectionPoolLogger)
+    }
+    
+    func returnConnection(_ connection: RedisConnection) {
+        self.returnConnection(connection, logger: .redisBaseConnectionPoolLogger)
+    }
+    
+    func close(promise: EventLoopPromise<Void>? = nil) {
+        self.close(promise: promise, logger: .redisBaseConnectionPoolLogger)
+    }
+}
+
+// MARK: Test Helpers
 
 extension Collection where Element == EmbeddedChannel {
     func allMatch<Other: Collection>(_ other: Other) -> Bool where Other.Element == EmbeddedChannel {
