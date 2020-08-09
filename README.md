@@ -4,7 +4,7 @@
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.0+-orange.svg" alt="Swift 5.0+"></a>
+    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.1+-orange.svg" alt="Swift 5.1+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 
@@ -31,15 +31,15 @@ The table below lists the major releases alongside their compatible language, de
 
 | RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
 |:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
-| `from: "1.0.0-alpha.7"` | 5.0+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x |
+| `from: "1.0.0-alpha.11"` | 5.1+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x |
 
 > **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
 ### Supported Operating Systems
 
-**RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases).
+**RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases)**²**.
 
-See the [test matrix below for more details](#language-and-platform-test-matrix).
+> **²** See the [platform support matrix below for more details](#language-and-platform-support).
 
 ## Installing
 
@@ -47,7 +47,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "1.0.0-alpha.5")
+    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "1.0.0-alpha.11")
 ]
 ```
 
@@ -104,16 +104,25 @@ Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/RediStack/blob/master/CON
 |:---:|:---:|:---:|:---:|:---:|
 | [SSWG-0004](https://github.com/swift-server/sswg/blob/master/proposals/0004-nio-redis.md) | [2019-01-07](https://forums.swift.org/t/swiftnio-redis-client/19325) | [2019-04-01](https://forums.swift.org/t/discussion-nioredis-nio-based-redis-driver/22455) | [2019-06-09](https://forums.swift.org/t/feedback-redisnio-a-nio-based-redis-driver/25521) | [2019-06-27](https://forums.swift.org/t/june-27th-2019/26580) |
 
-## Language and Platform Test Matrix
+## Language and Platform Support
+
+**RediStack** will always support the latest version of Swift on a given platform, plus **2** previous versions.
+
+This policy is to balance the desire for as much backwards compatibility as possible, while also being able to take advantage of new Swift features for the best API design possible.
+
+The oldest version of Swift will be dropped within **3 months** of an official release of a new version of Swift.
 
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI).
 
-| Platform | Swift 5 | 5.1 | 5.2 | Trunk |
+| Platform | Swift 5.1 | 5.2 | 5.3 | Trunk |
 |:---------|:-------:|:---:|:---:|:-----:|
 | macOS Latest | | | :white_check_mark: | |
+| Ubuntu 20.04 (Focal)  | | :white_check_mark: | | :white_check_mark: |
 | Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Amazon Linux 2 | | :white_check_mark: | | :white_check_mark: |
+| CentOS 8 | | :white_check_mark: | | :white_check_mark: |
 
 ## License
 

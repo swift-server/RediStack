@@ -16,9 +16,3 @@ swift 5.2:
 swift 5.1:
   extends: .unit-test
   image: swift:5.1-xenial
-
-swift 5.0:
-  extends: .unit-test
-  image: swift:5.0-xenial
-  variables:
-    SANITIZER_ARG: ''

@@ -1,4 +1,4 @@
-// swift-tools-version:5.0
+// swift-tools-version:5.1
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the RediStack open source project

@@ -8,7 +8,6 @@ swift trunk:
 swift 5.3:
   extends: .unit-test
   image: swiftlang/swift:nightly-5.3-bionic
-  allow_failure: true
 
 swift 5.2:
   extends: .unit-test
@@ -17,9 +16,3 @@ swift 5.2:
 swift 5.1:
   extends: .unit-test
   image: swift:5.1-bionic
-
-swift 5.0:
-  extends: .unit-test
-  image: swift:5.0-bionic
-  variables:
-    SANITIZER_ARG: ''
