@@ -76,6 +76,12 @@ Ubuntu Focal:
     strategy: depend
     include: '/.gitlab/ci/ubuntu-focal.yml'
 
+CentOS 7:
+  stage: Platform Tests
+  trigger:
+    strategy: depend
+    include: '/.gitlab/ci/centos-7.yml'
+
 CentOS 8:
   stage: Platform Tests
   trigger:
