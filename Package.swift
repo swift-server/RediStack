@@ -3,7 +3,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,7 +19,8 @@ let package = Package(
     name: "RediStack",
     products: [
         .library(name: "RediStack", targets: ["RediStack"]),
-        .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"])
+        .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"]),
+        .library(name: "RedisTypes", targets: ["RedisTypes"])
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -28,10 +29,10 @@ let package = Package(
     ],
     targets: [
         .target(name: "RediStack", dependencies: ["NIO", "Logging", "Metrics"]),
+        .target(name: "RedisTypes", dependencies: ["RediStack"]),
         .target(name: "RediStackTestUtils", dependencies: ["NIO", "RediStack"]),
-        .testTarget(name: "RediStackTests", dependencies: [
-            "RediStack", "NIO", "RediStackTestUtils", "NIOTestUtils"
-        ]),
+        .testTarget(name: "RediStackTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils", "NIOTestUtils"]),
+        .testTarget(name: "RedisTypesTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils", "RedisTypes"]),
         .testTarget(name: "RediStackIntegrationTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils"])
     ]
 )
