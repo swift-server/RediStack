@@ -118,12 +118,12 @@ receive regular unit testing (either in development, or with CI).
 | Platform              | Swift 5.1          | 5.2                | 5.3                | Trunk              |
 |:----------------------|:------------------:|:------------------:|:------------------:|:------------------:|
 | macOS Latest (Intel)  |                    |                    | :white_check_mark: |                    |
-| Ubuntu 20.04 (Focal)  |                    | :white_check_mark: |                    | :white_check_mark: |
+| Ubuntu 20.04 (Focal)  |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Amazon Linux 2        |                    | :white_check_mark: |                    | :white_check_mark: |
+| Amazon Linux 2        |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | CentOS 7              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| CentOS 8              |                    | :white_check_mark: |                    | :white_check_mark: |
+| CentOS 8              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## License
 

@@ -5,6 +5,10 @@ swift trunk:
   image: swiftlang/swift:nightly-master-focal
   allow_failure: true
 
+swift 5.3:
+  extends: .unit-test
+  image: swiftlang/swift:nightly-5.3-focal
+
 swift 5.2:
   extends: .unit-test
   image: swift:5.2-focal
