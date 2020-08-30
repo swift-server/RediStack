@@ -1,5 +1,5 @@
 <div align="center">
-<p><img src="https://gitlab.com/Mordil/RediStack/wikis/uploads/cb4c517e40bd2f5ab796f1093efbd697/RediStack_social-preview_transparent.png" width="350" alt="RediStack logo"></p>
+<p><img src="https://repository-images.githubusercontent.com/161592209/e0dfc700-a1c2-11e9-9302-a4b00958c76f" width="350" alt="RediStack logo"></p>
 
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
