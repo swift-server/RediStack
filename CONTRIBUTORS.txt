@@ -16,7 +16,7 @@ needs to be listed here.
 - George Barnett <gbarnett@apple.com>
 - Nathan Harris <nathan@mordil.info>
 - Ondrej Rafaj <ondrej.rafaj@gmail.com>
-- tanner0101 <me@tanner.xyz>
+- Tanner Nelson <me@tanner.xyz>
 
 **Updating this list**
 
