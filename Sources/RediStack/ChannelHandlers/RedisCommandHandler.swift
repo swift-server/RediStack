@@ -83,6 +83,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
     }
     
     private func _failCommandQueue(because error: Error) {
+        self.state = .error(error)
         let queue = self.commandResponseQueue
         self.commandResponseQueue.removeAll()
         queue.forEach { $0.fail(error) }
