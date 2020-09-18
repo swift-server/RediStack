@@ -15,7 +15,7 @@ swift trunk:
 
 swift 5.3:
   extends: .centos7-test-workaround
-  image: swiftlang/swift:nightly-5.3-centos7
+  image: swift:5.3-centos7
 
 swift 5.2:
   extends: .centos7-test-workaround
