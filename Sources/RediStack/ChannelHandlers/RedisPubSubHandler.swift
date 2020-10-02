@@ -108,14 +108,19 @@ public final class RedisPubSubHandler {
     /// A queue of unsubscribe changes awaiting notification of completion.
     private var pendingUnsubscribes: PendingSubscriptionChangeQueue
     
+    private let eventLoop: EventLoop
+    
     // we need to be extra careful not to use this context before we know we've initialized
     private var context: ChannelHandlerContext!
     
-    /// - Parameter queueCapacity: The initial capacity of queues used for processing subscription changes. The initial value is `3`.
+    /// - Parameters:
+    ///     - eventLoop: The event loop the `NIO.Channel` that this handler was added to is bound to.
+    ///     - queueCapacity: The initial capacity of queues used for processing subscription changes. The initial value is `3`.
     ///
-    ///     Unless you are subscribing and unsubscribing from a large volume of channels or patterns at a single time,
-    ///     such as a single SUBSCRIBE call, you do not need to modify this value.
-    public init(initialSubscriptionQueueCapacity queueCapacity: Int = 3) {
+    ///         Unless you are subscribing and unsubscribing from a large volume of channels or patterns at a single time,
+    ///         such as a single SUBSCRIBE call, you do not need to modify this value.
+    public init(eventLoop: EventLoop, initialSubscriptionQueueCapacity queueCapacity: Int = 3) {
+        self.eventLoop = eventLoop
         self.subscriptions = [:]
         self.pendingSubscribes = [:]
         self.pendingUnsubscribes = [:]
@@ -183,8 +188,21 @@ extension RedisPubSubHandler {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
     ) -> EventLoopFuture<Int> {
+        guard self.eventLoop.inEventLoop else {
+            return self.eventLoop.flatSubmit {
+                return self.addSubscription(
+                    for: target,
+                    messageReceiver: receiver,
+                    onSubscribe: subscribeHandler,
+                    onUnsubscribe: unsubscribeHandler
+                )
+            }
+        }
+
         switch self.state {
-        case let .error(e): return self.context.eventLoop.makeFailedFuture(e)
+        case .removed: return self.eventLoop.makeFailedFuture(RedisClientError.subscriptionModeRaceCondition)
+
+        case let .error(e): return self.eventLoop.makeFailedFuture(e)
             
         case .default:
             // go through all the target patterns/names and update the map with the new receiver if it's already registered
@@ -206,7 +224,7 @@ extension RedisPubSubHandler {
             // if there aren't any new actual subscriptions,
             // then we just short circuit and return our local count of subscriptions
             guard !newSubscriptionTargets.isEmpty else {
-                return self.context.eventLoop.makeSucceededFuture(self.subscriptions.count)
+                return self.eventLoop.makeSucceededFuture(self.subscriptions.count)
             }
 
             return self.sendSubscriptionChange(
@@ -221,9 +239,13 @@ extension RedisPubSubHandler {
     /// - Parameter target: The channel or pattern that a receiver should be removed for.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the number of subscriptions the client has after the subscription has been removed.
     public func removeSubscription(for target: RedisSubscriptionTarget) -> EventLoopFuture<Int> {
+        guard self.eventLoop.inEventLoop else {
+            return self.eventLoop.flatSubmit { self.removeSubscription(for: target) }
+        }
+
         // if we're not in our default state,
         // this essentially is a no-op because an error triggers all receivers to be removed
-        guard case .default = self.state else { return self.context.eventLoop.makeSucceededFuture(0) }
+        guard case .default = self.state else { return self.eventLoop.makeSucceededFuture(0) }
 
         // we send the UNSUBSCRIBE message to Redis,
         // and in the response we handle the actual removal of the receiver closure
@@ -240,15 +262,7 @@ extension RedisPubSubHandler {
         subscriptionTargets targets: [String],
         queue pendingQueue: ReferenceWritableKeyPath<RedisPubSubHandler, PendingSubscriptionChangeQueue>
     ) -> EventLoopFuture<Int> {
-        guard self.context.eventLoop.inEventLoop else {
-            return self.context.eventLoop.flatSubmit {
-                return self.sendSubscriptionChange(
-                    subscriptionChangeKeyword: keyword,
-                    subscriptionTargets: targets,
-                    queue: pendingQueue
-                )
-            }
-        }
+        self.eventLoop.assertInEventLoop()
         
         var command = [RESPValue(bulk: keyword)]
         command.append(convertingContentsOf: targets)
@@ -263,7 +277,7 @@ extension RedisPubSubHandler {
         
         // create them
         let pendingSubscriptions: [(String, EventLoopPromise<Int>)] = targets.map {
-            return ($0, self.context.eventLoop.makePromise())
+            return ($0, self.eventLoop.makePromise())
         }
         // add the subscription change handler to the appropriate queue for each individual subscription target
         pendingSubscriptions.forEach { self[keyPath: pendingQueue].updateValue($1, forKey: $0) }
@@ -272,13 +286,13 @@ extension RedisPubSubHandler {
         let subscriptionCountFuture = EventLoopFuture<Int>
             .whenAllComplete(
                 pendingSubscriptions.map { $0.1.futureResult },
-                on: self.context.eventLoop
+                on: self.eventLoop
             )
             .flatMapThrowing { (results) -> Int in
                 // trust the last success response as the most current count
                 guard let latestSubscriptionCount = results
                     .lazy
-                    .reversed() // reverse to save complexity, as we just need the last (first) successful value
+                    .reversed() // reverse to save time-complexity, as we just need the last (first) successful value
                     .compactMap({ try? $0.get() })
                     .first
                 // if we have no success cases, we will still have at least one response that we can
@@ -309,7 +323,8 @@ extension RedisPubSubHandler {
 
 extension RedisPubSubHandler: RemovableChannelHandler {
     public func removeHandler(context: ChannelHandlerContext, removalToken: ChannelHandlerContext.RemovalToken) {
-        // leave immediately so we don't get any more subscription requests
+        // update our state and leave immediately so we don't get any more subscription requests
+        self.state = .removed
         context.leavePipeline(removalToken: removalToken)
         // "close" all subscription handlers
         self.removeAllReceivers()
@@ -335,7 +350,7 @@ extension RedisPubSubHandler: ChannelInboundHandler {
         // these guards extract some of the basic details of a pubsub message
         guard
             let array = value.array,
-            !array.isEmpty,
+            array.count >= 3,
             let channelOrPattern = array[1].string,
             let messageKeyword = array[0].string
         else {
@@ -343,8 +358,8 @@ extension RedisPubSubHandler: ChannelInboundHandler {
             return
         }
         
-        // safe because the array is guaranteed from the guard above to have at least 1 element
-        // and it is not to be used until we match the PubSub message keyword
+        // safe because the array is guaranteed from the guard above to have at least 3 elements
+        // and it is NOT to be used until we match the PubSub message keyword
         let message = array.last!
         
         // the last check is to match one of the known pubsub message keywords
@@ -438,7 +453,7 @@ extension RedisPubSubHandler {
     }
 
     private enum State {
-        case `default`, error(Error)
+        case `default`, removed, error(Error)
     }
 }
 

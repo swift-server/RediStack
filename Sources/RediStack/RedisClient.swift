@@ -247,6 +247,8 @@ extension RedisClient {
 public struct RedisClientError: LocalizedError, Equatable, Hashable {
     /// The connection is closed, but was used to try and send a command to Redis.
     public static let connectionClosed = RedisClientError(.connectionClosed)
+    /// A race condition was triggered between unsubscribing from the last target while subscribing to a new target.
+    public static let subscriptionModeRaceCondition = RedisClientError(.subscriptionModeRaceCondition)
     
     /// Conversion from `RESPValue` to the specified type failed.
     ///
@@ -268,6 +270,7 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case .connectionClosed: message = "trying to send command with a closed connection"
         case let .failedRESPConversion(type): message = "failed to convert RESP to \(type)"
         case let .assertionFailure(text): message = text
+        case .subscriptionModeRaceCondition: message = "received request to subscribe after subscription mode has ended"
         }
         return "(RediStack) \(message)"
     }
@@ -277,6 +280,7 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case .connectionClosed: return "Check that the connection is not closed before invoking commands. With RedisConnection, this can be done with the 'isConnected' property."
         case .failedRESPConversion: return "Ensure that the data type being requested is actually what's being returned. If you see this error and are not sure why, capture the original RESPValue string sent from Redis to add to your bug report."
         case .assertionFailure: return "This error should in theory never happen. If you trigger this error, capture the original RESPValue string sent from Redis along with the command and arguments that you sent to Redis to add to your bug report."
+        case .subscriptionModeRaceCondition: return "This is a race condition where the PubSub handler was removed after a subscription was being added, but before it was committed. This can be solved by just retrying the subscription."
         }
     }
     
@@ -298,5 +302,6 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case connectionClosed
         case failedRESPConversion(to: Any.Type)
         case assertionFailure(message: String)
+        case subscriptionModeRaceCondition
     }
 }

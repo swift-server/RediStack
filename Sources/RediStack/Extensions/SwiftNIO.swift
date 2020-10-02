@@ -110,7 +110,7 @@ extension Channel {
         return self.pipeline
             .handler(type: RedisCommandHandler.self)
             .flatMap {
-                let pubsubHandler = RedisPubSubHandler()
+                let pubsubHandler = RedisPubSubHandler(eventLoop: self.eventLoop)
                 return self.pipeline
                     .addHandler(pubsubHandler, name: "RediStack.PubSubHandler", position: .before($0))
                     .map { pubsubHandler }
