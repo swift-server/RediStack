@@ -45,6 +45,7 @@ public class RedisConnectionPool {
     /// This needs to be a var because we reuse the same connection
     private var pubsubConnection: RedisConnection?
 
+    private let connectionRetryTimeout: TimeAmount?
     private let connectionPassword: String?
     private let connectionSystemContext: Logger
     private let poolSystemContext: Context
@@ -69,6 +70,8 @@ public class RedisConnectionPool {
     ///         factor, each connection attempt will be delayed by this amount times the previous delay.
     ///     - initialConnectionBackoffDelay: If a TCP connection attempt fails, this is the first backoff value on the reconnection attempt.
     ///         Subsequent backoffs are computed by compounding this value by `connectionBackoffFactor`.
+    ///     - connectionRetryTimeout: The max time to wait for a connection to be available before failing a particular command or connection operation.
+    ///         The default is 60 seconds.
     public init(
         serverConnectionAddresses: [SocketAddress],
         loop: EventLoop,
@@ -79,11 +82,13 @@ public class RedisConnectionPool {
         connectionTCPClient: ClientBootstrap? = nil,
         poolLogger: Logger = .redisBaseConnectionPoolLogger,
         connectionBackoffFactor: Float32 = 2,
-        initialConnectionBackoffDelay: TimeAmount = .milliseconds(100)
+        initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
+        connectionRetryTimeout: TimeAmount? = .seconds(60)
     ) {
         self.loop = loop
         self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: serverConnectionAddresses)
         self.connectionPassword = connectionPassword
+        self.connectionRetryTimeout = connectionRetryTimeout
         
         // mix of terminology here with the loggers
         // as we're being "forward thinking" in terms of the 'baggage context' future type
@@ -387,9 +392,11 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         let logger = self.prepareLoggerForUse(context)
         
         guard let connection = preferredConnection else {
-            // For now we have to default the deadline.
-            // For maximum compatibility with the existing implementation, we use a fairly-long timeout: one minute.
-            return pool.leaseConnection(deadline: .now() + .seconds(60), logger: logger)
+            return pool
+                .leaseConnection(
+                    deadline: self.connectionRetryTimeout.map({ .now() + $0 }) ?? .now(),
+                    logger: logger
+                )
                 .flatMap { operation($0, pool.returnConnection(_:logger:), logger) }
         }
 
