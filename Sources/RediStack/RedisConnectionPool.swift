@@ -45,7 +45,7 @@ public class RedisConnectionPool {
     /// This needs to be a var because we reuse the same connection
     private var pubsubConnection: RedisConnection?
 
-    private let connectionRetryTimeout: TimeAmount?
+    private let connectionRetryTimeout: TimeAmount
     private let connectionPassword: String?
     private let connectionSystemContext: Logger
     private let poolSystemContext: Context
@@ -88,7 +88,7 @@ public class RedisConnectionPool {
         self.loop = loop
         self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: serverConnectionAddresses)
         self.connectionPassword = connectionPassword
-        self.connectionRetryTimeout = connectionRetryTimeout
+        self.connectionRetryTimeout = connectionRetryTimeout ?? .milliseconds(10)
         
         // mix of terminology here with the loggers
         // as we're being "forward thinking" in terms of the 'baggage context' future type
@@ -392,11 +392,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         let logger = self.prepareLoggerForUse(context)
         
         guard let connection = preferredConnection else {
-            return pool
-                .leaseConnection(
-                    deadline: self.connectionRetryTimeout.map({ .now() + $0 }) ?? .now(),
-                    logger: logger
-                )
+            return pool.leaseConnection(deadline: .now() + self.connectionRetryTimeout, logger: logger)
                 .flatMap { operation($0, pool.returnConnection(_:logger:), logger) }
         }
 
