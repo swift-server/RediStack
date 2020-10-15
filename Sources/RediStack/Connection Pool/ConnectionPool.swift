@@ -366,6 +366,9 @@ extension ConnectionPool {
         // that yet, so double-check. Leave the dead ones there: we'll get them later.
         while let connection = self.availableConnections.popLast() {
             if connection.isConnected {
+                logger.debug("found available connection", metadata: [
+                    RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+                ])
                 self.leaseConnection(connection, to: waiter)
                 return waiter.futureResult
             }
@@ -373,6 +376,7 @@ extension ConnectionPool {
 
         // Ok, we didn't have any available connections. We're going to have to wait. Set our timeout.
         waiter.scheduleDeadline(loop: self.loop, deadline: deadline) {
+            logger.trace("connection not found in time")
             // The waiter timed out. We're going to fail the promise and remove the waiter.
             waiter.fail(RedisConnectionPoolError.timedOutWaitingForConnection)
 
@@ -385,6 +389,7 @@ extension ConnectionPool {
         // below the max, or the pool is leaky, we can create a new connection. Otherwise, we just have
         // to wait for a connection to come back.
         if self.activeConnectionCount < self.maximumConnectionCount || self.leaky {
+            logger.trace("creating new connection")
             self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
         }
 

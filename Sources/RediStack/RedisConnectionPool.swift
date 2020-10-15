@@ -148,6 +148,47 @@ extension RedisConnectionPool {
         }
     }
 
+    /// Provides limited exclusive access to a connection to be used in a user-defined specialized closure of operations.
+    /// - Warning: Attempting to create PubSub subscriptions with connections leased in the closure will result in a failed `NIO.EventLoopFuture`.
+    ///
+    /// `RedisConnectionPool` manages PubSub state and requires exclusive control over creating PubSub subscriptions.
+    /// - Important: This connection **MUST NOT** be stored outside of the closure. It is only available exclusively within the closure.
+    ///
+    /// All operations should be done inside the closure as chained `NIO.EventLoopFuture` callbacks.
+    ///
+    /// For example:
+    /// ```swift
+    /// let countFuture = pool.leaseConnection {
+    ///     $0.logging(to: myLogger)
+    ///         .authorize(with: userPassword)
+    ///         .flatMap { connection.select(database: userDatabase) }
+    ///         .flatMap { connection.increment(counterKey) }
+    /// }
+    /// ```
+    /// - Warning: Some commands change the state of the connection that are not tracked client-side,
+    /// and will not be automatically reset when the connection is returned to the pool.
+    ///
+    /// When the connection is reused from the pool, it will retain this state and may affect future commands executed with it.
+    ///
+    /// For example, if `select(database:)` is used, all future commands made with this connection will be against the selected database.
+    ///
+    /// To protect against future issues, make sure the final commands executed are to reset the connection to it's previous known state.
+    /// - Parameter operation: A closure that receives exclusive access to the provided `RedisConnection` for the lifetime of the closure for specialized Redis command chains.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves the value of the `NIO.EventLoopFuture` in the provided closure operation.
+    @inlinable
+    public func leaseConnection<T>(_ operation: @escaping (RedisConnection) -> EventLoopFuture<T>) -> EventLoopFuture<T> {
+        return self.forwardOperationToConnection(
+            {
+                (connection, returnConnection, context) in
+        
+                return operation(connection)
+                    .always { _ in returnConnection(connection, context) }
+            },
+            preferredConnection: nil,
+            context: nil
+        )
+    }
+
     /// Updates the list of valid connection addresses.
     ///
     /// - Note: This does not invalidate existing connections: as long as those connections continue to stay up, they will be kept by
@@ -179,13 +220,16 @@ extension RedisConnectionPool {
             return targetLoop.makeFailedFuture(RedisConnectionPoolError.noAvailableConnectionTargets)
         }
 
-        return RedisConnection.connect(
+        let connectFuture = RedisConnection.connect(
             to: nextTarget,
             on: targetLoop,
             password: self.connectionPassword,
             logger: self.connectionSystemContext,
             tcpClient: self.connectionTCPClient
         )
+        // disallow subscriptions on all connections by default so that we can enforce our management of PubSub state
+        connectFuture.whenSuccess { $0.allowSubscriptions = false }
+        return connectFuture
     }
 
     private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
@@ -323,7 +367,10 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         return self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
 
-                if self.pubsubConnection == nil { self.pubsubConnection = connection }
+                if self.pubsubConnection == nil {
+                    connection.allowSubscriptions = true // allow pubsub commands which are to come
+                    self.pubsubConnection = connection
+                }
                 
                 let onUnsubscribe: RedisSubscriptionChangeHandler = { channelName, subCount in
                     defer { unsubscribeHandler?(channelName, subCount) }
@@ -332,7 +379,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                         subCount == 0,
                         let connection = self.pubsubConnection
                     else { return }
-                    
+
+                    connection.allowSubscriptions = false // reset PubSub permissions
                     returnConnection(connection, context)
                     self.pubsubConnection = nil // break ref cycle
                 }
@@ -367,7 +415,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         )
     }
 
-    private func forwardOperationToConnection<T>(
+    @usableFromInline
+    internal func forwardOperationToConnection<T>(
         _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Context) -> Void, Context) -> EventLoopFuture<T>,
         preferredConnection: RedisConnection?,
         context: Context?

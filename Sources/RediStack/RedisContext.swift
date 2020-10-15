@@ -20,4 +20,5 @@ import struct Logging.Logger
 // so in order to be "future thinking" we create this typealias and interally refer to this passing of configuration
 // as context
 
+@usableFromInline
 internal typealias Context = Logging.Logger

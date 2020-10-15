@@ -249,6 +249,8 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
     public static let connectionClosed = RedisClientError(.connectionClosed)
     /// A race condition was triggered between unsubscribing from the last target while subscribing to a new target.
     public static let subscriptionModeRaceCondition = RedisClientError(.subscriptionModeRaceCondition)
+    /// A connection that is not authorized for PubSub subscriptions attempted to create a subscription.
+    public static let pubsubNotAllowed = RedisClientError(.pubsubNotAllowed)
     
     /// Conversion from `RESPValue` to the specified type failed.
     ///
@@ -271,6 +273,7 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case let .failedRESPConversion(type): message = "failed to convert RESP to \(type)"
         case let .assertionFailure(text): message = text
         case .subscriptionModeRaceCondition: message = "received request to subscribe after subscription mode has ended"
+        case .pubsubNotAllowed: message = "connection attempted to create a PubSub subscription"
         }
         return "(RediStack) \(message)"
     }
@@ -281,6 +284,7 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case .failedRESPConversion: return "Ensure that the data type being requested is actually what's being returned. If you see this error and are not sure why, capture the original RESPValue string sent from Redis to add to your bug report."
         case .assertionFailure: return "This error should in theory never happen. If you trigger this error, capture the original RESPValue string sent from Redis along with the command and arguments that you sent to Redis to add to your bug report."
         case .subscriptionModeRaceCondition: return "This is a race condition where the PubSub handler was removed after a subscription was being added, but before it was committed. This can be solved by just retrying the subscription."
+        case .pubsubNotAllowed: return "When connections are managed by a pool, they are not allowed to create PubSub subscriptions on their own. Use the appropriate PubSub commands on the connection pool itself. If the connection is not managed by a pool, this is a bug and should be reported."
         }
     }
     
@@ -303,5 +307,6 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         case failedRESPConversion(to: Any.Type)
         case assertionFailure(message: String)
         case subscriptionModeRaceCondition
+        case pubsubNotAllowed
     }
 }

@@ -125,12 +125,29 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
             autoflush.store(newValue)
         }
     }
-    
+    /// Controls the permission of the connection to be able to have PubSub subscriptions or not.
+    ///
+    /// When set to `true`, this connection is allowed to create subscriptions.
+    /// When set to `false`, this connection is not allowed to create subscriptions. Any potentially existing subscriptions will be removed.
+    public var allowSubscriptions: Bool {
+        get { self.allowPubSub.load() }
+        set(newValue) {
+            self.allowPubSub.store(newValue)
+            // TODO: Re-enable after [p]unsubscribe from all is fixed
+//            guard self.isConnected else { return }
+//            _ = EventLoopFuture<Void>.whenAllComplete([
+//                self.unsubscribe(),
+//                self.punsubscribe()
+//            ], on: self.eventLoop)
+        }
+    }
+
     internal let channel: Channel
     private let systemContext: Context
     private var logger: Logger { self.systemContext }
     
     private let autoflush: NIOAtomic<Bool> = .makeAtomic(value: true)
+    private let allowPubSub: NIOAtomic<Bool> = .makeAtomic(value: true)
     private let _stateLock = Lock()
     private var _state = ConnectionState.open
     private var state: ConnectionState {
@@ -417,6 +434,11 @@ extension RedisConnection {
         
         // if we're closed, just error out
         guard self.state.isConnected else { return self.eventLoop.makeFailedFuture(RedisClientError.connectionClosed) }
+
+        // if we're not allowed to to subscribe, then fail
+        guard self.allowSubscriptions else {
+            return self.eventLoop.makeFailedFuture(RedisClientError.pubsubNotAllowed)
+        }
 
         logger.trace("adding subscription", metadata: [
             RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"

@@ -159,7 +159,6 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
         
         let channel = RedisChannelName(#function)
         let pattern = "\(channel.rawValue.dropLast(channel.rawValue.count / 2))*"
-        print(channel, pattern)
 
         try subscriber
             .subscribe(to: channel) { (_, _) in channelMessageExpectation.fulfill() }

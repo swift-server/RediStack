@@ -43,3 +43,61 @@ final class RedisConnectionPoolTests: RediStackConnectionPoolIntegrationTestCase
         XCTAssertNoThrow(try pool.get(#function).wait())
     }
 }
+
+// MARK: Leasing a connection
+
+extension RedisConnectionPoolTests {
+    func test_borrowedConnectionStillReturnsOnError() throws {
+        enum TestError: Error { case expected }
+
+        let maxConnectionCount = 4
+        let pool = try self.makeNewPool(minimumConnectionCount: maxConnectionCount)
+        defer { pool.close() }
+        _ = try pool.ping().wait()
+
+        let promise = pool.eventLoop.makePromise(of: Void.self)
+        
+        XCTAssertEqual(pool.availableConnectionCount, maxConnectionCount)
+        defer { XCTAssertEqual(pool.availableConnectionCount, maxConnectionCount) }
+
+        let future = pool.leaseConnection { _ in promise.futureResult }
+        
+        promise.fail(TestError.expected)
+        XCTAssertThrowsError(try future.wait()) {
+            XCTAssertTrue($0 is TestError)
+        }
+    }
+    
+    func test_borrowedConnectionClosureHasExclusiveAccess() throws {
+        let maxConnectionCount = 4
+        let pool = try self.makeNewPool(minimumConnectionCount: maxConnectionCount)
+        defer { pool.close() }
+        // populate the connection pool
+        _ = try pool.ping().wait()
+        
+        // assert that we have the max number of connections available,
+        XCTAssertEqual(pool.availableConnectionCount, maxConnectionCount)
+
+        // borrow a connection, asserting that we've taken the connection out of the pool while we do "something" with it
+        // and then assert afterwards that it's back in the pool
+        
+        let promises: [EventLoopPromise<Void>] = [pool.eventLoop.makePromise(), pool.eventLoop.makePromise()]
+        let futures = promises.indices
+            .map { index in
+                return pool
+                    .leaseConnection { connection -> EventLoopFuture<Void> in
+                        XCTAssertTrue(pool.availableConnectionCount < maxConnectionCount)
+                
+                        return promises[index].futureResult
+                    }
+            }
+        
+        promises.forEach { $0.succeed(()) }
+        _ = try EventLoopFuture<Void>
+            .whenAllSucceed(futures, on: pool.eventLoop)
+            .always { _ in
+                XCTAssertEqual(pool.availableConnectionCount, maxConnectionCount)
+            }
+            .wait()
+    }
+}

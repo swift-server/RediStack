@@ -40,3 +40,43 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
         }
     }
 }
+
+// MARK: PubSub permissions
+
+extension RedisConnectionTests {
+    func test_subscriptionNotAllowedFails() throws {
+        self.connection.allowSubscriptions = false
+        let subscription = self.connection.subscribe(to: #function) { (_, _) in }
+
+        XCTAssertThrowsError(try subscription.wait()) {
+            guard let error = $0 as? RedisClientError else {
+                XCTFail("unexpected error type: \(type(of: $0))")
+                return
+            }
+            XCTAssertEqual(error, .pubsubNotAllowed)
+        }
+    }
+    
+    // TODO - fix [p]unsubscribe from all and re-enable this unit test
+//    func test_subscriptionPermissionsChanged_endsSubscriptions() throws {
+//        let connection = try self.makeNewConnection()
+//
+//        let channelSubClosedExpectation = self.expectation(description: "channel subscription was closed")
+//        let patternSubClosedExpectation = self.expectation(description: "pattern subscription was closed")
+//
+//        _ = connection.subscribe(
+//            to: #function,
+//            messageReceiver:  { (_, _) in },
+//            onUnsubscribe: { (_, _) in channelSubClosedExpectation.fulfill() }
+//        )
+//        _ = connection.psubscribe(
+//            to: #function,
+//            messageReceiver:  { (_, _) in },
+//            onUnsubscribe: { (_, _) in patternSubClosedExpectation.fulfill() }
+//        )
+//
+//        connection.allowSubscriptions = false
+//
+//        self.waitForExpectations(timeout: 2)
+//    }
+}
