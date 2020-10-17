@@ -150,14 +150,29 @@ extension RedisPubSubHandler {
     
     private func handleUnsubscribeMessage(
         withSubscriptionKey subscriptionKey: String,
-        reportedSubscriptionCount subscriptionCount: Int
+        reportedSubscriptionCount subscriptionCount: Int,
+        unsubscribeFromAllKey: String
     ) {
-        defer { self.pendingUnsubscribes.removeValue(forKey: subscriptionKey)?.succeed(subscriptionCount) }
-    
         guard let subscription = self.subscriptions.removeValue(forKey: subscriptionKey) else { return }
     
         subscription.onUnsubscribe?(subscriptionKey, subscriptionCount)
         subscription.type.gauge.decrement()
+
+        switch self.pendingUnsubscribes.removeValue(forKey: subscriptionKey) {
+        // we found a specific pattern/channel was being removed, so just fulfill the notification
+        case let .some(promise):
+            promise.succeed(subscriptionCount)
+            
+        // if one wasn't found, this means a [p]unsubscribe all was issued
+        case .none:
+            // and we want to wait for the subscription count to be 0 before we resolve it's notification
+            // this count may be from what Redis reports, or the count of subscriptions for this particular type
+            guard
+                subscriptionCount == 0 || self.subscriptions.count(where: { $0.type == subscription.type }) == 0
+            else { return }
+            // always report back the count according to Redis, it is the source of truth
+            self.pendingUnsubscribes.removeValue(forKey: unsubscribeFromAllKey)?.succeed(subscriptionCount)
+        }
     }
     
     private func handleMessage(
@@ -249,6 +264,12 @@ extension RedisPubSubHandler {
 
         // we send the UNSUBSCRIBE message to Redis,
         // and in the response we handle the actual removal of the receiver closure
+
+        // if there are no channels / patterns specified,
+        // then this is a special case of unsubscribing from all patterns / channels
+        guard !target.values.isEmpty else {
+            return self.unsubscribeAll(for: target)
+        }
         
         return self.sendSubscriptionChange(
             subscriptionChangeKeyword: target.unsubscribeKeyword,
@@ -302,8 +323,20 @@ extension RedisPubSubHandler {
                 return latestSubscriptionCount
             }
         
-        return self.context.writeAndFlush(self.wrapOutboundOut(.array(command)))
+        return self.context
+            .writeAndFlush(self.wrapOutboundOut(.array(command)))
             .flatMap { return subscriptionCountFuture }
+    }
+
+    private func unsubscribeAll(for target: RedisSubscriptionTarget) -> EventLoopFuture<Int> {
+        let command = [RESPValue(bulk: target.unsubscribeKeyword)]
+
+        let promise = self.context.eventLoop.makePromise(of: Int.self)
+        self.pendingUnsubscribes.updateValue(promise, forKey: target.unsubscribeAllKey)
+
+        return self.context
+            .writeAndFlush(self.wrapOutboundOut(.array(command)))
+            .flatMap { promise.futureResult }
     }
 }
 
@@ -376,8 +409,19 @@ extension RedisPubSubHandler: ChannelInboundHandler {
         case "subscribe", "psubscribe":
             self.handleSubscribeMessage(withSubscriptionKey: channelOrPattern, reportedSubscriptionCount: message.int!)
 
-        case "unsubscribe", "punsubscribe":
-            self.handleUnsubscribeMessage(withSubscriptionKey: channelOrPattern, reportedSubscriptionCount: message.int!)
+        case "unsubscribe":
+            self.handleUnsubscribeMessage(
+                withSubscriptionKey: channelOrPattern,
+                reportedSubscriptionCount: message.int!,
+                unsubscribeFromAllKey: kUnsubscribeAllChannelsKey
+            )
+            
+        case "punsubscribe":
+            self.handleUnsubscribeMessage(
+                withSubscriptionKey: channelOrPattern,
+                reportedSubscriptionCount: message.int!,
+                unsubscribeFromAllKey: kUnsubscribeAllPatternsKey
+            )
             
         // if we don't have a match, fire a channel read to forward to the next handler
         default: context.fireChannelRead(data)
@@ -419,6 +463,10 @@ extension RedisPubSubHandler: ChannelOutboundHandler {
 
 // MARK: Private Types
 
+// keys used for the pendingUnsubscribes
+private let kUnsubscribeAllChannelsKey = "__RS_ALL_CHS"
+private let kUnsubscribeAllPatternsKey = "__RS_ALL_PNS"
+
 fileprivate enum SubscriptionType {
     case channel, pattern
     
@@ -433,7 +481,7 @@ fileprivate enum SubscriptionType {
 extension RedisPubSubHandler {
     private typealias PendingSubscriptionChangeQueue = [String: EventLoopPromise<Int>]
 
-    private final class Subscription {
+    fileprivate final class Subscription {
         let type: SubscriptionType
         let onMessage: RedisSubscriptionMessageReceiver
         var onSubscribe: RedisSubscriptionChangeHandler? // will be set to nil after first call
@@ -460,6 +508,13 @@ extension RedisPubSubHandler {
 // MARK: Subscription Management Helpers
 
 extension RedisSubscriptionTarget {
+    fileprivate var unsubscribeAllKey: String {
+        switch self {
+        case .channels: return kUnsubscribeAllChannelsKey
+        case .patterns: return kUnsubscribeAllPatternsKey
+        }
+    }
+
     fileprivate var subscriptionType: SubscriptionType {
         switch self {
         case .channels: return .channel
@@ -477,6 +532,15 @@ extension RedisSubscriptionTarget {
         switch self {
         case .channels: return "UNSUBSCRIBE"
         case .patterns: return "PUNSUBSCRIBE"
+        }
+    }
+}
+
+extension Dictionary where Key == String, Value == RedisPubSubHandler.Subscription {
+    func count(where isIncluded: (Value) -> Bool) -> Int {
+        self.reduce(into: 0) {
+            guard isIncluded($1.value) else { return }
+            $0 += 1
         }
     }
 }

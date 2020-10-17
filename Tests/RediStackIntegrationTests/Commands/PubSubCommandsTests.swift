@@ -108,6 +108,86 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         let value = try self.connection.send(command: "QUIT").wait()
         XCTAssertEqual(value.string, "OK")
     }
+    
+    func test_unsubscribeFromAllChannels() throws {
+        let subscriber = try self.makeNewConnection()
+        defer { try? subscriber.close().wait() }
+
+        let channels = (1...5).map { RedisChannelName("\(#function)\($0)") }
+
+        let expectation = self.expectation(description: "all channel subscriptions should be cancelled")
+        expectation.expectedFulfillmentCount = channels.count
+
+        try subscriber.subscribe(
+            to: channels,
+            messageReceiver: { _, _ in },
+            onSubscribe: nil,
+            onUnsubscribe: { _, _ in expectation.fulfill() }
+        ).wait()
+        
+        XCTAssertTrue(subscriber.isSubscribed)
+        try subscriber.unsubscribe().wait()
+        XCTAssertFalse(subscriber.isSubscribed)
+        
+        self.waitForExpectations(timeout: 1)
+    }
+
+    func test_unsubscribeFromAllPatterns() throws {
+        let subscriber = try self.makeNewConnection()
+        defer { try? subscriber.close().wait() }
+        
+        let patterns = (1...3).map { ("*\(#function)\($0)") }
+        
+        let expectation = self.expectation(description: "all pattern subscriptions should be cancelled")
+        expectation.expectedFulfillmentCount = patterns.count
+        
+        try subscriber.psubscribe(
+            to: patterns,
+            messageReceiver: { _, _ in },
+            onSubscribe: nil,
+            onUnsubscribe: { _, _ in expectation.fulfill() }
+        ).wait()
+        
+        XCTAssertTrue(subscriber.isSubscribed)
+        try subscriber.punsubscribe().wait()
+        XCTAssertFalse(subscriber.isSubscribed)
+        
+        self.waitForExpectations(timeout: 1)
+    }
+
+    func test_unsubscribeFromAllMixed() throws {
+        let subscriber = try self.makeNewConnection()
+        defer { try? subscriber.close().wait() }
+
+        let expectation = self.expectation(description: "both unsubscribes should be completed")
+        expectation.expectedFulfillmentCount = 2
+
+        XCTAssertFalse(subscriber.isSubscribed)
+
+        try subscriber.subscribe(
+            to: #function,
+            messageReceiver: { _, _ in },
+            onSubscribe: nil,
+            onUnsubscribe: { _, _ in expectation.fulfill() }
+        ).wait()
+        XCTAssertTrue(subscriber.isSubscribed)
+        
+        try subscriber.psubscribe(
+            to: "*\(#function)",
+            messageReceiver: { _, _ in },
+            onSubscribe: nil,
+            onUnsubscribe: { _, _ in expectation.fulfill() }
+        ).wait()
+        XCTAssertTrue(subscriber.isSubscribed)
+
+        try subscriber.unsubscribe().wait()
+        XCTAssertTrue(subscriber.isSubscribed)
+        
+        try subscriber.punsubscribe().wait()
+        XCTAssertFalse(subscriber.isSubscribed)
+
+        self.waitForExpectations(timeout: 1)
+    }
 }
 
 final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTestCase {
