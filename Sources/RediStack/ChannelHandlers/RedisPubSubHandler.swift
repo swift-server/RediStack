@@ -101,6 +101,8 @@ public enum RedisSubscriptionTarget: Equatable, CustomDebugStringConvertible {
 public final class RedisPubSubHandler {
     private var state: State = .default
 
+    // each key in the following maps _must_ be prefixed as there can be clashes between patterns and channel names
+
     /// A map of channel names or patterns and their respective event registration.
     private var subscriptions: [String: Subscription]
     /// A queue of subscribe changes awaiting notification of completion.
@@ -135,15 +137,18 @@ public final class RedisPubSubHandler {
 extension RedisPubSubHandler {
     private func handleSubscribeMessage(
         withSubscriptionKey subscriptionKey: String,
-        reportedSubscriptionCount subscriptionCount: Int
+        reportedSubscriptionCount subscriptionCount: Int,
+        keyPrefix: String
     ) {
-        defer { self.pendingSubscribes.removeValue(forKey: subscriptionKey)?.succeed(subscriptionCount) }
+        let prefixedKey = self.prefixKey(subscriptionKey, with: keyPrefix)
         
-        guard let subscription = self.subscriptions[subscriptionKey] else { return }
+        defer { self.pendingSubscribes.removeValue(forKey: prefixedKey)?.succeed(subscriptionCount) }
+        
+        guard let subscription = self.subscriptions[prefixedKey] else { return }
 
         subscription.onSubscribe?(subscriptionKey, subscriptionCount)
         subscription.onSubscribe = nil // nil to free memory
-        self.subscriptions[subscriptionKey] = subscription
+        self.subscriptions[prefixedKey] = subscription
         
         subscription.type.gauge.increment()
     }
@@ -151,14 +156,16 @@ extension RedisPubSubHandler {
     private func handleUnsubscribeMessage(
         withSubscriptionKey subscriptionKey: String,
         reportedSubscriptionCount subscriptionCount: Int,
-        unsubscribeFromAllKey: String
+        unsubscribeFromAllKey: String,
+        keyPrefix: String
     ) {
-        guard let subscription = self.subscriptions.removeValue(forKey: subscriptionKey) else { return }
+        let prefixedKey = self.prefixKey(subscriptionKey, with: keyPrefix)
+        guard let subscription = self.subscriptions.removeValue(forKey: prefixedKey) else { return }
     
         subscription.onUnsubscribe?(subscriptionKey, subscriptionCount)
         subscription.type.gauge.decrement()
 
-        switch self.pendingUnsubscribes.removeValue(forKey: subscriptionKey) {
+        switch self.pendingUnsubscribes.removeValue(forKey: prefixedKey) {
         // we found a specific pattern/channel was being removed, so just fulfill the notification
         case let .some(promise):
             promise.succeed(subscriptionCount)
@@ -178,9 +185,10 @@ extension RedisPubSubHandler {
     private func handleMessage(
         _ message: RESPValue,
         from channel: RedisChannelName,
-        withSubscriptionKey subscriptionKey: String
+        withSubscriptionKey subscriptionKey: String,
+        keyPrefix: String
     ) {
-        guard let subscription = self.subscriptions[subscriptionKey] else { return }
+        guard let subscription = self.subscriptions[self.prefixKey(subscriptionKey, with: keyPrefix)] else { return }
         subscription.onMessage(channel, message)
         RedisMetrics.subscriptionMessagesReceivedCount.increment()
     }
@@ -232,7 +240,8 @@ extension RedisPubSubHandler {
                         subscribeHandler: subscribeHandler,
                         unsubscribeHandler: unsubscribeHandler
                     )
-                    guard self.subscriptions.updateValue(subscription, forKey: targetKey) == nil else { return nil }
+                    let prefixedKey = self.prefixKey(targetKey, with: target.keyPrefix)
+                    guard self.subscriptions.updateValue(subscription, forKey: prefixedKey) == nil else { return nil }
                     return targetKey
                 }
 
@@ -245,7 +254,8 @@ extension RedisPubSubHandler {
             return self.sendSubscriptionChange(
                 subscriptionChangeKeyword: target.subscribeKeyword,
                 subscriptionTargets: newSubscriptionTargets,
-                queue: \.pendingSubscribes
+                queue: \.pendingSubscribes,
+                keyPrefix: target.keyPrefix
             )
         }
     }
@@ -274,14 +284,16 @@ extension RedisPubSubHandler {
         return self.sendSubscriptionChange(
             subscriptionChangeKeyword: target.unsubscribeKeyword,
             subscriptionTargets: target.values,
-            queue: \.pendingUnsubscribes
+            queue: \.pendingUnsubscribes,
+            keyPrefix: target.keyPrefix
         )
     }
     
     private func sendSubscriptionChange(
         subscriptionChangeKeyword keyword: String,
         subscriptionTargets targets: [String],
-        queue pendingQueue: ReferenceWritableKeyPath<RedisPubSubHandler, PendingSubscriptionChangeQueue>
+        queue pendingQueue: ReferenceWritableKeyPath<RedisPubSubHandler, PendingSubscriptionChangeQueue>,
+        keyPrefix: String
     ) -> EventLoopFuture<Int> {
         self.eventLoop.assertInEventLoop()
         
@@ -298,7 +310,7 @@ extension RedisPubSubHandler {
         
         // create them
         let pendingSubscriptions: [(String, EventLoopPromise<Int>)] = targets.map {
-            return ($0, self.eventLoop.makePromise())
+            return (self.prefixKey($0, with: keyPrefix), self.eventLoop.makePromise())
         }
         // add the subscription change handler to the appropriate queue for each individual subscription target
         pendingSubscriptions.forEach { self[keyPath: pendingQueue].updateValue($1, forKey: $0) }
@@ -399,28 +411,53 @@ extension RedisPubSubHandler: ChannelInboundHandler {
         // if we have a match, we're definitely in a pubsub message and we should handle it
 
         switch messageKeyword {
-        case "message": self.handleMessage(message, from: .init(channelOrPattern), withSubscriptionKey: channelOrPattern)
+        case "message":
+            self.handleMessage(
+                message,
+                from: .init(channelOrPattern),
+                withSubscriptionKey: channelOrPattern,
+                keyPrefix: kSubscriptionKeyPrefixChannel
+            )
 
-        // the channel name is stored as the 3rd element in the array in 'pmessage' streams
-        case "pmessage": self.handleMessage(message, from: .init(array[2].string!), withSubscriptionKey: channelOrPattern)
+        
+        case "pmessage":
+            self.handleMessage(
+                message,
+                from: .init(array[2].string!), // the channel name is stored as the 3rd element in the array in 'pmessage' streams
+                withSubscriptionKey: channelOrPattern,
+                keyPrefix: kSubscriptionKeyPrefixPattern
+            )
 
         // if the message keyword is for subscribing or unsubscribing,
         // the message is guaranteed to be the count of subscriptions the connection still has
-        case "subscribe", "psubscribe":
-            self.handleSubscribeMessage(withSubscriptionKey: channelOrPattern, reportedSubscriptionCount: message.int!)
+        case "subscribe":
+            self.handleSubscribeMessage(
+                withSubscriptionKey: channelOrPattern,
+                reportedSubscriptionCount: message.int!,
+                keyPrefix: kSubscriptionKeyPrefixChannel
+            )
+            
+        case "psubscribe":
+            self.handleSubscribeMessage(
+                withSubscriptionKey: channelOrPattern,
+                reportedSubscriptionCount: message.int!,
+                keyPrefix: kSubscriptionKeyPrefixPattern
+            )
 
         case "unsubscribe":
             self.handleUnsubscribeMessage(
                 withSubscriptionKey: channelOrPattern,
                 reportedSubscriptionCount: message.int!,
-                unsubscribeFromAllKey: kUnsubscribeAllChannelsKey
+                unsubscribeFromAllKey: kUnsubscribeAllChannelsKey,
+                keyPrefix: kSubscriptionKeyPrefixChannel
             )
             
         case "punsubscribe":
             self.handleUnsubscribeMessage(
                 withSubscriptionKey: channelOrPattern,
                 reportedSubscriptionCount: message.int!,
-                unsubscribeFromAllKey: kUnsubscribeAllPatternsKey
+                unsubscribeFromAllKey: kUnsubscribeAllPatternsKey,
+                keyPrefix: kSubscriptionKeyPrefixPattern
             )
             
         // if we don't have a match, fire a channel read to forward to the next handler
@@ -507,11 +544,25 @@ extension RedisPubSubHandler {
 
 // MARK: Subscription Management Helpers
 
+private let kSubscriptionKeyPrefixChannel = "__RS_CS"
+private let kSubscriptionKeyPrefixPattern = "__RS_PS"
+
+extension RedisPubSubHandler {
+    private func prefixKey(_ key: String, with prefix: String) -> String { "\(prefix)_\(key)" }
+}
+
 extension RedisSubscriptionTarget {
     fileprivate var unsubscribeAllKey: String {
         switch self {
         case .channels: return kUnsubscribeAllChannelsKey
         case .patterns: return kUnsubscribeAllPatternsKey
+        }
+    }
+
+    fileprivate var keyPrefix: String {
+        switch self {
+        case .channels: return kSubscriptionKeyPrefixChannel
+        case .patterns: return kSubscriptionKeyPrefixPattern
         }
     }
 

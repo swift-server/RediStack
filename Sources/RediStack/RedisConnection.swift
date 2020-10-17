@@ -133,12 +133,12 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         get { self.allowPubSub.load() }
         set(newValue) {
             self.allowPubSub.store(newValue)
-            // TODO: Re-enable after [p]unsubscribe from all is fixed
-//            guard self.isConnected else { return }
-//            _ = EventLoopFuture<Void>.whenAllComplete([
-//                self.unsubscribe(),
-//                self.punsubscribe()
-//            ], on: self.eventLoop)
+            // if we're subscribed, and we're not allowed to be in pubsub, end our subscriptions
+            guard self.isSubscribed && !self.allowPubSub.load() else { return }
+            _ = EventLoopFuture<Void>.whenAllComplete([
+                self.unsubscribe(),
+                self.punsubscribe()
+            ], on: self.eventLoop)
         }
     }
 
