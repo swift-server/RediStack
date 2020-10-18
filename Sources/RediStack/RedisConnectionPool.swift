@@ -159,8 +159,8 @@ extension RedisConnectionPool {
     /// For example:
     /// ```swift
     /// let countFuture = pool.leaseConnection {
-    ///     $0.logging(to: myLogger)
-    ///         .authorize(with: userPassword)
+    ///     let client = $0.logging(to: myLogger)
+    ///     return client.authorize(with: userPassword)
     ///         .flatMap { connection.select(database: userDatabase) }
     ///         .flatMap { connection.increment(counterKey) }
     /// }
