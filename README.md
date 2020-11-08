@@ -60,9 +60,9 @@ import NIO
 import RediStack
 
 let eventLoop: EventLoop = ...
-let connection = RedisConnection.connect(
-    to: try .init(ipAddress: "127.0.0.1", port: RedisConnection.defaultPort),
-    on: eventLoop
+let connection = RedisConnection.make(
+    configuration: try .init(hostname: "127.0.0.1"),
+    boundEventLoop: eventLoop
 ).wait()
 
 let result = try connection.set("my_key", to: "some value")

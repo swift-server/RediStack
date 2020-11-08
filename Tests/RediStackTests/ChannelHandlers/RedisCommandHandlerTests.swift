@@ -29,9 +29,9 @@ final class RedisCommandHandlerTests: XCTestCase {
             .wait()
         defer { try? server.close().wait() }
         
-        let connection = try RedisConnection.connect(
-            to: socketAddress,
-            on: group.next()
+        let connection = try RedisConnection.make(
+            configuration: .init(hostname: "localhost", port: 8080),
+            boundEventLoop: group.next()
         ).wait()
         defer { try? connection.close().wait() }
         

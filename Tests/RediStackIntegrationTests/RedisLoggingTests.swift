@@ -47,10 +47,12 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let logger = Logger(label: #function, factory: { _ in return handler })
         
         let pool = RedisConnectionPool(
-            serverConnectionAddresses: [try .makeAddressResolvingHost(self.redisHostname, port: self.redisPort)],
-            loop: self.connection.eventLoop,
-            maximumConnectionCount: .maximumActiveConnections(1),
-            connectionPassword: self.redisPassword
+            configuration: .init(
+                initialServerConnectionAddresses: [try .makeAddressResolvingHost(self.redisHostname, port: self.redisPort)],
+                maximumConnectionCount: .maximumActiveConnections(1),
+                connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword)
+            ),
+            boundEventLoop: self.connection.eventLoop
         )
         defer { pool.close() }
         pool.activate()

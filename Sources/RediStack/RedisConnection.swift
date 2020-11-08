@@ -20,25 +20,20 @@ import NIO
 import NIOConcurrencyHelpers
 
 extension RedisConnection {
-    /// The documented default port that Redis connects through.
-    ///
-    /// See [https://redis.io/topics/quickstart](https://redis.io/topics/quickstart)
-    public static let defaultPort = 6379
     
-    /// Creates a new connection to a Redis instance.
+    /// Creates a new connection with provided configuration and sychronization objects.
     ///
-    /// If you would like to specialize the `NIO.ClientBootstrap` that the connection communicates on, override the default by passing it in as `tcpClient`.
+    /// If you would like to specialize the `NIO.ClientBootstrap` that the connection communicates on, override the default by passing it in as `configuredTCPClient`.
     ///
     ///     let eventLoopGroup: EventLoopGroup = ...
     ///     var customTCPClient = ClientBootstrap.makeRedisTCPClient(group: eventLoopGroup)
     ///     customTCPClient.channelInitializer { channel in
     ///         // channel customizations
     ///     }
-    ///     let connection = RedisConnection.connect(
-    ///         to: ...,
-    ///         on: eventLoopGroup.next(),
-    ///         password: ...,
-    ///         tcpClient: customTCPClient
+    ///     let connection = RedisConnection.make(
+    ///         configuration: ...,
+    ///         boundEventLoop: eventLoopGroup.next(),
+    ///         configuredTCPClient: customTCPClient
     ///     ).wait()
     ///
     /// It is recommended that you be familiar with `ClientBootstrap.makeRedisTCPClient(group:)` and `NIO.ClientBootstrap` in general before doing so.
@@ -46,45 +41,50 @@ extension RedisConnection {
     /// Note: Use of `wait()` in the example is for simplicity. Never call `wait()` on an event loop.
     ///
     /// - Important: Call `close()` on the connection before letting the instance deinit to properly cleanup resources.
-    /// - Note: If a `password` is provided, the connection will send an "AUTH" command to Redis as soon as it has been opened.
-    ///
+    /// - Invariant: If a `password` is provided in the configuration, the connection will send an "AUTH" command to Redis as soon as it has been opened.
+    /// - Invariant: If a `database` index is provided in the configuration, the connection will send a "SELECT" command to Redis after it has been authenticated.
     /// - Parameters:
-    ///     - socket: The `NIO.SocketAddress` information of the Redis instance to connect to.
-    ///     - eventLoop: The `NIO.EventLoop` that this connection will execute all tasks on.
-    ///     - password: The optional password to use for authorizing the connection with Redis.
-    ///     - logger: The `Logging.Logger` instance to use for all client logging purposes. If one is not provided, one will be created.
-    ///         A `Foundation.UUID` will be attached to the metadata to uniquely identify this connection instance's logs.
-    ///     - tcpClient: If you have chosen to configure a `NIO.ClientBootstrap` yourself, this will be used instead of the `makeRedisTCPClient` instance.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves with the new connection after it has been opened, and if a `password` is provided, authenticated.
-    public static func connect(
-        to socket: SocketAddress,
-        on eventLoop: EventLoop,
-        password: String? = nil,
-        logger: Logger = .redisBaseConnectionLogger,
-        tcpClient: ClientBootstrap? = nil
+    ///     - config: The configuration to use for creating the connection.
+    ///     - eventLoop: The `NIO.EventLoop` that the connection will be bound to.
+    ///     - client: If you have chosen to configure a `NIO.ClientBootstrap` yourself, this will be used instead of the `.makeRedisTCPClient` factory instance.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves with the new connection after it has been opened, configured, and authenticated per the `configuration` object.
+    public static func make(
+        configuration config: Configuration,
+        boundEventLoop eventLoop: EventLoop,
+        configuredTCPClient client: ClientBootstrap? = nil
     ) -> EventLoopFuture<RedisConnection> {
-        let client = tcpClient ?? ClientBootstrap.makeRedisTCPClient(group: eventLoop)
+        let client = client ?? .makeRedisTCPClient(group: eventLoop)
         
-        return client.connect(to: socket)
-            .map { return RedisConnection(configuredRESPChannel: $0, context: logger) }
-            .flatMap { connection in
-                guard let pw = password else {
-                    return connection.eventLoop.makeSucceededFuture(connection)
-                }
-                return connection.authorize(with: pw)
-                    .map { return connection }
+        var future = client
+            .connect(to: config.address)
+            .map { return RedisConnection(configuredRESPChannel: $0, context: config.defaultLogger) }
+
+        // if a password is specified, use it to authenticate before further operations happen
+        if let password = config.password {
+            future = future.flatMap { connection in
+                return connection.authorize(with: password).map { connection }
             }
+        }
+
+        // if a database index is specified, use it to switch the selected database before further operations happen
+        if let database = config.initialDatabase {
+            future = future.flatMap { connection in
+                return connection.select(database: database).map { connection }
+            }
+        }
+        
+        return future
     }
 }
 
-/// A concrete `RedisClient` implementation that represents an individual connection to a Redis database instance.
+/// A concrete `RedisClient` implementation that represents an individual connection to a Redis instance.
 ///
-/// For basic setups, you will just need a  `NIO.SocketAddress` and a `NIO.EventLoop` and perhaps a `password`.
+/// For basic setups, you will just need a `NIO.EventLoop` and perhaps a `password`.
 ///
 ///     let eventLoop: EventLoop = ...
-///     let connection = RedisConnection.connect(
-///         to: try .makeAddressResolvingHost("my.redis.url", port: RedisConnection.defaultPort),
-///         on: eventLoop
+///     let connection = RedisConnection.make(
+///         configuration: .init(hostname: "my.redis.url", password: "some_password"),
+///         boundEventLoop: eventLoop
 ///     ).wait()
 ///
 ///     let result = try connection.set("my_key", to: "some value")
@@ -94,8 +94,6 @@ extension RedisConnection {
 ///     print(result) // Optional("some value")
 ///
 /// Note: `wait()` is used in the example for simplicity. Never call `wait()` on an event loop.
-///
-/// See `NIO.SocketAddress`, `NIO.EventLoop`, and `RedisClient`.
 public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     /// A unique identifer to represent this connection.
     public let id = UUID()

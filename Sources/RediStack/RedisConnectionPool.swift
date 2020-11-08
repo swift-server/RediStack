@@ -34,83 +34,47 @@ public class RedisConnectionPool {
     /// The number of connections that have been handed out and are in active use.
     public var leasedConnectionCount: Int { self.pool?.leasedConnectionCount ?? 0 }
 
+    private let loop: EventLoop
     // This needs to be var because we hand it a closure that references us strongly. This also
     // establishes a reference cycle which we need to break.
     // Aside from on init, all other operations on this var must occur on the event loop.
     private var pool: ConnectionPool?
-
-    /// This needs to be var because it is updatable and mutable. As a result, aside from init,
-    /// all use of this var must occur on the event loop.
+    // This needs to be var because of some logger metadata tagging.
+    // This should only be mutated on init, and safe to read anywhere else
+    private var configuration: Configuration
+    // This needs to be var because it is updatable and mutable.
+    // As a result, aside from init, all use of this var must occur on the event loop.
     private var serverConnectionAddresses: ConnectionAddresses
-    /// This needs to be a var because we reuse the same connection
+    // This needs to be a var because its value changes as the pool enters/leaves pubsub mode to reuse the same connection.
     private var pubsubConnection: RedisConnection?
+    
+    public init(configuration: Configuration, boundEventLoop: EventLoop) {
+        var config = configuration
 
-    private let connectionRetryTimeout: TimeAmount
-    private let connectionPassword: String?
-    private let connectionSystemContext: Logger
-    private let poolSystemContext: Context
-    private let loop: EventLoop
-    private let connectionTCPClient: ClientBootstrap?
-
-    /// Create a new `RedisConnectionPool`.
-    ///
-    /// - parameters:
-    ///     - serverConnectionAddresses: The set of Redis servers to which this pool is initially willing to connect.
-    ///         This set can be updated over time.
-    ///     - loop: The event loop to which this pooled client is tied.
-    ///     - maximumConnectionCount: The maximum number of connections to for this pool, either to be preserved or as a hard limit.
-    ///     - minimumConnectionCount: The minimum number of connections to preserve in the pool. If the pool is mostly idle
-    ///         and the Redis servers close these idle connections, the `RedisConnectionPool` will initiate new outbound
-    ///         connections proactively to avoid the number of available connections dropping below this number. Defaults to `1`.
-    ///     - connectionPassword: The password to use to connect to the Redis servers in this pool.
-    ///     - connectionLogger: The `Logger` to pass to each connection in the pool.
-    ///     - connectionTCPClient: The base `ClientBootstrap` to use to create pool connections, if a custom one is in use.
-    ///     - poolLogger: The `Logger` used by the connection pool itself.
-    ///     - connectionBackoffFactor: Used when connection attempts fail to control the exponential backoff. This is a multiplicative
-    ///         factor, each connection attempt will be delayed by this amount times the previous delay.
-    ///     - initialConnectionBackoffDelay: If a TCP connection attempt fails, this is the first backoff value on the reconnection attempt.
-    ///         Subsequent backoffs are computed by compounding this value by `connectionBackoffFactor`.
-    ///     - connectionRetryTimeout: The max time to wait for a connection to be available before failing a particular command or connection operation.
-    ///         The default is 60 seconds.
-    public init(
-        serverConnectionAddresses: [SocketAddress],
-        loop: EventLoop,
-        maximumConnectionCount: RedisConnectionPoolSize,
-        minimumConnectionCount: Int = 1,
-        connectionPassword: String? = nil,
-        connectionLogger: Logger = .redisBaseConnectionLogger,
-        connectionTCPClient: ClientBootstrap? = nil,
-        poolLogger: Logger = .redisBaseConnectionPoolLogger,
-        connectionBackoffFactor: Float32 = 2,
-        initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
-        connectionRetryTimeout: TimeAmount? = .seconds(60)
-    ) {
-        self.loop = loop
-        self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: serverConnectionAddresses)
-        self.connectionPassword = connectionPassword
-        self.connectionRetryTimeout = connectionRetryTimeout ?? .milliseconds(10)
+        self.loop = boundEventLoop
+        self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: config.initialConnectionAddresses)
         
         // mix of terminology here with the loggers
         // as we're being "forward thinking" in terms of the 'baggage context' future type
-
-        var connectionLogger = connectionLogger
-        connectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
-        self.connectionSystemContext = connectionLogger
-
-        var poolLogger = poolLogger
-        poolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
-        self.poolSystemContext = poolLogger
-
-        self.connectionTCPClient = connectionTCPClient
-
+        
+        var taggedConnectionLogger = config.factoryConfiguration.connectionDefaultLogger
+        taggedConnectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
+        config.factoryConfiguration.connectionDefaultLogger = taggedConnectionLogger
+        
+        var taggedPoolLogger = config.poolDefaultLogger
+        taggedPoolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
+        config.poolDefaultLogger = taggedPoolLogger
+        
+        self.configuration = config
+        
         self.pool = ConnectionPool(
-            maximumConnectionCount: maximumConnectionCount.size,
-            minimumConnectionCount: minimumConnectionCount,
-            leaky: maximumConnectionCount.leaky,
-            loop: loop,
-            systemContext: poolLogger,
-            connectionBackoffFactor: connectionBackoffFactor,
-            initialConnectionBackoffDelay: initialConnectionBackoffDelay,
+            maximumConnectionCount: config.maximumConnectionCount.size,
+            minimumConnectionCount: config.minimumConnectionCount,
+            leaky: config.maximumConnectionCount.leaky,
+            loop: boundEventLoop,
+            systemContext: config.poolDefaultLogger,
+            connectionBackoffFactor: config.connectionRetryConfiguration.backoff.factor,
+            initialConnectionBackoffDelay: config.connectionRetryConfiguration.backoff.initialDelay,
             connectionFactory: self.connectionFactory(_:)
         )
     }
@@ -190,7 +154,7 @@ extension RedisConnectionPool {
     }
 
     /// Updates the list of valid connection addresses.
-    ///
+    /// - Warning: This will replace any previously set list of addresses.
     /// - Note: This does not invalidate existing connections: as long as those connections continue to stay up, they will be kept by
     /// this client.
     ///
@@ -214,26 +178,42 @@ extension RedisConnectionPool {
         // Validate the loop invariants.
         self.loop.preconditionInEventLoop()
         targetLoop.preconditionInEventLoop()
+        
+        let factoryConfig = self.configuration.factoryConfiguration
 
         guard let nextTarget = self.serverConnectionAddresses.nextTarget() else {
             // No valid connection target, we'll fail.
             return targetLoop.makeFailedFuture(RedisConnectionPoolError.noAvailableConnectionTargets)
         }
+        
+        let connectionConfig: RedisConnection.Configuration
+        do {
+            connectionConfig = try .init(
+                address: nextTarget,
+                password: factoryConfig.connectionPassword,
+                initialDatabase: factoryConfig.connectionInitialDatabase,
+                defaultLogger: factoryConfig.connectionDefaultLogger
+            )
+        } catch {
+            // config validation failed, return the error
+            return targetLoop.makeFailedFuture(error)
+        }
 
-        let connectFuture = RedisConnection.connect(
-            to: nextTarget,
-            on: targetLoop,
-            password: self.connectionPassword,
-            logger: self.connectionSystemContext,
-            tcpClient: self.connectionTCPClient
-        )
-        // disallow subscriptions on all connections by default so that we can enforce our management of PubSub state
-        connectFuture.whenSuccess { $0.allowSubscriptions = false }
-        return connectFuture
+        return RedisConnection
+            .make(
+                configuration: connectionConfig,
+                boundEventLoop: targetLoop,
+                configuredTCPClient: factoryConfig.tcpClient
+            )
+            .map { connection in
+                // disallow subscriptions on all connections by default to enforce our management of PubSub state
+                connection.allowSubscriptions = false
+                return connection
+            }
     }
 
     private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
-        guard var logger = logger else { return self.poolSystemContext }
+        guard var logger = logger else { return self.configuration.poolDefaultLogger }
         logger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         return logger
     }
@@ -441,7 +421,11 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         let logger = self.prepareLoggerForUse(context)
         
         guard let connection = preferredConnection else {
-            return pool.leaseConnection(deadline: .now() + self.connectionRetryTimeout, logger: logger)
+            return pool
+                .leaseConnection(
+                    deadline: .now() + self.configuration.connectionRetryConfiguration.timeout,
+                    logger: logger
+                )
                 .flatMap { operation($0, pool.returnConnection(_:logger:), logger) }
         }
 
@@ -456,57 +440,47 @@ extension RedisConnectionPool {
         private var addresses: [SocketAddress]
 
         private var index: Array<SocketAddress>.Index
-
-        init(initialAddresses: [SocketAddress]) {
+        
+        internal init(initialAddresses: [SocketAddress]) {
             self.addresses = initialAddresses
             self.index = self.addresses.startIndex
         }
-
-        mutating func nextTarget() -> SocketAddress? {
-            // Early exit on 0, makes life easier.
-            guard self.addresses.count > 0 else {
+        
+        internal mutating func nextTarget() -> SocketAddress? {
+            // early exit on 0, makes life easier
+            guard !self.addresses.isEmpty else {
                 self.index = self.addresses.startIndex
                 return nil
             }
-
-            // It's an invariant of this function that the index is always valid for subscripting the collection.
+            
             let nextTarget = self.addresses[self.index]
+            
+            // it's an invariant of this function that the index is always valid for subscripting the collection
             self.addresses.formIndex(after: &self.index)
             if self.index == self.addresses.endIndex {
                 self.index = self.addresses.startIndex
             }
+            
             return nextTarget
         }
-
-        mutating func update(_ newAddresses: [SocketAddress]) {
+        
+        internal mutating func update(_ newAddresses: [SocketAddress]) {
             self.addresses = newAddresses
             self.index = self.addresses.startIndex
         }
     }
 }
 
-/// `RedisConnectionPoolSize` controls how the maximum number of connections in a pool are interpreted.
-public enum RedisConnectionPoolSize {
-    /// The pool will allow no more than this number of connections to be "active" (that is, connecting, in-use,
-    /// or pooled) at any one time. This will force possible future users of new connections to wait until a currently
-    /// active connection becomes available by being returned to the pool, but provides a hard upper limit on concurrency.
-    case maximumActiveConnections(Int)
-
-    /// The pool will only store up to this number of connections that are not currently in-use. However, if the pool is
-    /// asked for more connections at one time than this number, it will create new connections to serve those waiting for
-    /// connections. These "extra" connections will not be preserved: while they will be used to satisfy those waiting for new
-    /// connections if needed, they will not be preserved in the pool if load drops low enough. This does not provide a hard
-    /// upper bound on concurrency, but does provide an upper bound on low-level load.
-    case maximumPreservedConnections(Int)
-
-    internal var size: Int {
+// MARK: RedisConnectionPoolSize helpers
+extension RedisConnectionPoolSize {
+    fileprivate var size: Int {
         switch self {
         case .maximumActiveConnections(let size), .maximumPreservedConnections(let size):
             return size
         }
     }
 
-    internal var leaky: Bool {
+    fileprivate var leaky: Bool {
         switch self {
         case .maximumActiveConnections:
             return false

@@ -25,10 +25,10 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     /// The default value is `RedisConnection.defaultHostname`
     ///
     /// This is especially useful to override if you build on Linux & macOS where Redis might be installed locally vs. through Docker.
-    open var redisHostname: String { return RedisConnection.defaultHostname }
+    open var redisHostname: String { RedisConnection.Configuration.defaultHostname }
 
     /// The port to connect over to Redis, defaulting to `RedisConnection.defaultPort`.
-    open var redisPort: Int { return RedisConnection.defaultPort }
+    open var redisPort: Int { RedisConnection.Configuration.defaultPort }
 
     /// The password to use to connect to Redis. Default is `nil` - no password authentication.
     open var redisPassword: String? { return nil }
@@ -80,12 +80,14 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     ) throws -> RedisConnectionPool {
         let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
         let pool = RedisConnectionPool(
-            serverConnectionAddresses: [address],
-            loop: self.eventLoopGroup.next(),
-            maximumConnectionCount: .maximumActiveConnections(4),
-            minimumConnectionCount: minimumConnectionCount,
-            connectionPassword: self.redisPassword,
-            connectionRetryTimeout: connectionRetryTimeout
+            configuration: .init(
+                initialServerConnectionAddresses: [address],
+                maximumConnectionCount: .maximumActiveConnections(4),
+                connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
+                minimumConnectionCount: minimumConnectionCount,
+                connectionRetryTimeout: connectionRetryTimeout
+            ),
+            boundEventLoop: self.eventLoopGroup.next()
         )
         pool.activate()
 
