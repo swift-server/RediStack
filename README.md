@@ -106,11 +106,13 @@ Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/RediStack/blob/master/CON
 
 ## Language and Platform Support
 
-**RediStack** will always support the latest version of Swift on a given platform, plus **2** previous versions.
+Any given release of **RediStack** will support at least the latest version of Swift on a given platform plus **2** previous versions, at the time of the release.
+
+Major version releases will be scheduled around official Swift releases, taking no longer **3 months** from the Swift release.
+
+Major version releases will drop support for any version of Swift older than the last **3** Swift versions.
 
 This policy is to balance the desire for as much backwards compatibility as possible, while also being able to take advantage of new Swift features for the best API design possible.
-
-The oldest version of Swift will be dropped within **3 months** of an official release of a new version of Swift.
 
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI).
