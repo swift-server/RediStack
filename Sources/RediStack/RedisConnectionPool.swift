@@ -226,9 +226,9 @@ extension RedisConnectionPool: RedisClient {
     public func logging(to logger: Logger) -> RedisClient {
         return UserContextRedisClient(client: self, context: self.prepareLoggerForUse(logger))
     }
-
-    public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: arguments, context: nil)
+    
+    public func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult> {
+        return self.send(command, context: nil)
     }
     
     public func subscribe(
@@ -272,14 +272,14 @@ extension RedisConnectionPool: RedisClient {
 
 // MARK: RedisClientWithUserContext conformance
 extension RedisConnectionPool: RedisClientWithUserContext {
-    internal func send(command: String, with arguments: [RESPValue], context: Logger?) -> EventLoopFuture<RESPValue> {
+    internal func send<CommandResult>(_ command: RedisCommand<CommandResult>, context: Logger?) -> EventLoopFuture<CommandResult> {
         return self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
 
                 connection.sendCommandsImmediately = true
 
                 return connection
-                    .send(command: command, with: arguments, context: context)
+                    .send(command, context: context)
                     .always { _ in returnConnection(connection, context) }
             },
             preferredConnection: nil,

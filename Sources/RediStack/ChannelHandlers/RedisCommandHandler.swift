@@ -14,27 +14,18 @@
 
 import NIO
 
-/// The `NIO.ChannelOutboundHandler.OutboundIn` type for `RedisCommandHandler`.
-///
-/// This holds the full command message to be sent to Redis, and an `NIO.EventLoopPromise` to be fulfilled when a response has been received.
-/// - Important: This struct has _reference semantics_ due to the retention of the `NIO.EventLoopPromise`.
-public struct RedisCommand {
-    /// A message waiting to be sent to Redis. A full message contains a command keyword and its arguments stored as a single `RESPValue.array`.
-    public let message: RESPValue
-    /// A promise to be fulfilled with the sent message's response from Redis.
-    public let responsePromise: EventLoopPromise<RESPValue>
-
-    public init(message: RESPValue, responsePromise promise: EventLoopPromise<RESPValue>) {
-        self.message = message
-        self.responsePromise = promise
-    }
-}
-
 /// An object that operates in a First In, First Out (FIFO) request-response cycle.
 ///
 /// `RedisCommandHandler` is a `NIO.ChannelDuplexHandler` that sends `RedisCommand` instances to Redis,
 /// and fulfills the command's `NIO.EventLoopPromise` as soon as a `RESPValue` response has been received from Redis.
 public final class RedisCommandHandler {
+    /// The data payload that the command handler is expecting to receive in the channel to process sending to Redis.
+    /// ## message
+    /// This value is expected to be a fully serialized command with it's keyword and arguments in a bulk string array ready to be sent to Redis as-is.
+    /// ## responsePromise
+    /// This is a `NIO.EventLoopPromise` that will be resolved once a response from Redis has been received.
+    public typealias OutboundCommandPayload = (message: RESPValue, responsePromise: EventLoopPromise<RESPValue>)
+
     /// FIFO queue of promises waiting to receive a response value from a sent command.
     private var commandResponseQueue: CircularBuffer<EventLoopPromise<RESPValue>>
     private var state: State = .default
@@ -115,27 +106,25 @@ extension RedisCommandHandler: ChannelInboundHandler {
 // MARK: ChannelOutboundHandler
 
 extension RedisCommandHandler: ChannelOutboundHandler {
-    /// See `NIO.ChannelOutboundHandler.OutboundIn`
-    public typealias OutboundIn = RedisCommand
-    /// See `NIO.ChannelOutboundHandler.OutboundOut`
+    public typealias OutboundIn = OutboundCommandPayload
     public typealias OutboundOut = RESPValue
 
     /// Invoked by SwiftNIO when a `write` has been requested on the `Channel`.
     ///
-    /// This unwraps a `RedisCommand`, storing the `NIO.EventLoopPromise` in a command queue,
+    /// This unwraps a `OutboundCommandPayload` tuple, storing the `NIO.EventLoopPromise` in a command queue
     /// to fulfill later with the response to the command that is about to be sent through the `NIO.Channel`.
     ///
     /// See `NIO.ChannelOutboundHandler.write(context:data:promise:)`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
-        let commandContext = self.unwrapOutboundIn(data)
+        let commandPayload = self.unwrapOutboundIn(data)
         
         switch self.state {
-        case let .error(e): commandContext.responsePromise.fail(e)
+        case let .error(e): commandPayload.responsePromise.fail(e)
             
         case .default:
-            self.commandResponseQueue.append(commandContext.responsePromise)
+            self.commandResponseQueue.append(commandPayload.responsePromise)
             context.write(
-                self.wrapOutboundOut(commandContext.message),
+                self.wrapOutboundOut(commandPayload.message),
                 promise: promise
             )
         }

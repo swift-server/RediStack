@@ -28,3 +28,9 @@ extension RedisConnection.Configuration {
         try self.init(hostname: host, port: port, password: password)
     }
 }
+
+extension RedisCommand {
+    /// Erases all data on the Redis instance.
+    /// - Warning: **ONLY** use this on your test Redis instances!
+    public static var flushall: RedisCommand<Void> { .init(keyword: "FLUSHALL", arguments: []) }
+}

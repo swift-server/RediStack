@@ -85,7 +85,7 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         try self.connection.subscribe(to: #function) { (_, _) in }.wait()
         defer { try? self.connection.unsubscribe(from: #function).wait() }
         
-        XCTAssertThrowsError(try self.connection.lpush("value", into: "List").wait()) {
+        XCTAssertThrowsError(try self.connection.send(.lpush("value", into: "List")).wait()) {
             XCTAssertTrue($0 is RedisError)
         }
     }
@@ -105,8 +105,9 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         try self.connection.subscribe(to: #function) { (_, _) in }.wait()
         defer { try? self.connection.unsubscribe(from: #function).wait() }
         
-        let value = try self.connection.send(command: "QUIT").wait()
-        XCTAssertEqual(value.string, "OK")
+        let quit = RedisCommand<String>(keyword: "QUIT", arguments: [])
+        let result = try self.connection.send(quit).wait()
+        XCTAssertEqual(result, "OK")
     }
     
     func test_unsubscribeFromAllChannels() throws {

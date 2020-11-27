@@ -45,7 +45,7 @@ internal final class EmbeddedMockRedisServer {
     func pumpChannel(_ channel: EmbeddedChannel) throws -> Bool {
         var didRead = false
 
-        while let nextRead = try channel.readOutbound(as: RedisCommand.self) {
+        while let nextRead = try channel.readOutbound(as: RedisCommandHandler.OutboundCommandPayload.self) {
             didRead = true
             try self.processChannelRead(nextRead, channel)
         }
@@ -53,7 +53,7 @@ internal final class EmbeddedMockRedisServer {
         return didRead
     }
 
-    func processChannelRead(_ data: RedisCommand, _ channel: Channel) throws {
+    func processChannelRead(_ data: RedisCommandHandler.OutboundCommandPayload, _ channel: Channel) throws {
         switch data.message {
         case .array([RESPValue(from: "QUIT")]):
             // We always allow this.

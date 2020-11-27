@@ -209,47 +209,27 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
 // MARK: Sending Commands
 
 extension RedisConnection {
-    /// Sends the command with the provided arguments to Redis.
-    ///
-    /// See `RedisClient.send(command:with:)`.
-    /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
-    ///     If a `RedisError` is returned, the future will be failed instead.
-    public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
+    public func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult> {
         self.eventLoop.flatSubmit {
-            return self.send(command: command, with: arguments, context: nil)
+            return self.send(command, context: nil)
         }
     }
 
-    internal func send(
-        command: String,
-        with arguments: [RESPValue],
-        context: Context?
-    ) -> EventLoopFuture<RESPValue> {
-        self.eventLoop.preconditionInEventLoop()
-
+    internal func send<CommandResult>(_ command: RedisCommand<CommandResult>, context: Context?) -> EventLoopFuture<CommandResult> {
         let logger = self.prepareLoggerForUse(context)
-
+        
         guard self.isConnected else {
             let error = RedisClientError.connectionClosed
             logger.warning("\(error.localizedDescription)")
-            return self.channel.eventLoop.makeFailedFuture(error)
+            return self.eventLoop.makeFailedFuture(error)
         }
         logger.trace("received command request")
         
         logger.debug("sending command", metadata: [
-            RedisLogging.MetadataKeys.commandKeyword: "\(command)",
-            RedisLogging.MetadataKeys.commandArguments: "\(arguments)"
+            RedisLogging.MetadataKeys.command: "\(command)"
         ])
         
-        var message: [RESPValue] = [.init(bulk: command)]
-        message.append(contentsOf: arguments)
-        
-        let promise = channel.eventLoop.makePromise(of: RESPValue.self)
-        let command = RedisCommand(
-            message: .array(message),
-            responsePromise: promise
-        )
+        let promise = self.eventLoop.makePromise(of: RESPValue.self)
         
         let startTime = DispatchTime.now().uptimeNanoseconds
         promise.futureResult.whenComplete { result in
@@ -269,14 +249,25 @@ extension RedisConnection {
                 ])
             }
         }
-        
-        defer { logger.trace("command sent") }
 
-        if self.sendCommandsImmediately {
-            return channel.writeAndFlush(command).flatMap { promise.futureResult }
-        } else {
-            return channel.write(command).flatMap { promise.futureResult }
-        }
+        defer { logger.trace("command sent") }
+        
+        let outboundData: RedisCommandHandler.OutboundCommandPayload = (command.serialized(), promise)
+        let writeFuture: EventLoopFuture<Void> = self.sendCommandsImmediately
+            ? self.channel.writeAndFlush(outboundData)
+            : self.channel.write(outboundData)
+
+        return writeFuture
+            .flatMap { promise.futureResult }
+            .flatMapThrowing { try command.transform($0) }
+    }
+
+    internal func send(
+        command: String,
+        with arguments: [RESPValue],
+        context: Context?
+    ) -> EventLoopFuture<RESPValue> {
+        self.eventLoop.makeFailedFuture(RedisClientError.connectionClosed)
     }
 }
 
@@ -325,16 +316,15 @@ extension RedisConnection {
     /// Bypasses everything for a normal command and explicitly just sends a "QUIT" command to Redis.
     /// - Note: If the command fails, the `NIO.EventLoopFuture` will still succeed - as it's not critical for the command to succeed.
     private func sendQuitCommand(logger: Logger) -> EventLoopFuture<Void> {
-        let promise = channel.eventLoop.makePromise(of: RESPValue.self)
-        let command = RedisCommand(
-            message: .array([RESPValue(bulk: "QUIT")]),
-            responsePromise: promise
+        let payload: RedisCommandHandler.OutboundCommandPayload = (
+            RedisCommand<Void>(keyword: "QUIT", arguments: []).serialized(),
+            self.eventLoop.makePromise()
         )
 
         logger.trace("sending QUIT command")
 
-        return channel.writeAndFlush(command) // write the command
-            .flatMap { promise.futureResult } // chain the callback to the response's
+        return channel.writeAndFlush(payload) // write the command
+            .flatMap { payload.responsePromise.futureResult } // chain the callback to the response's
             .map { _ in logger.trace("sent QUIT command") } // ignore the result's value
             .recover { _ in logger.debug("recovered from error sending QUIT") } // if there's an error, just return to void
     }

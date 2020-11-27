@@ -23,17 +23,20 @@ final class RedisConnectionPoolTests: RediStackConnectionPoolIntegrationTestCase
         // We're going to insert a bunch of elements into a set, and then when all is done confirm that every
         // element exists.
         let operations = (0..<50).map { number in
-            self.pool.sadd([number], to: #function)
+            self.pool.send(.sadd([number], to: #function))
         }
         let results = try EventLoopFuture<Int>.whenAllSucceed(operations, on: self.eventLoopGroup.next()).wait()
         XCTAssertEqual(results, Array(repeating: 1, count: 50))
-        let whatRedisThinks = try self.pool.smembers(of: #function, as: Int.self).wait()
+        let whatRedisThinks = try self.pool
+            .send(.smembers(of: #function))
+            .flatMapThrowing { result in try result.map { try $0.map(to: Int.self) } }
+            .wait()
         XCTAssertEqual(whatRedisThinks.compactMap { $0 }.sorted(), Array(0..<50))
     }
 
     func test_closedPoolDoesNothing() throws {
         self.pool.close()
-        XCTAssertThrowsError(try self.pool.increment(#function).wait()) { error in
+        XCTAssertThrowsError(try self.pool.send(.incr(#function)).wait()) { error in
             XCTAssertEqual(error as? RedisConnectionPoolError, .poolClosed)
         }
     }

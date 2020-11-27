@@ -63,7 +63,7 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     /// See `XCTest.XCTestCase.tearDown()`
     open override func tearDown() {
         do {
-            _ = try self.pool.send(command: "FLUSHALL").wait()
+            _ = try self.pool.send(.flushall).wait()
         } catch let err as RedisConnectionPoolError where err == .poolClosed {
             // Ok, this is fine.
         } catch {

@@ -75,7 +75,7 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     /// Resolves the number of elements in the set.
     ///
     /// See `RediStack.RedisClient.scard(of:)`
-    public var count: EventLoopFuture<Int> { return self.client.scard(of: self.id) }
+    public var count: EventLoopFuture<Int> { return self.client.send(.scard(of: self.id)) }
     /// Resolves a Boolean value that indicates whether the set is empty.
     public var isEmpty: EventLoopFuture<Bool> { return self.count.map { $0 == 0 } }
     /// Resolves all of elements in the set.
@@ -85,7 +85,7 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     ///
     /// See `RediStack.RedisClient.smembers(of:)`
     public var allElements: EventLoopFuture<[Element]> {
-        return self.client.smembers(of: self.id)
+        return self.client.send(.smembers(of: self.id))
             .map { $0.compactMap(Element.init) }
     }
     
@@ -95,7 +95,7 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     /// - Parameter member: An element to look for in the set.
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if `member` exists in the set; otherwise, `false`.
     public func contains(_ member: Element) -> EventLoopFuture<Bool> {
-        return self.client.sismember(member, of: self.id)
+        return self.client.send(.sismember(member, of: self.id))
     }
 }
 
@@ -119,7 +119,7 @@ extension RedisSet {
     /// - Returns: A `NIO.EventLoopFuture<Int>` resolving the number of elements inserted into the set.
     public func insert(contentsOf newMembers: [Element]) -> EventLoopFuture<Int> {
         guard newMembers.count > 0 else { return self.client.eventLoop.makeSucceededFuture(0) }
-        return self.client.sadd(newMembers, to: self.id)
+        return self.client.send(.sadd(newMembers, to: self.id))
     }
 }
 
@@ -134,7 +134,7 @@ extension RedisSet {
     ///     - other:A set of the same type as the current set.
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if the element was moved; otherwise, `false`.
     public func move(_ member: Element, to other: RedisSet<Element>) -> EventLoopFuture<Bool> {
-        return self.client.smove(member, from: self.id, to: other.id)
+        return self.client.send(.smove(member, from: self.id, to: other.id))
     }
     
     /// Removes the given element from the set.
@@ -154,7 +154,7 @@ extension RedisSet {
     /// - Returns: A `NIO.EventLoopFuture<Int>` resolving the number of elements removed from the set.
     public func remove(_ members: [Element]) -> EventLoopFuture<Int> {
         guard members.count > 0 else { return self.client.eventLoop.makeSucceededFuture(0) }
-        return self.client.srem(members, from: self.id)
+        return self.client.send(.srem(members, from: self.id))
     }
     
     /// Removes all elements from the array.
@@ -179,7 +179,7 @@ extension RedisSet {
     ///
     /// - Returns: A `NIO.EventLoopFuture<Element?>` resolving a randomly popped element from the set, or `nil` if the set was empty.
     public func popRandomElement() -> EventLoopFuture<Element?> {
-        return self.client.spop(from: self.id)
+        return self.client.send(.spop(from: self.id))
             .map { response in
                 guard response.count > 0 else { return nil }
                 return Element(fromRESP: response[0])
@@ -197,7 +197,7 @@ extension RedisSet {
     public func popRandomElements(max count: Int) -> EventLoopFuture<[Element]> {
         guard count >= 0 else { return self.client.eventLoop.makeFailedFuture(RedisError.indexOutOfRange) }
         guard count >= 1 else { return self.client.eventLoop.makeSucceededFuture([]) }
-        return self.client.spop(from: self.id, max: count)
+        return self.client.send(.spop(from: self.id, max: count))
             .map { return $0.compactMap(Element.init) }
     }
     
@@ -210,7 +210,7 @@ extension RedisSet {
     ///
     /// - Returns: A `NIO.EventLoopFuture<Element?>` resolving a randoml element from the set, or `nil` if the set was empty.
     public func randomElement() -> EventLoopFuture<Element?> {
-        return self.client.srandmember(from: self.id)
+        return self.client.send(.srandmember(from: self.id))
             .map { response in
                 guard response.count > 0 else { return nil }
                 return Element(fromRESP: response[0])
@@ -239,7 +239,7 @@ extension RedisSet {
         assert(max > 0, "Max should be a positive value. Use 'allowDuplicates' to handle proper value signing.")
 
         let count = allowDuplicates ? -max : max
-        return self.client.srandmember(from: self.id, max: count)
+        return self.client.send(.srandmember(from: self.id, max: count))
             .map { $0.compactMap(Element.init) }
     }
 }

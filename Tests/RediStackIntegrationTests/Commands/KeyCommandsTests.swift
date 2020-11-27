@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2020 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,20 +12,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
+import RediStack
 import RediStackTestUtils
 import XCTest
 
-final class BasicCommandsTests: RediStackIntegrationTestCase {
-    func test_select() {
-        XCTAssertNoThrow(try connection.select(database: 3).wait())
-    }
-
+final class KeyCommandsTests: RediStackIntegrationTestCase {
     func test_delete() throws {
         let keys = [ #function + "1", #function + "2", #function + "3" ].map(RedisKey.init(_:))
-        try connection.set(keys[0], to: "value").wait()
-        try connection.set(keys[1], to: "value").wait()
-        try connection.set(keys[2], to: "value").wait()
+        try connection.send(.set(keys[0], to: "value")).wait()
+        try connection.send(.set(keys[1], to: "value")).wait()
+        try connection.send(.set(keys[2], to: "value")).wait()
 
         let first = try connection.delete([keys[0]]).wait()
         XCTAssertEqual(first, 1)
@@ -38,18 +34,18 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_exists() throws {
-        try self.connection.set("first", to: "1").wait()
-        let first = try connection.exists("first").wait()
+        try self.connection.send(.set("first", to: "1")).wait()
+        let first = try connection.send(.exists("first")).wait()
         XCTAssertEqual(first, 1)
 
-        try self.connection.set("second", to: "2").wait()
-        let firstAndSecond = try connection.exists("first", "second").wait()
+        try self.connection.send(.set("second", to: "2")).wait()
+        let firstAndSecond = try connection.send(.exists("first", "second")).wait()
         XCTAssertEqual(firstAndSecond, 2)
 
-        let secondAndThird = try connection.exists("second", "third").wait()
+        let secondAndThird = try connection.send(.exists("second", "third")).wait()
         XCTAssertEqual(secondAndThird, 1)
 
-        let third = try connection.exists("third").wait()
+        let third = try connection.send(.exists("third")).wait()
         XCTAssertEqual(third, 0)
     }
 
@@ -57,7 +53,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         try connection.set(#function, to: "value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())
         XCTAssertTrue(try connection.expire(#function, after: .nanoseconds(1)).wait())
-        XCTAssertEqual(try connection.get(#function).wait(), .null)
+        XCTAssertNil(try connection.get(#function).wait())
         
         try connection.set(#function, to: "new value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())
@@ -70,7 +66,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         let expire = try self.connection.expire("first", after: .minutes(1)).wait()
         XCTAssertTrue(expire)
 
-        let ttl = try self.connection.ttl("first").wait()
+        let ttl = try self.connection.send(.ttl("first")).wait()
         switch ttl {
         case .keyDoesNotExist, .unlimited:
             XCTFail("Expected an expiry to be set on key 'first'")
@@ -78,7 +74,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
             XCTAssertGreaterThanOrEqual(lifetime.timeAmount.nanoseconds, 0)
         }
 
-        let doesNotExist = try self.connection.ttl("second").wait()
+        let doesNotExist = try self.connection.send(.ttl("second")).wait()
         switch doesNotExist {
         case .keyDoesNotExist:
             ()  // Expected
@@ -87,7 +83,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         }
 
         try self.connection.set("second", to: "value").wait()
-        let hasNoExpire = try self.connection.ttl("second").wait()
+        let hasNoExpire = try self.connection.send(.ttl("second")).wait()
         switch hasNoExpire {
         case .unlimited:
             ()  // Expected
@@ -101,7 +97,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         let expire = try self.connection.expire("first", after: .minutes(1)).wait()
         XCTAssertTrue(expire)
 
-        let pttl = try self.connection.pttl("first").wait()
+        let pttl = try self.connection.send(.pttl("first")).wait()
         switch pttl {
         case .keyDoesNotExist, .unlimited:
             XCTFail("Expected an expiry to be set on key 'first'")
@@ -109,7 +105,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
             XCTAssertGreaterThanOrEqual(lifetime.timeAmount.nanoseconds, 0)
         }
 
-        let doesNotExist = try self.connection.ttl("second").wait()
+        let doesNotExist = try self.connection.send(.ttl("second")).wait()
         switch doesNotExist {
         case .keyDoesNotExist:
             ()  // Expected
@@ -118,7 +114,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         }
 
         try self.connection.set("second", to: "value").wait()
-        let hasNoExpire = try self.connection.ttl("second").wait()
+        let hasNoExpire = try self.connection.send(.ttl("second")).wait()
         switch hasNoExpire {
         case .unlimited:
             ()  // Expected
@@ -126,44 +122,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
             XCTFail("Expected '.noExpiry' but lifetime was \(hasNoExpire)")
         }
     }
-
-    func test_ping() throws {
-        let first = try connection.ping().wait()
-        XCTAssertEqual(first, "PONG")
-
-        let second = try connection.ping(with: "My message").wait()
-        XCTAssertEqual(second, "My message")
-    }
-
-    func test_echo() throws {
-        let response = try connection.echo("FIZZ_BUZZ").wait()
-        XCTAssertEqual(response, "FIZZ_BUZZ")
-    }
-
-    func test_swapDatabase() throws {
-        try connection.set("first", to: "3").wait()
-        var first = try connection.get("first", as: String.self).wait()
-        XCTAssertEqual(first, "3")
-
-        try connection.select(database: 1).wait()
-        var second = try connection.get("first", as: String.self).wait()
-        XCTAssertEqual(second, nil)
-
-        try connection.set("second", to: "100").wait()
-        second = try connection.get("second", as: String.self).wait()
-        XCTAssertEqual(second, "100")
-
-        let success = try connection.swapDatabase(0, with: 1).wait()
-        XCTAssertEqual(success, true)
-
-        second = try connection.get("first", as: String.self).wait()
-        XCTAssertEqual(second, "3")
-
-        try connection.select(database: 0).wait()
-        first = try connection.get("second", as: String.self).wait()
-        XCTAssertEqual(first, "100")
-    }
-
+    
     // TODO: #23 -- Rework Scan Unit Test
     // This is extremely flakey, and causes non-deterministic failures because of the assert on key counts
 //    func test_scan() throws {

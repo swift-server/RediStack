@@ -29,12 +29,12 @@ public protocol RedisClient {
     /// The `NIO.EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
 
-    /// Sends the desired command with the specified arguments.
-    /// - Parameters:
-    ///     - command: The command to execute.
-    ///     - arguments: The arguments, if any, to be sent with the command.
-    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
-    func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
+    /// Sends the given command to Redis.
+    /// - Parameter command: The command to send to Redis for execution.
+    /// - Returns: A `NIO.EventLoopFuture` that will resolve when the Redis command receives a response.
+    ///
+    ///     If a `RedisError` is returned, the future will be failed instead.
+    func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult>
     
     /// Temporarily overrides the default logger for command logs to the provided instance.
     /// - Parameter logger: The `Logging.Logger` instance to use for command logs.
@@ -117,13 +117,6 @@ public protocol RedisClient {
 // MARK: Extension Methods
 
 extension RedisClient {
-    /// Sends the desired command without arguments.
-    /// - Parameter command: The command keyword to execute.
-    /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
-    public func send(command: String) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: [])
-    }
-
     /// Unsubscribes the client from all active Redis channel name subscriptions.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the subscriptions have been removed.
     public func unsubscribe() -> EventLoopFuture<Void> {

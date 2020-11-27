@@ -64,7 +64,7 @@ open class RedisIntegrationTestCase: XCTestCase {
     open override func tearDown() {
         do {
             if self.connection.isConnected {
-                _ = try self.connection.send(command: "FLUSHALL")
+                _ = try self.connection.send(.flushall)
                     .flatMap { _ in self.connection.close() }
                     .wait()
             }

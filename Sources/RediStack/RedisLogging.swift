@@ -41,8 +41,7 @@ public enum RedisLogging {
 
         // Internal keys can be as long as they want, but still should have the `rdstk` prefix to avoid clashes
 
-        internal static var commandKeyword: String { "rdstk_command" }
-        internal static var commandArguments: String { "rdstk_args" }
+        internal static var command: String { "rdstk_command" }
         internal static var commandResult: String { "rdstk_result" }
         internal static var connectionCount: String { "rdstk_conn_count" }
         internal static var poolConnectionRetryBackoff: String { "rdstk_conn_retry_prev_backoff" }
@@ -71,7 +70,7 @@ extension Logger {
 ///
 /// An execution context includes things like a `Logging.Logger` instance for command activity logs.
 internal protocol RedisClientWithUserContext: RedisClient {
-    func send(command: String, with arguments: [RESPValue], context: Context?) -> EventLoopFuture<RESPValue>
+    func send<CommandResult>(_ command: RedisCommand<CommandResult>, context: Context?) -> EventLoopFuture<CommandResult>
 
     func subscribe(
         to channels: [RedisChannelName],
@@ -113,9 +112,9 @@ internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: Redi
     
     // Forward the commands to the underlying client
     
-    internal func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
+    internal func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult> {
         return self.eventLoop.flatSubmit {
-            return self.client.send(command: command, with: arguments, context: self.context)
+            return self.client.send(command, context: self.context)
         }
     }
     
