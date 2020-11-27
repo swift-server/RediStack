@@ -17,36 +17,36 @@ import XCTest
 
 final class RedisKeyLifetimeTests: XCTestCase {
     func test_initFromSeconds() {
-        XCTAssertEqual(RedisKeyLifetime(seconds: -2), .keyDoesNotExist)
-        XCTAssertEqual(RedisKeyLifetime(seconds: -1), .unlimited)
-        XCTAssertEqual(RedisKeyLifetime(seconds: 42), .limited(.seconds(42)))
+        XCTAssertEqual(RedisKey.Lifetime(seconds: -2), .keyDoesNotExist)
+        XCTAssertEqual(RedisKey.Lifetime(seconds: -1), .unlimited)
+        XCTAssertEqual(RedisKey.Lifetime(seconds: 42), .limited(.seconds(42)))
     }
 
     func test_initFromMilliseconds() {
-        XCTAssertEqual(RedisKeyLifetime(milliseconds: -2), .keyDoesNotExist)
-        XCTAssertEqual(RedisKeyLifetime(milliseconds: -1), .unlimited)
-        XCTAssertEqual(RedisKeyLifetime(milliseconds: 42), .limited(.milliseconds(42)))
+        XCTAssertEqual(RedisKey.Lifetime(milliseconds: -2), .keyDoesNotExist)
+        XCTAssertEqual(RedisKey.Lifetime(milliseconds: -1), .unlimited)
+        XCTAssertEqual(RedisKey.Lifetime(milliseconds: 42), .limited(.milliseconds(42)))
     }
 
     func test_timeAmount() {
-        XCTAssertNil(RedisKeyLifetime.keyDoesNotExist.timeAmount)
-        XCTAssertNil(RedisKeyLifetime.unlimited.timeAmount)
+        XCTAssertNil(RedisKey.Lifetime.keyDoesNotExist.timeAmount)
+        XCTAssertNil(RedisKey.Lifetime.unlimited.timeAmount)
 
-        XCTAssertEqual(RedisKeyLifetime.limited(.seconds(42)).timeAmount, .seconds(42))
-        XCTAssertEqual(RedisKeyLifetime.limited(.milliseconds(42)).timeAmount, .milliseconds(42))
+        XCTAssertEqual(RedisKey.Lifetime.limited(.seconds(42)).timeAmount, .seconds(42))
+        XCTAssertEqual(RedisKey.Lifetime.limited(.milliseconds(42)).timeAmount, .milliseconds(42))
     }
 
     func test_lifetimeCompare() {
-        XCTAssertLessThan(RedisKeyLifetime.Lifetime.seconds(42), .seconds(43))
-        XCTAssertLessThan(RedisKeyLifetime.Lifetime.seconds(42), .milliseconds(42001))
-        XCTAssertLessThan(RedisKeyLifetime.Lifetime.milliseconds(41999), .milliseconds(42000))
-        XCTAssertLessThan(RedisKeyLifetime.Lifetime.milliseconds(41999), .seconds(42))
+        XCTAssertLessThan(RedisKey.Lifetime.Duration.seconds(42), .seconds(43))
+        XCTAssertLessThan(RedisKey.Lifetime.Duration.seconds(42), .milliseconds(42001))
+        XCTAssertLessThan(RedisKey.Lifetime.Duration.milliseconds(41999), .milliseconds(42000))
+        XCTAssertLessThan(RedisKey.Lifetime.Duration.milliseconds(41999), .seconds(42))
     }
 
     func test_lifetimeEqual() {
-        XCTAssertEqual(RedisKeyLifetime.Lifetime.seconds(42), .seconds(42))
-        XCTAssertEqual(RedisKeyLifetime.Lifetime.seconds(42), .milliseconds(42000))
-        XCTAssertEqual(RedisKeyLifetime.Lifetime.milliseconds(42000), .milliseconds(42000))
-        XCTAssertEqual(RedisKeyLifetime.Lifetime.milliseconds(42000), .seconds(42))
+        XCTAssertEqual(RedisKey.Lifetime.Duration.seconds(42), .seconds(42))
+        XCTAssertEqual(RedisKey.Lifetime.Duration.seconds(42), .milliseconds(42000))
+        XCTAssertEqual(RedisKey.Lifetime.Duration.milliseconds(42000), .milliseconds(42000))
+        XCTAssertEqual(RedisKey.Lifetime.Duration.milliseconds(42000), .seconds(42))
     }
 }

@@ -130,3 +130,12 @@ extension RedisConnectionPool {
         )
     }
 }
+
+// MARK: - RedisKeyLifetime
+@available(*, deprecated, message: "renamed to RedisKey.Lifetime")
+public typealias RedisKeyLifetime = RedisKey.Lifetime
+
+extension RedisKey.Lifetime {
+    @available(*, deprecated, message: "renamed to Duration")
+    public typealias Lifetime = Duration
+}

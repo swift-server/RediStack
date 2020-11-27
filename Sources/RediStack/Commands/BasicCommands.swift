@@ -159,11 +159,11 @@ extension RedisClient {
     /// [https://redis.io/commands/ttl](https://redis.io/commands/ttl)
     /// - Parameter key: The key to check the time-to-live on.
     /// - Returns: The number of seconds before the given key will expire.
-    public func ttl(_ key: RedisKey) -> EventLoopFuture<RedisKeyLifetime> {
+    public func ttl(_ key: RedisKey) -> EventLoopFuture<RedisKey.Lifetime> {
         let args: [RESPValue] = [RESPValue(from: key)]
         return self.send(command: "TTL", with: args)
             .tryConverting(to: Int64.self)
-            .map { RedisKeyLifetime(seconds: $0) }
+            .map { .init(seconds: $0) }
     }
 
     /// Returns the remaining time-to-live (in milliseconds) of the provided key.
@@ -171,82 +171,11 @@ extension RedisClient {
     /// [https://redis.io/commands/pttl](https://redis.io/commands/pttl)
     /// - Parameter key: The key to check the time-to-live on.
     /// - Returns: The number of milliseconds before the given key will expire.
-    public func pttl(_ key: RedisKey) -> EventLoopFuture<RedisKeyLifetime> {
+    public func pttl(_ key: RedisKey) -> EventLoopFuture<RedisKey.Lifetime> {
         let args: [RESPValue] = [RESPValue(from: key)]
         return self.send(command: "PTTL", with: args)
             .tryConverting(to: Int64.self)
-            .map { RedisKeyLifetime(milliseconds: $0) }
-    }
-}
-
-
-/// The lifetime of a `RedisKey` as determined by `ttl` or `pttl`.
-public enum RedisKeyLifetime: Hashable {
-    /// The key does not exist.
-    case keyDoesNotExist
-    /// The key exists but has no expiry associated with it.
-    case unlimited
-    /// The key exists for the given lifetime.
-    case limited(Lifetime)
-}
-
-extension RedisKeyLifetime {
-    /// The lifetime for a `RedisKey` which has an expiry set.
-    public enum Lifetime: Comparable, Hashable {
-        /// The remaining time-to-live in seconds.
-        case seconds(Int64)
-        /// The remaining time-to-live in milliseconds.
-        case milliseconds(Int64)
-
-        /// The remaining time-to-live.
-        public var timeAmount: TimeAmount {
-            switch self {
-            case .seconds(let amount): return .seconds(amount)
-            case .milliseconds(let amount): return .milliseconds(amount)
-            }
-        }
-
-        public static func <(lhs: Lifetime, rhs: Lifetime) -> Bool {
-            return lhs.timeAmount < rhs.timeAmount
-        }
-
-        public static func ==(lhs: Lifetime, rhs: Lifetime) -> Bool {
-            return lhs.timeAmount == rhs.timeAmount
-        }
-    }
-}
-
-extension RedisKeyLifetime {
-    /// The remaining time-to-live for the key, or `nil` if the key does not exist or will not expire.
-    public var timeAmount: TimeAmount? {
-        switch self {
-        case .keyDoesNotExist, .unlimited: return nil
-        case .limited(let lifetime): return lifetime.timeAmount
-        }
-    }
-}
-
-extension RedisKeyLifetime {
-    internal init(seconds: Int64) {
-        switch seconds {
-        case -2:
-            self = .keyDoesNotExist
-        case -1:
-            self = .unlimited
-        default:
-            self = .limited(.seconds(seconds))
-        }
-    }
-
-    internal init(milliseconds: Int64) {
-        switch milliseconds {
-        case -2:
-            self = .keyDoesNotExist
-        case -1:
-            self = .unlimited
-        default:
-            self = .limited(.milliseconds(milliseconds))
-        }
+            .map { .init(milliseconds: $0) }
     }
 }
 
