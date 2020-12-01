@@ -31,9 +31,10 @@ The table below lists the major releases alongside their compatible language, de
 
 | RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
 |:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
-| `from: "1.0.0"` | 5.1+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x ..< 3.0 |
+| `from: "1.0.0"`   | 5.1+                                | 3.x**¹** ..< 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
+| `from: "2.0.0"`   | 5.2+                                | 3.x**¹** ... 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
 
-> **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
+> **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v6](https://raw.githubusercontent.com/antirez/redis/6.0/00-RELEASENOTES), [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
 ### Supported Operating Systems
 
@@ -47,7 +48,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "1.0.0")
+    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "2.0.0")
 ]
 ```
 
@@ -117,15 +118,15 @@ This policy is to balance the desire for as much backwards compatibility as poss
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI).
 
-| Platform              | Swift 5.1          | 5.2                | 5.3                | Trunk              |
+| Platform              | Swift 5.2          | 5.3                | 5.4                | Trunk              |
 |:----------------------|:------------------:|:------------------:|:------------------:|:------------------:|
-| macOS Latest (Intel)  |                    |                    | :white_check_mark: |                    |
-| Ubuntu 20.04 (Focal)  |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| macOS Latest (Intel)  |                    | :white_check_mark: |                    |                    |
+| Ubuntu 20.04 (Focal)  | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Amazon Linux 2        |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| CentOS 7              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| CentOS 8              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Amazon Linux 2        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| CentOS 7              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| CentOS 8              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 
 ## License
 

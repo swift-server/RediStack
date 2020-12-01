@@ -1,4 +1,4 @@
-// swift-tools-version:5.1
+// swift-tools-version:5.2
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the RediStack open source project
@@ -28,11 +28,46 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.0.0")
     ],
     targets: [
-        .target(name: "RediStack", dependencies: ["NIO", "Logging", "Metrics"]),
+        .target(
+            name: "RediStack",
+            dependencies: [
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "Logging", package: "swift-log"),
+                .product(name: "Metrics", package: "swift-metrics")
+            ]
+        ),
+        .testTarget(
+            name: "RediStackTests",
+            dependencies: [
+                "RediStack", "RediStackTestUtils",
+                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOTestUtils", package: "swift-nio")
+            ]
+        ),
+
         .target(name: "RedisTypes", dependencies: ["RediStack"]),
-        .target(name: "RediStackTestUtils", dependencies: ["NIO", "RediStack"]),
-        .testTarget(name: "RediStackTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils", "NIOTestUtils"]),
-        .testTarget(name: "RedisTypesTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils", "RedisTypes"]),
-        .testTarget(name: "RediStackIntegrationTests", dependencies: ["RediStack", "NIO", "RediStackTestUtils"])
+        .testTarget(
+            name: "RedisTypesTests",
+            dependencies: [
+                "RediStack", "RedisTypes", "RediStackTestUtils",
+                .product(name: "NIO", package: "swift-nio")
+            ]
+        ),
+
+        .target(
+            name: "RediStackTestUtils",
+            dependencies: [
+                .product(name: "NIO", package: "swift-nio"),
+                "RediStack"
+            ]
+        ),
+
+        .testTarget(
+            name: "RediStackIntegrationTests",
+            dependencies: [
+                "RediStack", "RediStackTestUtils",
+                .product(name: "NIO", package: "swift-nio")
+            ]
+        )
     ]
 )

@@ -12,7 +12,3 @@ swift 5.3:
 swift 5.2:
   extends: .unit-test
   image: swift:5.2-xenial
-
-swift 5.1:
-  extends: .unit-test
-  image: swift:5.1-xenial
