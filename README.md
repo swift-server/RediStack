@@ -116,7 +116,7 @@ Major version releases will drop support for any version of Swift older than the
 This policy is to balance the desire for as much backwards compatibility as possible, while also being able to take advantage of new Swift features for the best API design possible.
 
 The following table shows the combination of Swift language versions and operating systems that
-receive regular unit testing (either in development, or with CI).
+receive regular unit testing (either in development, or with CI) against the **current version** of **RediStack**.
 
 | Platform              | Swift 5.2          | 5.3                | 5.4                | Trunk              |
 |:----------------------|:------------------:|:------------------:|:------------------:|:------------------:|
@@ -127,6 +127,23 @@ receive regular unit testing (either in development, or with CI).
 | Amazon Linux 2        | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | CentOS 7              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
 | CentOS 8              | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+
+For older versions of **RediStack**, view each summary below.
+
+<details>
+<summary><bold>RediStack 1.x</bold></summary>
+
+| Platform              | Swift 5.1          | 5.2                | 5.3                | Trunk              |
+|:----------------------|:------------------:|:------------------:|:------------------:|:------------------:|
+| macOS Latest (Intel)  |                    |                    | :white_check_mark: |                    |
+| Ubuntu 20.04 (Focal)  |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Amazon Linux 2        |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| CentOS 7              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| CentOS 8              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+
+</details>
 
 ## License
 
