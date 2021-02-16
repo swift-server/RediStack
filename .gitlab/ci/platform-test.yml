@@ -29,10 +29,9 @@ swift trunk:
   image: swiftlang/swift:nightly-master-${SWIFT_PLATFORM_NAME}
   allow_failure: true
 
-# 5.4 nightlies are not available yet
-# swift 5.4:
-#   extends: .standard-platform
-#   image: swiftlang/swift:nightly-5.4-${SWIFT_PLATFORM_NAME}
+swift 5.4:
+  extends: .standard-platform
+  image: swiftlang/swift:nightly-5.4-${SWIFT_PLATFORM_NAME}
 
 swift 5.3:
   extends: .standard-platform

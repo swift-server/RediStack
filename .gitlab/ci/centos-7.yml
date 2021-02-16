@@ -16,10 +16,9 @@ swift trunk:
   image: swiftlang/swift:nightly-master-centos7
   allow_failure: true
 
-# 5.4 nightlies are not available yet
-# swift 5.4:
-#   extends: .centos7
-#   image: swiftlang/swift:nightly-5.4-centos7
+swift 5.4:
+  extends: .centos7
+  image: swiftlang/swift:nightly-5.4-centos7
 
 swift 5.3:
   extends: .centos7
