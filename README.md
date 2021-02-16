@@ -4,7 +4,7 @@
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.1+-orange.svg" alt="Swift 5.1+"></a>
+    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.2+-orange.svg" alt="Swift 5.2+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 
@@ -32,7 +32,7 @@ The table below lists the major releases alongside their compatible language, de
 | RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
 |:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
 | `from: "1.0.0"`   | 5.1+                                | 3.x**¹** ..< 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
-| `from: "2.0.0"`   | 5.2+                                | 3.x**¹** ... 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
+|`.branch("master")`| 5.2+                                | 3.x**¹** ... 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
 
 > **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v6](https://raw.githubusercontent.com/antirez/redis/6.0/00-RELEASENOTES), [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
@@ -48,7 +48,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "2.0.0")
+    .package(url: "https://gitlab.com/mordil/RediStack.git", .branch("master"))
 ]
 ```
 
