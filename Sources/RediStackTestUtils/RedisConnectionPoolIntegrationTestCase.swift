@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIO
 import RediStack
 import XCTest
@@ -75,16 +76,19 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     }
     
     public func makeNewPool(
+        initialAddresses: [SocketAddress]? = nil,
+        initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
         connectionRetryTimeout: TimeAmount? = .seconds(5),
         minimumConnectionCount: Int = 0
     ) throws -> RedisConnectionPool {
-        let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
+        let addresses = try initialAddresses ?? [SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)]
         let pool = RedisConnectionPool(
             configuration: .init(
-                initialServerConnectionAddresses: [address],
+                initialServerConnectionAddresses: addresses,
                 maximumConnectionCount: .maximumActiveConnections(4),
                 connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
                 minimumConnectionCount: minimumConnectionCount,
+                initialConnectionBackoffDelay: initialConnectionBackoffDelay,
                 connectionRetryTimeout: connectionRetryTimeout
             ),
             boundEventLoop: self.eventLoopGroup.next()
