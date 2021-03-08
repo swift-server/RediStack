@@ -29,10 +29,10 @@ This library is primarily developed for Redis v5, but is backwards compatible to
 
 The table below lists the major releases alongside their compatible language, dependency, and Redis versions.
 
-| RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
-|:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
-| `from: "1.0.0"`   | 5.1+                                | 3.x**¹** ..< 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
-|`.branch("master")`| 5.2+                                | 3.x**¹** ... 6.x          | 2.x                                            | 1.x                                            | 1.x ..< 3.0                    |
+| RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) | [ServiceDiscovery](https://github.com/apple/swift-service-discovery) |
+|:--------------------|:----:|:----------------:|:---:|:---:|:-----------:|:---:|
+| `from: "1.0.0"`     | 5.1+ | 3.x**¹** ..< 6.x | 2.x | 1.x | 1.x ..< 3.0 | -   |
+| `.branch("master")` | 5.2+ | 3.x**¹** ... 6.x | 2.x | 1.x | 1.x ..< 3.0 | 1.x |
 
 > **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v6](https://raw.githubusercontent.com/antirez/redis/6.0/00-RELEASENOTES), [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
