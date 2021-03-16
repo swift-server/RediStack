@@ -246,7 +246,7 @@ extension RedisCommand {
 // MARK: -
 
 extension RedisClient {
-    /// Incrementally iterates over allv alues in a set.
+    /// Incrementally iterates over all values in a set.
     ///
     /// See `RedisCommand.sscan(_:startingFrom:matching:count:)`
     /// - Parameters:
