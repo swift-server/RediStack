@@ -246,7 +246,7 @@ extension ConnectionPool {
     private func connectionCreationFailed(_ error: Error, backoff: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
 
-        logger.error("failed to create connection for pool", metadata: [
+        logger.warning("failed to create connection for pool", metadata: [
             RedisLogging.MetadataKeys.error: "\(error)"
         ])
 

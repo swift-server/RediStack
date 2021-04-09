@@ -180,7 +180,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
             guard self.state.isConnected else { return }
             
             self.state = .closed
-            self.logger.error("connection was closed unexpectedly")
+            self.logger.warning("connection was closed unexpectedly")
             RedisMetrics.activeConnectionCount.decrement()
         }
 
@@ -239,7 +239,7 @@ extension RedisConnection {
             // log data based on the result
             switch result {
             case let .failure(error):
-                logger.error("command failed", metadata: [
+                logger.debug("command failed", metadata: [
                     RedisLogging.MetadataKeys.error: "\(error.localizedDescription)"
                 ])
                 
@@ -300,7 +300,7 @@ extension RedisConnection {
             .flatMap { self.closeChannel() } // close the channel from our end
         
         notification.whenFailure {
-            logger.error("error while closing connection", metadata: [
+            logger.warning("failed to close connection", metadata: [
                 RedisLogging.MetadataKeys.error: "\($0)"
             ])
         }

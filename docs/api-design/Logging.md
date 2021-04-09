@@ -57,11 +57,11 @@ connection
 1. All log metadata keys should be added to the `RedisLogging` namespace
 1. Log messages should be in all lowercase, with no punctuation preferred
   - if a Redis command keyword (such as `QUIT`) is in the log message, it should be in all caps
-1. Log a `critical` message before any `precondition` failure
-1. Prefer single locations of `error` messages
-  - for example, only the top level `send` command on `RedisConnection` should log the error returned from Redis or from a failed `EventLoopFuture`
-1. `warning` logs should be reserved for situations that could lead to `critical` conditions
+1. `warning` logs should be reserved for situations that could lead to `error` or `critical` conditions
   - this may include leaks or bad state
+1. Only use `error` in situations where the error cannot be expressed by the language, such as by throwing an error or failing `EventLoopFuture`s.
+  - this is to avoid high severity logs that developers cannot control and must create filtering mechanisms if they want to ignore emitted logs from **RediStack**
+1. Log a `critical` message before any `preconditionFailure` or `fatalError`
 
 ### Metadata
 
