@@ -96,8 +96,8 @@ extension RedisCommand {
         var args: [RESPValue] = [.init(bulk: pos)]
         
         if let k = key { args.insert(.init(from: k), at: 0) }
-        if let m = match { args.append(.init(bulk: "match \(m)")) }
-        if let c = count { args.append(.init(bulk: "count \(c)")) }
+        if let m = match { args.append(contentsOf: [.init(bulk: "match"), .init(bulk: "\(m)")]) }
+        if let c = count { args.append(contentsOf: [.init(bulk: "count"), .init(bulk: "\(c)")]) }
         
         return .init(keyword: keyword, arguments: args) {
             let response = try $0.map(to: [RESPValue].self)
