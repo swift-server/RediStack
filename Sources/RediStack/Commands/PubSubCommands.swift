@@ -37,8 +37,11 @@ extension RedisCommand {
     /// - Invariant: If no `match` pattern is provided, all active channels will be returned.
     /// - Parameter match: An optional pattern of channel names to filter for.
     public static func pubsubChannels(matching match: String? = nil) -> RedisCommand<[RedisChannelName]> {
-        let args: [RESPValue] = match.map { [.init(bulk: $0)] } ?? []
-        return .init(keyword: "PUBSUB CHANNELS", arguments: args)
+        var args: [RESPValue] = [.init(bulk: "CHANNELS")]
+        if let match = match {
+            args.append(.init(bulk: match))
+        }
+        return .init(keyword: "PUBSUB", arguments: args)
     }
 
     /// [PUBSUB NUMPAT](https://redis.io/commands/pubsub#codepubsub-numpatcode)
