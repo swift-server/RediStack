@@ -46,7 +46,7 @@ extension RedisCommand {
 
     /// [PUBSUB NUMPAT](https://redis.io/commands/pubsub#codepubsub-numpatcode)
     public static func pubsubNumpat() -> RedisCommand<Int> {
-        return .init(keyword: "PUBSUB NUMPAT", arguments: [])
+        return .init(keyword: "PUBSUB", arguments: [.init(bulk: "NUMPAT")])
     }
 
     /// [PUBSUB NUMSUB](https://redis.io/commands/pubsub#codepubsub-numsub-channel-1--channel-ncode)

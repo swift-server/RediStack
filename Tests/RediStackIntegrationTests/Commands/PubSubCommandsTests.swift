@@ -190,6 +190,14 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         self.waitForExpectations(timeout: 1)
     }
 
+    func test_pubSubNumpat() throws {
+        let queryConnection = try self.makeNewConnection()
+        defer { try? queryConnection.close().wait() }
+
+        let numPat = try queryConnection.send(.pubsubNumpat()).wait()
+        XCTAssertGreaterThanOrEqual(numPat, 0)
+    }
+
     func test_pubSubChannels() throws {
         let fn = #function
         let subscriber = try self.makeNewConnection()
