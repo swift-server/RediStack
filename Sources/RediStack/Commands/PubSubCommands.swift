@@ -52,8 +52,9 @@ extension RedisCommand {
     /// [PUBSUB NUMSUB](https://redis.io/commands/pubsub#codepubsub-numsub-channel-1--channel-ncode)
     /// - Parameter channels: A list of channel names to collect the subscriber counts for.
     public static func pubsubNumsub(forChannels channels: [RedisChannelName]) -> RedisCommand<[RedisChannelName: Int]> {
-        let args = channels.map { $0.convertedToRESPValue() }
-        return .init(keyword: "PUBSUB NUMSUB", arguments: args) {
+        var args: [RESPValue] = [.init(bulk: "NUMSUB")]
+        args.append(convertingContentsOf: channels)
+        return .init(keyword: "PUBSUB", arguments: args) {
             let response = try $0.map(to: [RESPValue].self)
             assert(response.count == channels.count * 2, "Unexpected response size!")
             
@@ -62,11 +63,12 @@ extension RedisCommand {
             return try channels
                 .enumerated()
                 .reduce(into: [:]) { (result, next) in
-                    assert(next.element.rawValue == response[next.offset].string, "Unexpected value in current index!")
+                    let responseOffset = next.offset * 2
+                    assert(next.element.rawValue == response[responseOffset].string, "Unexpected value in current index!")
                     
-                    guard let count = response[next.offset + 1].int else {
+                    guard let count = response[responseOffset + 1].int else {
                         throw RedisClientError.assertionFailure(
-                            message: "Unexpected value at position \(next.offset + 1) in \(response)"
+                            message: "Unexpected value at position \(responseOffset + 1) in \(response)"
                         )
                     }
                     result[next.element] = count
