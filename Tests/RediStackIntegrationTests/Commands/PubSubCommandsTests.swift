@@ -231,6 +231,42 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         let allChannels = try queryConnection.activeChannels().wait()
         XCTAssertGreaterThanOrEqual(allChannels.count, channelNames.count)
     }
+
+    func test_pubSubNumsub() throws {
+        let fn = #function
+        let subscriber = try self.makeNewConnection()
+        defer { try? subscriber.close().wait() }
+
+        let channelNames = (1...5).map {
+            RedisChannelName("\(fn)\($0)")
+        }
+
+        for channelName in channelNames {
+            try subscriber.subscribe(
+                to: channelName,
+                messageReceiver: { _, _ in },
+                onSubscribe: nil,
+                onUnsubscribe: nil
+            ).wait()
+        }
+        XCTAssertTrue(subscriber.isSubscribed)
+        defer {
+            // Unsubscribe (clean up)
+            try? subscriber.unsubscribe(from: channelNames).wait()
+            XCTAssertFalse(subscriber.isSubscribed)
+        }
+
+        // Make another connection to query on.
+        let queryConnection = try self.makeNewConnection()
+        defer { try? queryConnection.close().wait() }
+
+        let notSubscribedChannel = RedisChannelName("\(fn)_notsubbed")
+        let numSubs = try queryConnection.subscriberCount(forChannels: [channelNames[0], notSubscribedChannel]).wait()
+        XCTAssertEqual(numSubs.count, 2)
+
+        XCTAssertGreaterThanOrEqual(numSubs[channelNames[0]] ?? 0, 1)
+        XCTAssertEqual(numSubs[notSubscribedChannel], 0)
+    }
 }
 
 final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTestCase {

@@ -88,11 +88,12 @@ extension RedisClient {
                 return try channels
                     .enumerated()
                     .reduce(into: [:]) { (result, next) in
-                        assert(next.element.rawValue == response[next.offset].string, "Unexpected value in current index!")
+                        let responseOffset = next.offset * 2
+                        assert(next.element.rawValue == response[responseOffset].string, "Unexpected value in current index!")
                         
-                        guard let count = response[next.offset + 1].int else {
+                        guard let count = response[responseOffset + 1].int else {
                             throw RedisClientError.assertionFailure(
-                                message: "Unexpected value at position \(next.offset + 1) in \(response)"
+                                message: "Unexpected value at position \(responseOffset + 1) in \(response)"
                             )
                         }
                         result[next.element] = count
