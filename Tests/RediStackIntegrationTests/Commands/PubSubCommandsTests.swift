@@ -188,6 +188,41 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
 
         self.waitForExpectations(timeout: 1)
     }
+
+    func test_pubSubChannels() throws {
+        let fn = #function
+        let subscriber = try self.makeNewConnection()
+        defer { try? subscriber.close().wait() }
+
+        let channelNames = (1...10).map {
+            RedisChannelName("\(fn)\($0)\($0 % 2 == 0 ? "_even" : "_odd")")
+        }
+
+        for channelName in channelNames {
+            try subscriber.subscribe(
+                to: channelName,
+                messageReceiver: { _, _ in },
+                onSubscribe: nil,
+                onUnsubscribe: nil
+            ).wait()
+        }
+        XCTAssertTrue(subscriber.isSubscribed)
+        defer {
+            // Unsubscribe (clean up)
+            try? subscriber.unsubscribe(from: channelNames).wait()
+            XCTAssertFalse(subscriber.isSubscribed)
+        }
+
+        // Make another connection to query on.
+        let queryConnection = try self.makeNewConnection()
+        defer { try? queryConnection.close().wait() }
+
+        let oddChannels = try queryConnection.activeChannels(matching: "\(fn)*_odd").wait()
+        XCTAssertEqual(oddChannels.count, channelNames.count / 2)
+
+        let allChannels = try queryConnection.activeChannels().wait()
+        XCTAssertGreaterThanOrEqual(allChannels.count, channelNames.count)
+    }
 }
 
 final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTestCase {
