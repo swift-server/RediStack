@@ -85,6 +85,12 @@ For bugs or feature requests, file a new [issue](https://gitlab.com/mordil/RediS
 
 For all other support requests, please email [support@redistack.info](mailto:support@redistack.info).
 
+## Security Vulnerabilities
+
+If you think you have found a security flaw in the library, please report it following this project's [Security Policy](https://gitlab.com/Mordil/RediStack/blob/master/SECURITY.md).
+
+Project contributors will treat your report as top priority.
+
 ## Changelog
 
 [SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://gitlab.com/Mordil/RediStack/-/releases).
