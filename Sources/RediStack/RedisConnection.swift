@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2021 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -139,6 +139,10 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
             ], on: self.eventLoop)
         }
     }
+    /// A closure to invoke when the connection closes unexpectedly.
+    ///
+    /// An unexpected closure is when the connection is closed by any other method than by calling `close(logger:)`.
+    public var onUnexpectedClosure: (() -> Void)?
 
     internal let channel: Channel
     private let systemContext: Context
@@ -182,6 +186,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
             self.state = .closed
             self.logger.error("connection was closed unexpectedly")
             RedisMetrics.activeConnectionCount.decrement()
+            self.onUnexpectedClosure?()
         }
 
         self.logger.trace("connection created")
