@@ -58,38 +58,38 @@ Code Climate:
     reports:
       codequality: gl-code-quality-report.json
 
-.platform-test:
+.standard-platform-test:
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab/ci/platform-test.yml'
+    include: '/.gitlab/ci/standard-platforms.yml'
 
 Ubuntu Bionic:
-  extends: .platform-test
+  extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: bionic
 
 Ubuntu Xenial:
-  extends: .platform-test
+  extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: xenial
 
 Ubuntu Focal:
-  extends: .platform-test
+  extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: focal
 
 CentOS 7:
-  extends: .platform-test
+  extends: .standard-platform-test
   trigger:
     include: '/.gitlab/ci/centos-7.yml'
 
 CentOS 8:
-  extends: .platform-test
+  extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: centos8
 
 Amazon Linux 2:
-  extends: .platform-test
+  extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: amazonlinux2

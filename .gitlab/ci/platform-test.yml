@@ -1,9 +1,6 @@
 stages:
   - Test
 
-variables:
-  SWIFT_STANDARD_PLATFORM_TESTS: "true"
-
 .platform-test:
   stage: Test
   tags:
@@ -18,25 +15,4 @@ variables:
   script:
     - swift build --build-tests --enable-test-discovery --sanitize=thread -v 
     - swift test --skip-build
-
-.standard-platform:
-  extends: .platform-test
-  rules:
-    - if: '$SWIFT_STANDARD_PLATFORM_TESTS == "true"'
-
-swift trunk:
-  extends: .standard-platform
-  image: swiftlang/swift:nightly-master-${SWIFT_PLATFORM_NAME}
-  allow_failure: true
-
-swift 5.5:
-  extends: .standard-platform
-  image: swift:5.5-${SWIFT_PLATFORM_NAME}
-
-swift 5.4:
-  extends: .standard-platform
-  image: swift:5.4-${SWIFT_PLATFORM_NAME}
-
-swift 5.3:
-  extends: .standard-platform
-  image: swift:5.3-${SWIFT_PLATFORM_NAME}
+    

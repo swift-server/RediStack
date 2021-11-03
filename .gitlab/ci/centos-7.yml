@@ -1,8 +1,5 @@
 include: '/.gitlab/ci/platform-test.yml'
 
-variables:
-  SWIFT_STANDARD_PLATFORM_TESTS: "false"
-
 .centos7:
   extends: .platform-test
   before_script:
