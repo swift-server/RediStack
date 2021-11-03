@@ -1,9 +1,9 @@
-// swift-tools-version:5.3
+// swift-tools-version:5.5
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2022 RediStack project authors
+// Copyright (c) 2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -36,8 +36,7 @@ let package = Package(
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Metrics", package: "swift-metrics"),
                 .product(name: "ServiceDiscovery", package: "swift-service-discovery")
-            ],
-            exclude: ["Documentation.docc"]
+            ]
         ),
         .testTarget(
             name: "RediStackTests",
@@ -48,7 +47,7 @@ let package = Package(
             ]
         ),
 
-        .target(name: "RedisTypes", dependencies: ["RediStack"], exclude: ["Documentation.docc"]),
+        .target(name: "RedisTypes", dependencies: ["RediStack"]),
         .testTarget(
             name: "RedisTypesTests",
             dependencies: [
@@ -62,8 +61,7 @@ let package = Package(
             dependencies: [
                 .product(name: "NIO", package: "swift-nio"),
                 "RediStack"
-            ],
-            exclude: ["Documentation.docc"]
+            ]
         ),
 
         .testTarget(
