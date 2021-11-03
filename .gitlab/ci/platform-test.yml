@@ -29,14 +29,14 @@ swift trunk:
   image: swiftlang/swift:nightly-master-${SWIFT_PLATFORM_NAME}
   allow_failure: true
 
+swift 5.5:
+  extends: .standard-platform
+  image: swift:5.5-${SWIFT_PLATFORM_NAME}
+
 swift 5.4:
   extends: .standard-platform
-  image: swiftlang/swift:nightly-5.4-${SWIFT_PLATFORM_NAME}
+  image: swift:5.4-${SWIFT_PLATFORM_NAME}
 
 swift 5.3:
   extends: .standard-platform
   image: swift:5.3-${SWIFT_PLATFORM_NAME}
-
-swift 5.2:
-  extends: .standard-platform
-  image: swift:5.2-${SWIFT_PLATFORM_NAME}

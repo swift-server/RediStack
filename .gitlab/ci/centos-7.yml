@@ -16,14 +16,14 @@ swift trunk:
   image: swiftlang/swift:nightly-master-centos7
   allow_failure: true
 
+swift 5.5:
+  extends: .centos7
+  image: swift:5.5-centos7
+
 swift 5.4:
   extends: .centos7
-  image: swiftlang/swift:nightly-5.4-centos7
+  image: swift:5.4-centos7
 
 swift 5.3:
   extends: .centos7
   image: swift:5.3-centos7
-
-swift 5.2:
-  extends: .centos7
-  image: swift:5.2-centos7
