@@ -15,4 +15,10 @@ stages:
   script:
     - swift build --build-tests --enable-test-discovery --sanitize=thread -v 
     - swift test --skip-build
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $RUN_NIGHTLY'
+      allow_failure: true
+      when: always
+    - if: '$CI_PIPELINE_SOURCE != "schedule"'
+      when: always
     

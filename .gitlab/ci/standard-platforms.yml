@@ -3,7 +3,8 @@ include: '/.gitlab/ci/platform-test.yml'
 swift trunk:
   extends: .platform-test
   image: swiftlang/swift:nightly-master-${SWIFT_PLATFORM_NAME}
-  allow_failure: true
+  variables:
+    RUN_NIGHTLY: 1
 
 swift 5.5:
   extends: .platform-test
