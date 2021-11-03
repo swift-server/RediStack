@@ -124,7 +124,7 @@ This policy is to balance the desire for as much backwards compatibility as poss
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI) against the **current version** of **RediStack**.
 
-| Platform              | Swift 5.2 | 5.3 | 5.4 | Trunk |
+| Platform              | Swift 5.3 | 5.4 | 5.5 | Trunk |
 |:----------------------|:---------:|:---:|:---:|:-----:|
 | macOS Latest (Intel)  |    |   | ✅ |    |
 | Ubuntu 20.04 (Focal)  | ✅ | ✅ | ✅ | ✅ |
