@@ -11,8 +11,7 @@ include: '/.gitlab/ci/platform-test.yml'
 swift trunk:
   extends: .centos7
   image: swiftlang/swift:nightly-master-centos7
-  variables:
-    RUN_NIGHTLY: 1
+  except:
 
 swift 5.5:
   extends: .centos7
