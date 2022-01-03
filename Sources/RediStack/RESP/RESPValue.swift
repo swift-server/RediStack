@@ -184,7 +184,7 @@ extension EventLoopFuture where Value == RESPValue {
         file: StaticString = #file,
         line: UInt = #line
     ) -> EventLoopFuture<T> {
-        return self.flatMapThrowing(file: file, line: line) {
+        return self.flatMapThrowing {
             guard let value = T(fromRESP: $0) else {
                 throw RedisClientError.failedRESPConversion(to: type)
             }
