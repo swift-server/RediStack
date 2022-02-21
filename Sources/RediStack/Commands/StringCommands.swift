@@ -222,6 +222,12 @@ extension RedisCommand {
         ]
         return .init(keyword: "SETNX", arguments: args)
     }
+  
+  ///[STRLEN](https://redis.io/commands/strln)
+  /// - Parameter key: The key to fetch the length of.
+  public static func strln(_ key: RedisKey) -> RedisCommand<Int> {
+    .init(keyword: "STRLEN", arguments: [.init(from: key)])
+  }
 }
 
 // MARK: -

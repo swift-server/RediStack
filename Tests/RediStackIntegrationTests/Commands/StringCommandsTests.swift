@@ -229,4 +229,10 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
         result = try connection.send(.decrby(#function, by: 0)).wait()
         XCTAssertEqual(result, 7)
     }
+  
+    func test_strlen() throws {
+        XCTAssertNoThrow(try connection.set(#function, to: "value").wait())
+        let val = try connection.send(.strln(#function)).wait()
+        XCTAssertEqual(val, 5)
+    }
 }
