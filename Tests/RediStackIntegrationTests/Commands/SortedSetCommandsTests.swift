@@ -512,3 +512,55 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(count, 1)
     }
 }
+
+// MARK: - #104 zrevrange & zrange bug
+
+extension SortedSetCommandsTests {
+    func test_zrange_realworld() throws {
+        struct Keys {
+            static let first  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0185"
+            static let second = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0186"
+            static let third  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0187"
+            static let fourth = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0188"
+            static let fifth  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0189"
+        }
+        _ = try self.connection.send(.zadd([
+            (Keys.first, 1),
+            (Keys.second, 1),
+            (Keys.third, 1),
+            (Keys.fourth, 1),
+            (Keys.fifth, 1),
+        ], to: #function)).wait()
+
+        let elements = try self.connection.send(.zrange(from: #function, fromIndex: 0, returning: .valuesOnly))
+            .wait()
+            .compactMap(\.string)
+
+        XCTAssertEqual(elements.count, 5)
+        XCTAssertEqual(elements, elements.sorted(by: <))
+    }
+
+    func test_zrevrange_realworld() throws {
+        struct Keys {
+            static let first  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0185"
+            static let second = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0186"
+            static let third  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0187"
+            static let fourth = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0188"
+            static let fifth  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0189"
+        }
+        _ = try self.connection.send(.zadd([
+            (Keys.first, 1),
+            (Keys.second, 1),
+            (Keys.third, 1),
+            (Keys.fourth, 1),
+            (Keys.fifth, 1),
+        ], to: #function)).wait()
+
+        let elements = try self.connection.send(.zrevrange(from: #function, fromIndex: 0, returning: .valuesOnly))
+            .wait()
+            .compactMap(\.string)
+
+        XCTAssertEqual(elements.count, 5)
+        XCTAssertEqual(elements, elements.sorted(by: >))
+    }
+}
