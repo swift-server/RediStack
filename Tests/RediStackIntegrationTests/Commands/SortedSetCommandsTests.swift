@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -516,5 +516,59 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         
         count = try connection.zremrangebyscore(from: key, withMaximumScoreOf: .inclusive(1)).wait()
         XCTAssertEqual(count, 1)
+    }
+}
+
+// MARK: - #104 zrevrange & zrange bug
+
+extension SortedSetCommandsTests {
+    func test_zrange_realworld() throws {
+        struct Keys {
+            static let first  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0185"
+            static let second = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0186"
+            static let third  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0187"
+            static let fourth = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0188"
+            static let fifth  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0189"
+        }
+        _ = try self.connection.zadd([
+            (Keys.first, 1),
+            (Keys.second, 1),
+            (Keys.third, 1),
+            (Keys.fourth, 1),
+            (Keys.fifth, 1),
+        ], to: #function).wait()
+
+        let elements = try self.connection
+            .zrange(from: #function, fromIndex: 0)
+            .wait()
+            .compactMap { $0.string }
+
+        XCTAssertEqual(elements.count, 5)
+        XCTAssertEqual(elements, elements.sorted(by: <))
+    }
+
+    func test_zrevrange_realworld() throws {
+        struct Keys {
+            static let first  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0185"
+            static let second = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0186"
+            static let third  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0187"
+            static let fourth = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0188"
+            static let fifth  = "1E4FD2C5-C32E-4E3F-91B3-45478BCF0189"
+        }
+        _ = try self.connection.zadd([
+            (Keys.first, 1),
+            (Keys.second, 1),
+            (Keys.third, 1),
+            (Keys.fourth, 1),
+            (Keys.fifth, 1),
+        ], to: #function).wait()
+
+        let elements = try self.connection
+            .zrevrange(from: #function, fromIndex: 0)
+            .wait()
+            .compactMap { $0.string }
+
+        XCTAssertEqual(elements.count, 5)
+        XCTAssertEqual(elements, elements.sorted(by: >))
     }
 }

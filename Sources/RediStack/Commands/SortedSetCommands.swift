@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -1121,7 +1121,7 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound, includeScoresInResponse: includeScores)
+        return self.zrevrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound, includeScoresInResponse: includeScores)
     }
     
     /// Gets all the elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
@@ -1163,7 +1163,7 @@ extension RedisClient {
         indices range: Range<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1, includeScoresInResponse: includeScores)
+        return self.zrevrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1, includeScoresInResponse: includeScores)
     }
     
     /// Gets all elements from the index specified to the end of a SortedSet.
@@ -1191,7 +1191,7 @@ extension RedisClient {
         fromIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
+        return self.zrevrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
     }
     
     /// Gets all elements from the start of a SortedSet up to, and including, the element at the index specified.
@@ -1219,7 +1219,7 @@ extension RedisClient {
         throughIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
+        return self.zrevrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
     }
     
     /// Gets all elements from the start of a SortedSet up to, but not including, the element at the index specified.
@@ -1247,7 +1247,7 @@ extension RedisClient {
         upToIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
+        return self.zrevrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
     }
 
     func _zrange(
