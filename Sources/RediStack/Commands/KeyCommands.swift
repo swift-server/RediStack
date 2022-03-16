@@ -70,7 +70,7 @@ extension RedisCommand {
 
     /// [KEYS](https://redis.io/commands/keys)
     /// - Parameter pattern: The key pattern to search for matching keys that exist in Redis.
-    public static func keys(matching pattern: String) -> RedisCommand<[String]> {
+    public static func keys(matching pattern: String) -> RedisCommand<[RedisKey]> {
         return .init(keyword: "KEYS", arguments: [pattern.convertedToRESPValue()])
     }
     
@@ -126,7 +126,7 @@ extension RedisClient {
     /// See ``RedisCommand/keys(matching:)``
     /// - Parameter pattern: The key pattern to search for matching keys that exist in Redis.
     /// - Returns: A list of keys that matched the provided pattern.
-    public func listKeys(matching pattern: String) -> EventLoopFuture<[String]> {
+    public func listKeys(matching pattern: String) -> EventLoopFuture<[RedisKey]> {
         return self.send(.keys(matching: pattern))
     }
 

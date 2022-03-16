@@ -156,6 +156,6 @@ final class KeyCommandsTests: RediStackIntegrationTestCase {
         }
         let keys = try self.connection.listKeys(matching: "\(#function)*").wait()
         XCTAssertEqual(keys.count, range.count)
-        XCTAssertTrue(keys.allSatisfy({ $0.contains(#function) }))
+        XCTAssertTrue(keys.allSatisfy({ $0.rawValue.contains(#function) }))
     }
 }
