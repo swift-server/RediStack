@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -82,6 +82,16 @@ extension RedisCommand where ResultType == Void {
         self.init(keyword: keyword, arguments: arguments, mapValueToResult: { _ in })
     }
 }
+
+
+// MARK: Equatable
+extension RedisCommand: Equatable {
+    public static func ==<T>(lhs: RedisCommand<T>, rhs: RedisCommand<T>) -> Bool {
+        return lhs.keyword == rhs.keyword && lhs.arguments == rhs.arguments
+    }
+}
+
+// MARK: - Common helpers
 
 extension RedisCommand {
     @usableFromInline
