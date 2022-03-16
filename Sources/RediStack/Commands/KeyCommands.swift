@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -67,6 +67,12 @@ extension RedisCommand {
             return .init(milliseconds: try $0.map())
         }
     }
+
+    /// [KEYS](https://redis.io/commands/keys)
+    /// - Parameter pattern: The key pattern to search for matching keys that exist in Redis.
+    public static func keys(matching pattern: String) -> RedisCommand<[String]> {
+        return .init(keyword: "KEYS", arguments: [pattern.convertedToRESPValue()])
+    }
     
     /// [SCAN](https://redis.io/commands/scan)
     /// - Parameters:
@@ -113,6 +119,15 @@ extension RedisClient {
     /// - Returns: A `NIO.EventLoopFuture` that resolves `true` if the expiration was set and `false` if it wasn't.
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         return self.send(.expire(key, after: timeout))
+    }
+
+    /// Searches the keys in the database that match the given pattern.
+    ///
+    /// See ``RedisCommand/keys(matching:)``
+    /// - Parameter pattern: The key pattern to search for matching keys that exist in Redis.
+    /// - Returns: A list of keys that matched the provided pattern.
+    public func listKeys(matching pattern: String) -> EventLoopFuture<[String]> {
+        return self.send(.keys(matching: pattern))
     }
 
     /// Incrementally iterates over all keys in the currently selected database.

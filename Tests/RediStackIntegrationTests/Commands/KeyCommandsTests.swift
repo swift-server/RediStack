@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -147,5 +147,15 @@ final class KeyCommandsTests: RediStackIntegrationTestCase {
         XCTAssertGreaterThanOrEqual(cursor, 0)
         XCTAssertGreaterThanOrEqual(keys.count, 1)
         XCTAssertLessThanOrEqual(keys.count, 7)
+    }
+
+    func test_keys() throws {
+        let range = Range(0...3)
+        try range.forEach {
+            try self.connection.set("\(#function)_\($0)", to: $0).wait()
+        }
+        let keys = try self.connection.listKeys(matching: "\(#function)*").wait()
+        XCTAssertEqual(keys.count, range.count)
+        XCTAssertTrue(keys.allSatisfy({ $0.contains(#function) }))
     }
 }
