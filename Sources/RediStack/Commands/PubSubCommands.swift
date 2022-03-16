@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -82,7 +82,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Publishes the provided message to a specific Redis channel.
     ///
-    /// See `RedisCommand.publish(_:to:)`
+    /// See ``RedisCommand/publish(_:to:)``
     /// - Parameters:
     ///     - message: The "message" value to publish on the channel.
     ///     - channel: The name of the channel to publish the message to.

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -60,7 +60,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Pings the server, which will respond with a message.
     ///
-    /// See `RedisCommand.ping(with:)`
+    /// See ``RedisCommand/ping(with:)``
     /// - Parameter message: The optional message that the server should respond with instead of the default.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the given `message` or Redis' default response of `PONG`.
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
@@ -69,7 +69,7 @@ extension RedisClient {
 
     /// Requests the client to authenticate with Redis to allow other commands to be executed.
     ///
-    /// See `RedisCommand.auth(with:)`
+    /// See ``RedisCommand/auth(with:)``
     /// - Parameter password: The password to authenticate with.
     /// - Returns: A `NIO.EventLoopFuture` that resolves if the password as accepted, otherwise it fails.
     public func authorize(with password: String) -> EventLoopFuture<Void> {
@@ -78,7 +78,7 @@ extension RedisClient {
 
     /// Selects the Redis logical database having the given zero-based numeric index.
     ///
-    /// See `RedisCommand.select(database:)`
+    /// See ``RedisCommand/select(database:)``
     /// - Note: New connections always use the database `0`.
     /// - Parameter index: The 0-based index of the database that the connection sending this command will execute later commands against.
     /// - Returns: A `NIO.EventLoopFuture` resolving once the operation has succeeded.

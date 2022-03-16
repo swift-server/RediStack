@@ -17,10 +17,10 @@
 /// An instance will retain the keyword of the command in plaintext as a `String` for identity purposes,
 /// while all the arguments will be stored as `RESPValue` representations.
 ///
-/// ## ResultType
-/// Each `RedisCommand` has a generic type referred to as `ResultType` that is the native Swift representation of the response Redis will send for the command.
+/// Each `RedisCommand` has a generic type referred to as `ResultType` that is the native Swift representation
+/// of the final result type parsed from the Redis command response.
 ///
-/// When creating a `RedisCommand`, a closure will be provided for transforming an arbitrary `RESPValue` instance into the `ResultType`.
+/// When creating a `RedisCommand`, a closure is provided for transforming an arbitrary `RESPValue` instance into the `ResultType`.
 public struct RedisCommand<ResultType> {
     public let keyword: String
     public let arguments: [RESPValue]

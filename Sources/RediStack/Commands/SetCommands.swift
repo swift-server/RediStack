@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -248,7 +248,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Incrementally iterates over all values in a set.
     ///
-    /// See `RedisCommand.sscan(_:startingFrom:matching:count:)`
+    /// See ``RedisCommand/sscan(_:startingFrom:matching:count:)``
     /// - Parameters:
     ///     - key: The key of the set.
     ///     - position: The position to start the scan from.

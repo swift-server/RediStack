@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -148,7 +148,7 @@ extension RedisCommand {
     }
 
     /// [HSET](https://redis.io/commands/hset)
-    /// - Note: If you do not want to overwrite existing values, use `hsetnx(_:field:to:)`.
+    /// - Note: If you do not want to overwrite existing values, use ``hsetnx(_:field:to:)``.
     /// - Parameters:
     ///     - field: The key of the field in the hash being set.
     ///     - value: The value the hash field should be set to.
@@ -168,7 +168,7 @@ extension RedisCommand {
     }
 
     /// [HSETNX](https://redis.io/commands/hsetnx)
-    /// - Note: If you do not care about overwriting existing values, use `hset(_:field:to:)`.
+    /// - Note: If you do not care about overwriting existing values, use ``hset(_:field:to:)``.
     /// - Parameters:
     ///     - field: The key of the field in the hash being set.
     ///     - value: The value the hash field should be set to.
@@ -231,7 +231,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Incrementally iterates over all fields in a hash.
     ///
-    /// See `RedisCommand.hscan(_:startingFrom:matching:count:)`
+    /// See ``RedisCommand/hscan(_:startingFrom:matching:count:)``
     /// - Parameters:
     ///     - key: The key of the hash.
     ///     - position: The position to start the scan from.

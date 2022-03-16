@@ -93,7 +93,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Deletes the given keys. Any key that does not exist is ignored.
     ///
-    /// See `RedisCommand.del(keys:)`
+    /// See ``RedisCommand/.del(keys:)``
     /// - Parameter keys: The list of keys to delete from the database.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the number of keys that were deleted from the database.
     public func delete(_ keys: RedisKey...) -> EventLoopFuture<Int> {
@@ -102,7 +102,7 @@ extension RedisClient {
 
     /// Deletes the given keys. Any key that does not exist is ignored.
     ///
-    /// See `RedisCommand.del(keys:)`
+    /// See ``RedisCommand/del(keys:)``
     /// - Parameter keys: The list of keys to delete from the database.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the number of keys that were deleted from the database.
     public func delete(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
@@ -112,7 +112,7 @@ extension RedisClient {
 
     /// Sets a timeout on key. After the timeout has expired, the key will automatically be deleted.
     ///
-    /// See `RedisCommand.expire(_:after:)`
+    /// See ``RedisCommand/expire(_:after:)``
     /// - Parameters:
     ///     - key: The key to set the expiration on.
     ///     - timeout: The time from now the key will expire at.
@@ -125,14 +125,14 @@ extension RedisClient {
     ///
     /// See ``RedisCommand/keys(matching:)``
     /// - Parameter pattern: The key pattern to search for matching keys that exist in Redis.
-    /// - Returns: A list of keys that matched the provided pattern.
+    /// - Returns: A result set of ``RedisKey`` values that exist and match the provided pattern.
     public func listKeys(matching pattern: String) -> EventLoopFuture<[RedisKey]> {
         return self.send(.keys(matching: pattern))
     }
 
     /// Incrementally iterates over all keys in the currently selected database.
     ///
-    /// See `RedisCommand.scan(startingFrom:matching:count:)`
+    /// See ``RedisCommand/scan(startingFrom:matching:count:)``
     /// - Parameters:
     ///     - position: The cursor position to start from.
     ///     - match: A glob-style pattern to filter values to be selected from the result set.

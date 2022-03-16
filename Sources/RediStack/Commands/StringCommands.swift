@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -117,14 +117,14 @@ extension RedisCommand {
     }
 
     /// [MSET](https://redis.io/commands/mset)
-    /// - Note: Use `msetnx(_:)` if you don't want to overwrite values.
+    /// - Note: Use ``msetnx(_:)`` if you don't want to overwrite values.
     /// - Parameter operations: The key-value list of SET operations to execute.
     public static func mset(_ operations: [RedisKey: RESPValueConvertible]) -> RedisCommand<Void> {
         return ._mset(keyword: "MSET", operations) { _ in }
     }
 
     /// [MSETNX](https://redis.io/commands/msetnx)
-    /// - Note: Use `mset(_:)` if you don't care about overwriting values.
+    /// - Note: Use ``mset(_:)`` if you don't care about overwriting values.
     /// - Parameter operations: The key-value list of SET operations to execute.
     public static func msetnx(_ operations: [RedisKey: RESPValueConvertible]) -> RedisCommand<Bool> {
         return ._mset(keyword: "MSETNX", operations) {
@@ -235,7 +235,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Gets the value of the given key.
     ///
-    /// See `RedisCommand.get(_:)`
+    /// See ``RedisCommand/get(_:)``
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the value stored at the given key, otherwise `nil`.
     public func get(_ key: RedisKey) -> EventLoopFuture<RESPValue?> {
@@ -244,7 +244,7 @@ extension RedisClient {
 
     /// Gets the value of the given key, converting it to the desired type.
     ///
-    /// See `RedisCommand.get(_:)`
+    /// See ``RedisCommand/get(_:)`
     /// - Parameters:
     ///     - key: The key to fetch the value from.
     ///     - type: The desired type to convert the stored data to.
@@ -260,7 +260,7 @@ extension RedisClient {
 
     /// Gets the value of the given key, decoding it as a JSON data structure.
     ///
-    /// See `RedisCommand.get(_:)`
+    /// See ``RedisCommand/get(_:)``
     /// - Parameters:
     ///     - key: The key to fetch the value from.
     ///     - type: The JSON type to decode to.
@@ -282,7 +282,7 @@ extension RedisClient {
     ///
     /// Any previous expiration set on the key is discarded if the `SET` operation was successful.
     ///
-    /// See `RedisCommand.set(_:to:)`
+    /// See ``RedisCommand/set(_:to:)``
     /// - Important: Regardless of the type of value stored at the `key`, it will be overwritten to a "string" value.
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value in Redis.
@@ -295,7 +295,7 @@ extension RedisClient {
 
     /// Sets the value stored at the given key with options to control how to set it.
     ///
-    /// See `RedisCommand.set(_:to:onCondition:expiration:)`
+    /// See ``RedisCommand/set(_:to:onCondition:expiration:)``
     /// - Important: Regardless of the type of value stored at the `key`, it will be overwritten to a "string" value.
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value.
@@ -317,7 +317,7 @@ extension RedisClient {
 
     /// Sets the value stored at the given key to the given value as JSON data.
     ///
-    /// See `RedisCommand.set(_:to:)`
+    /// See ``RedisCommand/set(_:to:)``
     /// - Important: Regardless of the type of value stored at the `key`, it will be overwritten to a "string" value.
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value in Redis.
@@ -339,7 +339,7 @@ extension RedisClient {
 
     /// Sets the value stored at the given key as JSON data with options to control how to set it.
     ///
-    /// See `RedisCommand.set(_:to:onCondition:expiration:)`
+    /// See ``RedisCommand/set(_:to:onCondition:expiration:)``
     /// - Important: Regardless of the type of value stored at the `key`, it will be overwritten to a "string" value.
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value in Redis.

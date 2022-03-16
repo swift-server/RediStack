@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -193,7 +193,7 @@ extension RedisCommand {
     ) -> RedisCommand<Int> { .lpush(elements, into: key) }
 
     /// [LPUSHX](https://redis.io/commands/lpushx)
-    /// - Note: This inserts the element at the head of the list, for the tail see `rpushx(_:into:)`.
+    /// - Note: This inserts the element at the head of the list, for the tail see ``rpushx(_:into:)``.
     /// - Parameters:
     ///     - element: The value to try and push into the list.
     ///     - key: The key of the list.
@@ -239,7 +239,7 @@ extension RedisCommand {
     /// - Precondition: A `ClosedRange` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0...-1`,
     ///     `ClosedRange` will trigger a precondition failure.
     ///
-    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    ///     If you need such a range, use ``lrange(from:firstIndex:lastIndex:)`` instead.
     /// - Parameters:
     ///     - key: The key of the List to return elements from.
     ///     - range: The range of inclusive indices of elements to get.
@@ -266,7 +266,7 @@ extension RedisCommand {
     /// - Precondition: A `Range` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0..<(-1)`,
     ///     `Range` will trigger a precondition failure.
     ///
-    ///     If you need such a range, use `lrange(from:firstIndex:lastIndex:)` instead.
+    ///     If you need such a range, use ``lrange(from:firstIndex:lastIndex:)`` instead.
     /// - Parameters:
     ///     - key: The key of the List to return elements from.
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
@@ -394,7 +394,7 @@ extension RedisCommand {
     /// - Precondition: A `ClosedRange` cannot be created where `upperBound` is less than `lowerBound`; so while Redis may support `0...-1`,
     ///     `ClosedRange` will trigger a precondition failure.
     ///
-    ///     If you need such a range, use `ltrim(_:before:after:)` instead.
+    ///     If you need such a range, use ``ltrim(_:before:after:)`` instead.
     /// - Parameters:
     ///     - key: The key of the List to trim.
     ///     - range: The range of indices that should be kept in the List.
@@ -515,7 +515,7 @@ extension RedisCommand {
     }
 
     /// [RPUSHX](https://redis.io/commands/rpushx)
-    /// - Note: This inserts the element at the tail of the list; for the head see `lpushx(_:into:)`.
+    /// - Note: This inserts the element at the tail of the list; for the head see ``lpushx(_:into:)``.
     /// - Parameters:
     ///     - element: The value to try and push into the list.
     ///     - key: The key of the list.
