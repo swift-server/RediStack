@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import struct Logging.Logger
 import NIO
 
 // MARK: PubSub
@@ -86,13 +87,17 @@ extension RedisClient {
     /// - Parameters:
     ///     - message: The "message" value to publish on the channel.
     ///     - channel: The name of the channel to publish the message to.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: The number of subscribed clients that received the message.
     @inlinable
     @discardableResult
     public func publish<Message: RESPValueConvertible>(
         _ message: Message,
-        to channel: RedisChannelName
+        to channel: RedisChannelName,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil
     ) -> EventLoopFuture<Int> {
-        return self.send(.publish(message, to: channel))
+        return self.send(.publish(message, to: channel), eventLoop: eventLoop, logger: logger)
     }
 }

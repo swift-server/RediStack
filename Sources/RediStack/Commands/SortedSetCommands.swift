@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import struct Logging.Logger
 import NIO
 
 // MARK: Sorted Sets
@@ -1154,15 +1155,19 @@ extension RedisClient {
     ///     - position: The position to start the scan from.
     ///     - match: A glob-style pattern to filter values to be selected from the result set.
     ///     - count: The number of elements to advance by. Redis default is 10.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A `NIO.EventLoopFuture` that resolves a cursor position for additional scans,
     ///     with a limited collection of elements with their scores found in the Sorted Set.
     public func scanSortedSetValues(
         in key: RedisKey,
         startingFrom position: Int = 0,
         matching match: String? = nil,
-        count: Int? = nil
+        count: Int? = nil,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil
     ) -> EventLoopFuture<(Int, [(RESPValue, Double)])> {
-        return self.send(.zscan(key, startingFrom: position, matching: match, count: count))
+        return self.send(.zscan(key, startingFrom: position, matching: match, count: count), eventLoop: eventLoop, logger: logger)
     }
 }
 

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -66,99 +66,56 @@ extension Logger {
     public static var redisBaseConnectionPoolLogger: Logger { RedisLogging.baseConnectionPoolLogger }
 }
 
-// MARK: Protocol-based Context Passing
+// MARK: RedisClient Logger Overrides
 
-/// An internal protocol for any `RedisClient` to conform to in order to use a user's execution context for the lifetime of a command.
-///
-/// An execution context includes things like a `Logging.Logger` instance for command activity logs.
-internal protocol RedisClientWithUserContext: RedisClient {
-    func send<CommandResult>(_ command: RedisCommand<CommandResult>, context: Context?) -> EventLoopFuture<CommandResult>
-
-    func subscribe(
-        to channels: [RedisChannelName],
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
-    ) -> EventLoopFuture<Void>
-    func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void>
-
-    func psubscribe(
-        to patterns: [String],
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
-    ) -> EventLoopFuture<Void>
-    func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void>
-}
-
-/// An internal implementation wrapper of a given `RedisClientWithUserContext` that enables users to pass a given `Logging.Logger`
-/// instance to capture command logs within their preferred contexts.
-internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: RedisClient {
+/// This is an implementation detail of baseline RediStack RedisClients that stores a reference to an underlying
+/// RedisClient and a given logger instance, which is used as a new default logger on all commands.
+internal struct CustomLoggerRedisClient<Client: RedisClient>: RedisClient {
     internal var eventLoop: EventLoop { self.client.eventLoop }
-    
+
+    internal let defaultLogger: Logger
+
     private let client: Client
-    internal let context: Context
-    
-    internal init(client: Client, context: Context) {
+
+    internal init(defaultLogger: Logger, client: Client) {
+        self.defaultLogger = defaultLogger
         self.client = client
-        self.context = context
-    }
-    
-    // Create a new instance of the custom logging implementation reusing the same client.
-    
-    internal func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self.client, context: logger)
-    }
-    
-    // Forward the commands to the underlying client
-    
-    internal func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult> {
-        return self.eventLoop.flatSubmit {
-            return self.client.send(command, context: self.context)
-        }
-    }
-    
-    internal func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit { self.client.unsubscribe(from: channels, context: self.context) }
-    }
-    
-    internal func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit { self.client.punsubscribe(from: patterns, context: self.context) }
     }
 
-    internal func subscribe(
-        to channels: [RedisChannelName],
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
-    ) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit {
-            self.client.subscribe(
-                to: channels,
-                messageReceiver: receiver,
-                onSubscribe: subscribeHandler,
-                onUnsubscribe: unsubscribeHandler,
-                context: self.context
-            )
-        }
+    // create a new instance by just reusing the same client and passing the new logger instance
+
+    internal func logging(to logger: Logger) -> RedisClient {
+        return Self(defaultLogger: logger, client: client)
     }
-    
-    internal func psubscribe(
-        to patterns: [String],
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
-    ) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit {
-            self.client.psubscribe(
-                to: patterns,
-                messageReceiver: receiver,
-                onSubscribe: subscribeHandler,
-                onUnsubscribe: unsubscribeHandler,
-                context: self.context
-            )
-        }
+
+    // forward methods to the underlying client
+
+    // in each case we need to explicitly create a logger variable using the provided logger argument, defaulting to
+    // the default logger if the argument is nil, because if we do it inline, the compiler will deduce the type
+    // as optional, allowing the (possibly) nil argument to pass through without providing the default logger in nil cases
+
+    internal func send<CommandResult>(_ command: RedisCommand<CommandResult>, eventLoop: EventLoop?, logger: Logger?) -> EventLoopFuture<CommandResult> {
+        let logger = logger ?? self.defaultLogger
+        return self.client.send(command, eventLoop: eventLoop, logger: logger)
+    }
+
+    internal func unsubscribe(from channels: [RedisChannelName], eventLoop: EventLoop?, logger: Logger?) -> EventLoopFuture<Void> {
+        let logger = logger ?? self.defaultLogger
+        return self.client.unsubscribe(from: channels, eventLoop: eventLoop, logger: logger)
+    }
+
+    internal func punsubscribe(from patterns: [String], eventLoop: EventLoop?, logger: Logger?) -> EventLoopFuture<Void> {
+        let logger = logger ?? self.defaultLogger
+        return self.client.punsubscribe(from: patterns, eventLoop: eventLoop, logger: logger)
+    }
+
+    internal func subscribe(to channels: [RedisChannelName], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?, onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?) -> EventLoopFuture<Void> {
+        let logger = logger ?? self.defaultLogger
+        return self.client.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+    }
+
+    internal func psubscribe(to patterns: [String], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?, onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?) -> EventLoopFuture<Void> {
+        let logger = logger ?? self.defaultLogger
+        return self.client.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 }

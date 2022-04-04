@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -16,12 +16,10 @@ import protocol Foundation.LocalizedError
 import struct Logging.Logger
 import NIO
 
-// - Important: Any RedisClient defined by RediStack should conform to the RedisClientWithUserContext protocol as well
-
 /// An object capable of sending commands and receiving responses.
 ///
 ///     let client = ...
-///     let result = client.send(command: "GET", arguments: ["my_key"])
+///     let result = client.send(.get("my_key"))
 ///     // result == EventLoopFuture<RESPValue>
 ///
 /// For the full list of available commands, see [https://redis.io/commands](https://redis.io/commands)
@@ -29,17 +27,27 @@ public protocol RedisClient {
     /// The `NIO.EventLoop` that this client operates on.
     var eventLoop: EventLoop { get }
 
+    /// The client's configured default logger instance, if set.
+    var defaultLogger: Logger? { get }
+
+    /// Overrides the default logger on the client with the provided instance for the duration of the returned object.
+    /// - Parameter logger: The logger instance to use in commands on the returned client instance.
+    /// - Returns: A client using the temporary default logger override for command logging.
+    func logging(to logger: Logger) -> RedisClient
+
     /// Sends the given command to Redis.
-    /// - Parameter command: The command to send to Redis for execution.
+    /// - Parameters:
+    ///     - command: The command to send to Redis for execution.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A `NIO.EventLoopFuture` that will resolve when the Redis command receives a response.
     ///
     ///     If a `RedisError` is returned, the future will be failed instead.
-    func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult>
-    
-    /// Temporarily overrides the default logger for command logs to the provided instance.
-    /// - Parameter logger: The `Logging.Logger` instance to use for command logs.
-    /// - Returns: A RedisClient with the temporary override for command logging.
-    func logging(to logger: Logger) -> RedisClient
+    func send<CommandResult>(
+        _ command: RedisCommand<CommandResult>,
+        eventLoop: EventLoop?,
+        logger: Logger?
+    ) -> EventLoopFuture<CommandResult>
     
     /// Subscribes the client to the specified Redis channels, invoking the provided message receiver each time a message is published.
     ///
@@ -49,14 +57,19 @@ public protocol RedisClient {
     ///     Commands issued with this client outside of that list will resolve with failures.
     ///
     ///     See the [PubSub specification](https://redis.io/topics/pubsub)
+    /// - Important: The callbacks will be invoked on the event loop of the client, not the one passed as `eventLoop`.
     /// - Parameters:
     ///     - channels: The names of channels to subscribe to.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     ///     - receiver: A closure which will be invoked each time a channel with a name in `channels` publishes a message.
     ///     - subscribeHandler: An optional closure to be invoked when the subscription becomes active.
     ///     - unsubscribeHandler: An optional closure to be invoked when the subscription becomes inactive.
     /// - Returns: A notification `NIO.EventLoopFuture` that resolves once the subscription has been registered with Redis.
     func subscribe(
         to channels: [RedisChannelName],
+        eventLoop: EventLoop?,
+        logger: Logger?,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
@@ -73,14 +86,19 @@ public protocol RedisClient {
     ///     Commands issues with this client outside of that list will resolve with failures.
     ///
     ///     See the [PubSub specification](https://redis.io/topics/pubsub)
+    /// - Important: The callbacks will be invoked on the event loop of the client, not the one passed as `eventLoop`.
     /// - Parameters:
     ///     - patterns: A list of glob patterns used for matching against PubSub channel names to subscribe to.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     ///     - receiver: A closure which will be invoked each time a channel with a name matching the specified pattern(s) publishes a message.
     ///     - subscribeHandler: An optional closure to be invoked when the subscription becomes active.
     ///     - unsubscribeHandler: An optional closure to be invoked when the subscription becomes inactive.
     /// - Returns: A notification `NIO.EventLoopFuture` that resolves once the subscription has been registered with Redis.
     func psubscribe(
         to patterns: [String],
+        eventLoop: EventLoop?,
+        logger: Logger?,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
@@ -96,9 +114,12 @@ public protocol RedisClient {
     ///     It will then be allowed to use any command like normal.
     ///
     ///     See the [PubSub specification](https://redis.io/topics/pubsub)
-    /// - Parameter channels: A list of channel names to be unsubscribed from.
+    /// - Parameters:
+    ///     - channels: A list of channel names to be unsubscribed from.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A notification `NIO.EventLoopFuture` that resolves once the subscription(s) have been removed from Redis.
-    func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void>
+    func unsubscribe(from channels: [RedisChannelName], eventLoop: EventLoop?, logger: Logger?) -> EventLoopFuture<Void>
     
     /// Unsubscribes the client from a pattern of Redis channel names from receiving any future published messages.
     ///
@@ -109,72 +130,107 @@ public protocol RedisClient {
     ///     It will then be allowed to use any command like normal.
     ///
     ///     See the [PubSub specification](https://redis.io/topics/pubsub)
-    /// - Parameter patterns: A list of glob patterns to be unsubscribed from.
+    /// - Parameters:
+    ///     - patterns: A list of glob patterns to be unsubscribed from.
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A notification `NIO.EventLoopFuture` that resolves once the subscription(s) have been removed from Redis.
-    func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void>
+    func punsubscribe(from patterns: [String], eventLoop: EventLoop?, logger: Logger?) -> EventLoopFuture<Void>
+}
+
+// MARK: Default implementations
+
+extension RedisClient {
+    public var defaultLogger: Logger? { nil }
 }
 
 // MARK: Extension Methods
 
 extension RedisClient {
     /// Unsubscribes the client from all active Redis channel name subscriptions.
+    /// - Parameters:
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the subscriptions have been removed.
-    public func unsubscribe() -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: [])
+    public func unsubscribe(eventLoop: EventLoop? = nil, logger: Logger? = nil) -> EventLoopFuture<Void> {
+        return self.unsubscribe(from: [], eventLoop: eventLoop, logger: logger)
     }
     
     /// Unsubscribes the client from all active Redis channel name patterns subscriptions.
+    /// - Parameters:
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
+    ///     - logger: An optional logger instance to use for logs generated from this command.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the subscriptions have been removed.
-    public func punsubscribe() -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: [])
+    public func punsubscribe(eventLoop: EventLoop? = nil, logger: Logger? = nil) -> EventLoopFuture<Void> {
+        return self.punsubscribe(from: [], eventLoop: eventLoop, logger: logger)
     }
 }
 
 // MARK: Overloads
 
 extension RedisClient {
-    public func unsubscribe(from channels: RedisChannelName...) -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: channels)
+    // variadic parameter overloads
+
+    public func unsubscribe(
+        from channels: RedisChannelName...,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil
+    ) -> EventLoopFuture<Void> {
+        return self.unsubscribe(from: channels, eventLoop: eventLoop, logger: logger)
     }
 
-    public func punsubscribe(from patterns: String...) -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: patterns)
+    public func punsubscribe(
+        from patterns: String...,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil
+    ) -> EventLoopFuture<Void> {
+        return self.punsubscribe(from: patterns, eventLoop: eventLoop, logger: logger)
     }
+
+    // trailing closure swift syntax overloads
 
     public func subscribe(
         to channels: [RedisChannelName],
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        return self.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 
     public func subscribe(
         to channels: RedisChannelName...,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        return self.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 
     public func psubscribe(
         to patterns: [String],
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        return self.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 
     public func psubscribe(
         to patterns: String...,
+        eventLoop: EventLoop? = nil,
+        logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        return self.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 }
 

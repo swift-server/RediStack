@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -27,7 +27,23 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
             .logging(to: logger)
             .ping()
             .wait()
-        XCTAssertFalse(handler.messages.isEmpty)
+        XCTAssertFalse(handler.events.isEmpty)
+    }
+
+    func test_connectionLoggerOverride_usesProvidedLoggerInstead() throws {
+        let defaultHandler = TestLogHandler()
+        let defaultLogger = Logger(label: #function, factory: { _ in return defaultHandler })
+
+        let expectedHandler = TestLogHandler()
+        let expectedLogger = Logger(label: "something_else", factory: { _ in return expectedHandler })
+
+        _ = try self.connection
+            .logging(to: defaultLogger)
+            .ping(logger: expectedLogger)
+            .wait()
+
+        XCTAssertTrue(defaultHandler.events.isEmpty)
+        XCTAssertFalse(expectedHandler.events.isEmpty)
     }
     
     func test_connectionLoggerMetadata() throws {
@@ -104,18 +120,18 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
 }
 
 final class TestLogHandler: LogHandler {
-    var messages: [Logger.Message]
     var metadata: Logger.Metadata
     var logLevel: Logger.Level
+    var events: [(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt)]
 
     init() {
-        self.messages = []
         self.metadata = [:]
+        self.events = []
         self.logLevel = .trace
     }
 
     func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
-        self.messages.append(message)
+        self.events.append((level, message, metadata, file, function, line))
     }
 
     subscript(metadataKey key: String) -> Logger.Metadata.Value? {

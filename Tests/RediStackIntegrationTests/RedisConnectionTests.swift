@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 @testable import RediStack
 import RediStackTestUtils
 import XCTest
@@ -79,5 +80,86 @@ extension RedisConnectionTests {
         connection.allowSubscriptions = false
 
         self.waitForExpectations(timeout: 1)
+    }
+}
+
+// MARK: EventLoop Hopping
+extension RedisConnectionTests {
+    func testCommandHopsEventLoop() throws {
+        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+
+        try self.connection.ping(eventLoop: eventLoop)
+            .map { _ in eventLoop.assertInEventLoop() }
+            .wait()
+
+        try self.connection.ping()
+            .map { _ in
+                eventLoop.assertNotInEventLoop()
+                self.connection.eventLoop.assertInEventLoop()
+            }
+            .wait()
+    }
+
+    func testSubscribeHopsEventLoop() throws {
+        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+        defer {
+            try! self.connection
+                .unsubscribe(from: #function, eventLoop: eventLoop)
+                .map { _ in eventLoop.assertInEventLoop() }
+                .wait()
+        }
+
+        try self.connection
+            .subscribe(to: #function, eventLoop: eventLoop) { _, _ in }
+            .map { _ in eventLoop.assertInEventLoop() }
+            .wait()
+
+        try self.connection
+            .subscribe(to: #function) { _, _ in }
+            .map { _ in
+                eventLoop.assertNotInEventLoop()
+                self.connection.eventLoop.assertInEventLoop()
+            }
+            .wait()
+    }
+
+    func testPSubscribeHopsEventLoop() throws {
+        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+        defer {
+            try! self.connection
+                .punsubscribe(from: #function, eventLoop: eventLoop)
+                .map { _ in eventLoop.assertInEventLoop() }
+                .wait()
+        }
+
+        try self.connection
+            .psubscribe(to: #function, eventLoop: eventLoop) { _, _ in }
+            .map { _ in eventLoop.assertInEventLoop() }
+            .wait()
+
+        try self.connection
+            .psubscribe(to: #function) { _, _ in }
+            .map { _ in
+                eventLoop.assertNotInEventLoop()
+                self.connection.eventLoop.assertInEventLoop()
+            }
+            .wait()
+    }
+
+    func testCloseHopsEventLoop() throws {
+        let eventLoop = MultiThreadedEventLoopGroup(numberOfThreads: 1).next()
+
+        try self.connection
+            .close(eventLoop: eventLoop)
+            .map { eventLoop.assertInEventLoop() }
+            .wait()
+
+        let other = try self.makeNewConnection()
+        try other.close()
+            .map {
+                eventLoop.assertNotInEventLoop()
+                other.eventLoop.assertInEventLoop()
+            }
+            .wait()
     }
 }

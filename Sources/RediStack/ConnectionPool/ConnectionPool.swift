@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -103,13 +103,13 @@ internal final class ConnectionPool {
         minimumConnectionCount: Int,
         leaky: Bool,
         loop: EventLoop,
-        systemContext: Context,
+        poolLogger: Logger,
         connectionBackoffFactor: Float32 = 2,
         initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
         connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>
     ) {
         guard minimumConnectionCount <= maximumConnectionCount else {
-            systemContext.critical("pool's minimum connection count is higher than the maximum")
+            poolLogger.critical("pool's minimum connection count is higher than the maximum")
             preconditionFailure("Minimum connection count must not exceed maximum")
         }
 

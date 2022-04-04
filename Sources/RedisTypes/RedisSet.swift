@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import struct Logging.Logger
 import NIO
 import RediStack
 
@@ -62,20 +63,30 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     
     private let id: RedisKey
     private let client: RedisClient
+    private let eventLoop: EventLoop
+    private let logger: Logger?
     
     /// Initializes a new reference to a specific Redis key that holds a Set value type.
     /// - Parameters:
     ///     - identifier: The key identifier to reference this set.
     ///     - client: The `RediStack.RedisClient` to use for making calls to Redis.
-    public init(identifier: RedisKey, client: RedisClient) {
+    ///     - eventLoop: An optional event loop to hop to for any further chaining on returned event loop futures.
+    ///     - logger: An optional logger instance to use for logs generated from commands.
+    public init(identifier: RedisKey, client: RedisClient, eventLoop: EventLoop? = nil, logger: Logger? = nil) {
         self.id = identifier
         self.client = client
+        self.eventLoop = eventLoop ?? client.eventLoop
+        self.logger = logger
+    }
+
+    private func send<CommandResult>(_ command: RedisCommand<CommandResult>) -> EventLoopFuture<CommandResult> {
+        return self.client.send(command, eventLoop: self.eventLoop, logger: self.logger)
     }
     
     /// Resolves the number of elements in the set.
     ///
     /// See `RediStack.RedisClient.scard(of:)`
-    public var count: EventLoopFuture<Int> { return self.client.send(.scard(of: self.id)) }
+    public var count: EventLoopFuture<Int> { return self.send(.scard(of: self.id)) }
     /// Resolves a Boolean value that indicates whether the set is empty.
     public var isEmpty: EventLoopFuture<Bool> { return self.count.map { $0 == 0 } }
     /// Resolves all of elements in the set.
@@ -85,7 +96,7 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     ///
     /// See `RediStack.RedisClient.smembers(of:)`
     public var allElements: EventLoopFuture<[Element]> {
-        return self.client.send(.smembers(of: self.id))
+        return self.send(.smembers(of: self.id))
             .map { $0.compactMap(Element.init) }
     }
     
@@ -95,7 +106,7 @@ public struct RedisSet<Element> where Element: RESPValueConvertible {
     /// - Parameter member: An element to look for in the set.
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if `member` exists in the set; otherwise, `false`.
     public func contains(_ member: Element) -> EventLoopFuture<Bool> {
-        return self.client.send(.sismember(member, of: self.id))
+        return self.send(.sismember(member, of: self.id))
     }
 }
 
@@ -118,8 +129,8 @@ extension RedisSet {
     /// - Parameter newMembers: The elements to insert into the set.
     /// - Returns: A `NIO.EventLoopFuture<Int>` resolving the number of elements inserted into the set.
     public func insert(contentsOf newMembers: [Element]) -> EventLoopFuture<Int> {
-        guard newMembers.count > 0 else { return self.client.eventLoop.makeSucceededFuture(0) }
-        return self.client.send(.sadd(newMembers, to: self.id))
+        guard newMembers.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
+        return self.send(.sadd(newMembers, to: self.id))
     }
 }
 
@@ -134,7 +145,7 @@ extension RedisSet {
     ///     - other:A set of the same type as the current set.
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if the element was moved; otherwise, `false`.
     public func move(_ member: Element, to other: RedisSet<Element>) -> EventLoopFuture<Bool> {
-        return self.client.send(.smove(member, from: self.id, to: other.id))
+        return self.send(.smove(member, from: self.id, to: other.id))
     }
     
     /// Removes the given element from the set.
@@ -153,8 +164,8 @@ extension RedisSet {
     /// - Parameter members: The elements to remove from the set.
     /// - Returns: A `NIO.EventLoopFuture<Int>` resolving the number of elements removed from the set.
     public func remove(_ members: [Element]) -> EventLoopFuture<Int> {
-        guard members.count > 0 else { return self.client.eventLoop.makeSucceededFuture(0) }
-        return self.client.send(.srem(members, from: self.id))
+        guard members.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
+        return self.send(.srem(members, from: self.id))
     }
     
     /// Removes all elements from the array.
@@ -162,7 +173,7 @@ extension RedisSet {
     /// See `RediStack.RedisClient.delete(_:)`
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if all elements were removed; otherwise, `false`.
     public func removeAll() -> EventLoopFuture<Bool> {
-        return self.client.delete([self.id])
+        return self.client.delete([self.id], eventLoop: self.eventLoop, logger: self.logger)
             .map { $0 == 1 }
     }
 }
@@ -179,7 +190,7 @@ extension RedisSet {
     ///
     /// - Returns: A `NIO.EventLoopFuture<Element?>` resolving a randomly popped element from the set, or `nil` if the set was empty.
     public func popRandomElement() -> EventLoopFuture<Element?> {
-        return self.client.send(.spop(from: self.id))
+        return self.send(.spop(from: self.id))
             .map { response in
                 guard response.count > 0 else { return nil }
                 return Element(fromRESP: response[0])
@@ -195,9 +206,9 @@ extension RedisSet {
     /// - Parameter count: The max number of elements that should be popped from the set.
     /// - Returns: A `NIO.EventLoopFuture<[Element]>` resolving between `0` and `max` count of random elements in the set.
     public func popRandomElements(max count: Int) -> EventLoopFuture<[Element]> {
-        guard count >= 0 else { return self.client.eventLoop.makeFailedFuture(RedisError.indexOutOfRange) }
-        guard count >= 1 else { return self.client.eventLoop.makeSucceededFuture([]) }
-        return self.client.send(.spop(from: self.id, max: count))
+        guard count >= 0 else { return self.eventLoop.makeFailedFuture(RedisError.indexOutOfRange) }
+        guard count >= 1 else { return self.eventLoop.makeSucceededFuture([]) }
+        return self.send(.spop(from: self.id, max: count))
             .map { return $0.compactMap(Element.init) }
     }
     
@@ -210,7 +221,7 @@ extension RedisSet {
     ///
     /// - Returns: A `NIO.EventLoopFuture<Element?>` resolving a randoml element from the set, or `nil` if the set was empty.
     public func randomElement() -> EventLoopFuture<Element?> {
-        return self.client.send(.srandmember(from: self.id))
+        return self.send(.srandmember(from: self.id))
             .map { response in
                 guard response.count > 0 else { return nil }
                 return Element(fromRESP: response[0])
@@ -239,7 +250,7 @@ extension RedisSet {
         assert(max > 0, "Max should be a positive value. Use 'allowDuplicates' to handle proper value signing.")
 
         let count = allowDuplicates ? -max : max
-        return self.client.send(.srandmember(from: self.id, max: count))
+        return self.send(.srandmember(from: self.id, max: count))
             .map { $0.compactMap(Element.init) }
     }
 }
