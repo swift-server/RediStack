@@ -109,12 +109,12 @@ internal struct CustomLoggerRedisClient<Client: RedisClient>: RedisClient {
         return self.client.punsubscribe(from: patterns, eventLoop: eventLoop, logger: logger)
     }
 
-    internal func subscribe(to channels: [RedisChannelName], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?, onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?) -> EventLoopFuture<Void> {
+    internal func subscribe(to channels: [RedisChannelName], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscribeHandler?, onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?) -> EventLoopFuture<Void> {
         let logger = logger ?? self.defaultLogger
         return self.client.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
 
-    internal func psubscribe(to patterns: [String], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?, onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?) -> EventLoopFuture<Void> {
+    internal func psubscribe(to patterns: [String], eventLoop: EventLoop?, logger: Logger?, messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver, onSubscribe subscribeHandler: RedisSubscribeHandler?, onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?) -> EventLoopFuture<Void> {
         let logger = logger ?? self.defaultLogger
         return self.client.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }

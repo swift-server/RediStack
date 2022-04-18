@@ -381,8 +381,8 @@ extension RedisConnection {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+        onSubscribe subscribeHandler: RedisSubscribeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
     ) -> EventLoopFuture<Void> {
         return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, eventLoop, logger)
     }
@@ -392,8 +392,8 @@ extension RedisConnection {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
+        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
     ) -> EventLoopFuture<Void> {
         return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, eventLoop, logger)
     }
@@ -401,8 +401,8 @@ extension RedisConnection {
     private func _subscribe(
         _ target: RedisSubscriptionTarget,
         _ receiver: @escaping RedisSubscriptionMessageReceiver,
-        _ onSubscribe: RedisSubscriptionChangeHandler?,
-        _ onUnsubscribe: RedisSubscriptionChangeHandler?,
+        _ onSubscribe: RedisSubscribeHandler?,
+        _ onUnsubscribe: RedisUnsubscribeHandler?,
         _ eventLoop: EventLoop?,
         _ logger: Logger?
     ) -> EventLoopFuture<Void> {

@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import NIO
-import RediStack
+import NIOEmbedded
+@testable import RediStack
 import RediStackTestUtils
 import XCTest
 
@@ -41,9 +42,16 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
                 guard $0 == #function, $1 == 1 else { return }
                 subscribeExpectation.fulfill()
             },
-            onUnsubscribe: {
-                guard $0 == #function, $1 == 0 else { return }
-                unsubscribeExpectation.fulfill()
+            onUnsubscribe: { details, eventSource in
+                switch eventSource {
+                case .clientError: return
+                case .userInitiated:
+                    guard
+                        details.subscriptionKey == #function,
+                        details.currentSubscriptionCount == 0
+                    else { return }
+                    unsubscribeExpectation.fulfill()
+                }
             }
         ).wait()
         
@@ -295,9 +303,16 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
                 guard $0 == #function, $1 == 1 else { return }
                 subscribeExpectation.fulfill()
             },
-            onUnsubscribe: {
-                guard $0 == #function, $1 == 0 else { return }
-                unsubscribeExpectation.fulfill()
+            onUnsubscribe: { details, eventSource in
+                switch eventSource {
+                case .clientError: return
+                case .userInitiated:
+                    guard
+                        details.subscriptionKey == #function,
+                        details.currentSubscriptionCount == 0
+                    else { return }
+                    unsubscribeExpectation.fulfill()
+                }
             }
         ).wait()
         XCTAssertEqual(subscriber.leasedConnectionCount, 1)
@@ -343,29 +358,49 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
     }
 }
 
-// MARK: - #100 subscribe race condition
+// MARK: - #103 tests
 
 extension RedisPubSubCommandsTests {
-    func test_pubsub_pipelineChanges_hasNoRaceCondition() throws {
-        func runOperation(_ factory: (RedisChannelName) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
-            return .andAllSucceed(
-                (0...100_000).reduce(into: []) {
-                    result, index in
+    func test_pubsub_calls_unsubscribe_whenUnexpectedClose() throws {
+        let channel = EmbeddedChannel()
+        try channel
+            .pipeline
+            .addBaseRedisHandlers()
+            .wait()
 
-                    result.append(factory("\(#function)-\(index)"))
-                },
-                on: self.connection.eventLoop
+        let subscribeExpectation = self.expectation(description: "should see subscribe")
+        let unsubscribeExpectation = self.expectation(description: "should see unsubscribe")
+
+        let connection = RedisConnection(configuredRESPChannel: channel, defaultLogger: .init(label: ""))
+        let subscribeFuture = connection
+            .subscribe(
+                to: [.init(#function)],
+                messageReceiver: { _, _ in },
+                onSubscribe: { _, _ in subscribeExpectation.fulfill() },
+                onUnsubscribe: { _, eventSource in
+                    switch eventSource {
+                    case .userInitiated: return
+                    case .clientError: unsubscribeExpectation.fulfill()
+                    }
+                }
             )
-        }
 
-        // subscribing (adding handler)
-        try runOperation { self.connection.subscribe(to: $0) { _, _ in } }
-            .wait()
+        // mimics a successful subscription response from the server
+        let allocator = ByteBufferAllocator()
+        var buffer = allocator.buffer(capacity: 300)
+        buffer.writeRESPValue(.array([
+            .init(bulk: "subscribe"),
+            .init(bulk: "\(#function)"),
+            .integer(1)
+        ]))
+        try channel.writeInbound(buffer)
 
-        // unsubscribing (removing handler)
-        try runOperation { self.connection.unsubscribe(from: $0) }
-            .wait()
+        // lets the initial subscription work finish
+        try subscribeFuture.wait()
 
-        try self.connection.close().wait()
+        // 'unexpected' close, should trigger expectations
+        try channel.close().wait()
+
+        self.waitForExpectations(timeout: 0.5)
     }
 }
