@@ -71,8 +71,8 @@ public protocol RedisClient {
         eventLoop: EventLoop?,
         logger: Logger?,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+        onSubscribe subscribeHandler: RedisSubscribeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
     ) -> EventLoopFuture<Void>
 
     /// Subscribes the client to the specified Redis channel name patterns, invoking the provided message receiver each time a message is published to
@@ -100,8 +100,8 @@ public protocol RedisClient {
         eventLoop: EventLoop?,
         logger: Logger?,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+        onSubscribe subscribeHandler: RedisSubscribeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
     ) -> EventLoopFuture<Void>
     
     /// Unsubscribes the client from a specific Redis channel from receiving any future published messages.
@@ -194,8 +194,8 @@ extension RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
+        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
     ) -> EventLoopFuture<Void> {
         return self.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
@@ -205,8 +205,8 @@ extension RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
+        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
     ) -> EventLoopFuture<Void> {
         return self.subscribe(to: channels, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
@@ -216,8 +216,8 @@ extension RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
+        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
     ) -> EventLoopFuture<Void> {
         return self.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
@@ -227,8 +227,8 @@ extension RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
+        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
     ) -> EventLoopFuture<Void> {
         return self.psubscribe(to: patterns, eventLoop: eventLoop, logger: logger, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }

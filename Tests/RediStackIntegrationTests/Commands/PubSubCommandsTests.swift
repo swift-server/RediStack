@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import RediStack
+import NIO
+import NIOEmbedded
+@testable import RediStack
 import RediStackTestUtils
 import XCTest
 
@@ -40,8 +42,12 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
                 guard $0 == #function, $1 == 1 else { return }
                 subscribeExpectation.fulfill()
             },
-            onUnsubscribe: {
-                guard $0 == #function, $1 == 0 else { return }
+            onUnsubscribe: { details, error in
+                guard
+                    error == nil,
+                    details.subscriptionKey == #function,
+                    details.currentSubscriptionCount == 0
+                else { return }
                 unsubscribeExpectation.fulfill()
             }
         ).wait()
@@ -294,8 +300,12 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
                 guard $0 == #function, $1 == 1 else { return }
                 subscribeExpectation.fulfill()
             },
-            onUnsubscribe: {
-                guard $0 == #function, $1 == 0 else { return }
+            onUnsubscribe: { details, error in
+                guard
+                    error == nil,
+                    details.subscriptionKey == #function,
+                    details.currentSubscriptionCount == 0
+                else { return }
                 unsubscribeExpectation.fulfill()
             }
         ).wait()
@@ -339,5 +349,49 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
         XCTAssertEqual(self.pool.leasedConnectionCount, 0)
         XCTAssertNoThrow(try self.pool.unsubscribe(from: #function).wait())
         XCTAssertEqual(self.pool.leasedConnectionCount, 0)
+    }
+}
+
+// MARK: - #103 tests
+
+extension RedisPubSubCommandsTests {
+    func test_pubsub_calls_unsubscribe_whenUnexpectedClose() throws {
+        let channel = EmbeddedChannel()
+        try channel
+            .addBaseRedisHandlers()
+            .wait()
+
+        let subscribeExpectation = self.expectation(description: "should see subscribe")
+        let unsubscribeExpectation = self.expectation(description: "should see unsubscribe")
+
+        let connection = RedisConnection(configuredRESPChannel: channel, defaultLogger: .init(label: ""))
+        let subscribeFuture = connection
+            .subscribe(
+                to: [.init(#function)],
+                messageReceiver: { _, _ in },
+                onSubscribe: { _, _ in subscribeExpectation.fulfill() },
+                onUnsubscribe: { _, error in
+                    guard error != nil else { return }
+                    unsubscribeExpectation.fulfill()
+                }
+            )
+
+        // mimics a successful subscription response from the server
+        let allocator = ByteBufferAllocator()
+        var buffer = allocator.buffer(capacity: 300)
+        buffer.writeRESPValue(.array([
+            .init(bulk: "subscribe"),
+            .init(bulk: "\(#function)"),
+            .integer(1)
+        ]))
+        try channel.writeInbound(buffer)
+
+        // lets the initial subscription work finish
+        try subscribeFuture.wait()
+
+        // 'unexpected' close, should trigger expectations
+        try channel.close().wait()
+
+        self.waitForExpectations(timeout: 0.5)
     }
 }

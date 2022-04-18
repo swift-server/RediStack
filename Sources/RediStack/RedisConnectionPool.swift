@@ -363,8 +363,8 @@ extension RedisConnectionPool: RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+        onSubscribe subscribeHandler: RedisSubscribeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
     ) -> EventLoopFuture<Void> {
         return self._subscribe(
             using: {
@@ -388,8 +388,8 @@ extension RedisConnectionPool: RedisClient {
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
+        onSubscribe subscribeHandler: RedisSubscribeHandler?,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
     ) -> EventLoopFuture<Void> {
         return self._subscribe(
             using: {
@@ -433,8 +433,8 @@ extension RedisConnectionPool: RedisClient {
     }
 
     private func _subscribe(
-        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) -> EventLoopFuture<Void>,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
+        using operation: @escaping (RedisConnection, @escaping RedisUnsubscribeHandler, Logger) -> EventLoopFuture<Void>,
+        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?,
         eventLoop: EventLoop?,
         taskLogger: Logger?
     ) -> EventLoopFuture<Void> {
@@ -446,11 +446,11 @@ extension RedisConnectionPool: RedisClient {
                     self.pubsubConnection = connection
                 }
                 
-                let onUnsubscribe: RedisSubscriptionChangeHandler = { channelName, subCount in
-                    defer { unsubscribeHandler?(channelName, subCount) }
+                let onUnsubscribe: RedisUnsubscribeHandler = { subscriptionDetails, error in
+                    defer { unsubscribeHandler?(subscriptionDetails, error) }
                     
                     guard
-                        subCount == 0,
+                        subscriptionDetails.currentSubscriptionCount == 0,
                         let connection = self.pubsubConnection
                     else { return }
 
