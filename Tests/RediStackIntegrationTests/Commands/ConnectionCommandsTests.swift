@@ -23,6 +23,9 @@ final class ConnectionCommandsTests: RediStackIntegrationTestCase {
 
         let second = try connection.ping(with: "My message").wait()
         XCTAssertEqual(second, "My message")
+
+        let third = try connection.send(.ping).wait()
+        XCTAssertEqual(third, first)
     }
 
     func test_echo() throws {

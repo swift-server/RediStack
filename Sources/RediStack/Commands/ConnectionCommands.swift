@@ -41,6 +41,9 @@ extension RedisCommand {
         }
     }
 
+    /// [PING](https://redis.io/commands/ping)
+    public static var ping: RedisCommand<String> { Self.ping(with: nil) }
+
     /// [AUTH](https://redis.io/commands/auth)
     /// - Parameter password: The password to authenticate with.
     public static func auth(with password: String) -> RedisCommand<Void> {
