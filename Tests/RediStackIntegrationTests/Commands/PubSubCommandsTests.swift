@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIO
 import RediStack
 import RediStackTestUtils
 import XCTest
@@ -338,5 +339,32 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
         XCTAssertEqual(self.pool.leasedConnectionCount, 0)
         XCTAssertNoThrow(try self.pool.unsubscribe(from: #function).wait())
         XCTAssertEqual(self.pool.leasedConnectionCount, 0)
+    }
+}
+
+// MARK: - #100 subscribe race condition
+
+extension RedisPubSubCommandsTests {
+    func test_pubsub_pipelineChanges_hasNoRaceCondition() throws {
+        func runOperation(_ factory: (RedisChannelName) -> EventLoopFuture<Void>) -> EventLoopFuture<Void> {
+            return .andAllSucceed(
+                (0...100_000).reduce(into: []) {
+                    result, index in
+
+                    result.append(factory("\(#function)-\(index)"))
+                },
+                on: self.connection.eventLoop
+            )
+        }
+
+        // subscribing (adding handler)
+        try runOperation { self.connection.subscribe(to: $0) { _, _ in } }
+            .wait()
+
+        // unsubscribing (removing handler)
+        try runOperation { self.connection.unsubscribe(from: $0) }
+            .wait()
+
+        try self.connection.close().wait()
     }
 }

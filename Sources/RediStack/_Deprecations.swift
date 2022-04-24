@@ -139,3 +139,15 @@ extension RedisKey.Lifetime {
     @available(*, deprecated, renamed: "Duration")
     public typealias Lifetime = Duration
 }
+
+extension Channel {
+    @available(*, deprecated, renamed: "pipeline.addBaseRedisHandlers()")
+    public func addBaseRedisHandlers() -> EventLoopFuture<Void> {
+        return self.pipeline.addBaseRedisHandlers()
+    }
+
+    @available(*, deprecated, renamed: "pipeline.addRedisPubSubHandler()")
+    public func addPubSubHandler() -> EventLoopFuture<RedisPubSubHandler> {
+        return self.pipeline.addRedisPubSubHandler()
+    }
+}
