@@ -427,8 +427,8 @@ extension RedisConnection {
         guard case let .pubsub(handler) = self.state else {
             logger.debug("not in pubsub mode, moving to pubsub mode")
             // otherwise, add it to the pipeline, add the subscriptions, and update our state after it was successful
-            return self.channel
-                .addPubSubHandler()
+            return self.channel.pipeline
+                .addRedisPubSubHandler()
                 .flatMap { handler in
                     logger.trace("handler added, adding subscription")
                     return handler
@@ -442,7 +442,7 @@ extension RedisConnection {
                             )
                             // if there was an error, no subscriptions were made
                             // so remove the handler and propogate the error to the caller by rethrowing it
-                            return self.channel.pipeline.removeHandler(handler)
+                            return self.channel.pipeline.removeRedisPubSubHandler(handler)
                                 .flatMapThrowing { throw error }
                         }
                         // success, return the handler

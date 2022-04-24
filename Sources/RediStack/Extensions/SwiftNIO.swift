@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -26,10 +26,10 @@ extension TimeAmount {
 
 // MARK: Pipeline manipulation
 
-extension Channel {
+extension ChannelPipeline {
     /// Adds the baseline channel handlers needed to support sending and receiving messages in Redis Serialization Protocol (RESP) format to the pipeline.
     ///
-    /// For implementation details, see `RedisMessageEncoder`, `RedisByteDecoder`, and `RedisCommandHandler`.
+    /// For implementation details, see ``RedisMessageEncoder``, ``RedisByteDecoder``, and ``RedisCommandHandler``.
     ///
     /// # Pipeline chart
     ///                                                 RedisClient.send
@@ -62,20 +62,20 @@ extension Channel {
             (RedisCommandHandler(), "RediStack.CommandHandler")
         ]
         return .andAllSucceed(
-            handlers.map { self.pipeline.addHandler($0, name: $1) },
+            handlers.map { self.addHandler($0, name: $1) },
             on: self.eventLoop
         )
     }
     
     /// Adds the channel handler that is responsible for handling everything related to Redis PubSub.
-    /// - Important: The connection that manages this channel is responsible for removing the `RedisPubSubHandler`.
+    /// - Important: The connection that manages this channel is responsible for removing the ``RedisPubSubHandler``.
     ///
     /// # Discussion
     /// PubSub responsibilities include managing subscription callbacks as well as parsing and dispatching messages received from Redis.
     ///
-    /// For implementation details, see `RedisPubSubHandler`.
+    /// For implementation details, see ``RedisPubSubHandler``.
     ///
-    /// The handler will be inserted in the `NIO.ChannelPipeline` just before the `RedisCommandHandler` instance.
+    /// The handler will be inserted in the `NIO.ChannelPipeline` just before the ``RedisCommandHandler`` instance.
     ///
     /// # Pipeline chart
     ///                                                 RedisClient.send
@@ -106,14 +106,38 @@ extension Channel {
     ///             | [ Socket.read ] |                | [ Socket.write ] |
     ///             +-----------------+                +------------------+
     /// - Returns: A `NIO.EventLoopFuture` that resolves the instance of the PubSubHandler that was added to the pipeline.
-    public func addPubSubHandler() -> EventLoopFuture<RedisPubSubHandler> {
-        return self.pipeline
-            .handler(type: RedisCommandHandler.self)
-            .flatMap {
-                let pubsubHandler = RedisPubSubHandler(eventLoop: self.eventLoop)
-                return self.pipeline
-                    .addHandler(pubsubHandler, name: "RediStack.PubSubHandler", position: .before($0))
-                    .map { pubsubHandler }
+    public func addRedisPubSubHandler() -> EventLoopFuture<RedisPubSubHandler> {
+        // first try to return the handler that already exists in the pipeline
+
+        return self.handler(type: RedisPubSubHandler.self)
+            .flatMapError {
+                // if it doesn't exist, add it to the pipeline
+                guard
+                    let error = $0 as? ChannelPipelineError,
+                    error == .notFound
+                else { return self.eventLoop.makeFailedFuture($0) }
+
+                return self.handler(type: RedisCommandHandler.self)
+                    .flatMap {
+                        let pubsubHandler = RedisPubSubHandler(eventLoop: self.eventLoop)
+                        return self.addHandler(pubsubHandler, name: "RediStack.PubSubHandler", position: .before($0))
+                            .map { pubsubHandler }
+                    }
+            }
+    }
+
+    /// Removes the provided Redis PubSub handler.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves when the handler was removed from the pipeline.
+    public func removeRedisPubSubHandler(_ handler: RedisPubSubHandler) -> EventLoopFuture<Void> {
+        self.removeHandler(handler)
+            .flatMapError {
+                // if it was already removed, then we can just succeed
+                guard
+                    let error = $0 as? ChannelPipelineError,
+                    error == .alreadyRemoved
+                else { return self.eventLoop.makeFailedFuture($0) }
+
+                return self.eventLoop.makeSucceededVoidFuture()
             }
     }
 }
@@ -124,9 +148,9 @@ extension ClientBootstrap {
     /// Makes a new `ClientBootstrap` instance with a baseline Redis `Channel` pipeline
     /// for sending and receiving messages in Redis Serialization Protocol (RESP) format.
     ///
-    /// For implementation details, see `RedisMessageEncoder`, `RedisByteDecoder`, and `RedisCommandHandler`.
+    /// For implementation details, see ``RedisMessageEncoder``, ``RedisByteDecoder``, and ``RedisCommandHandler``.
     ///
-    /// See also `Channel.addBaseRedisHandlers()`.
+    /// See also `ChannelPipeline.addBaseRedisHandlers()`.
     /// - Parameter group: The `EventLoopGroup` to create the `ClientBootstrap` with.
     /// - Returns: A TCP connection with the base configuration of a `Channel` pipeline for RESP messages.
     public static func makeRedisTCPClient(group: EventLoopGroup) -> ClientBootstrap {
@@ -135,6 +159,6 @@ extension ClientBootstrap {
                 ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR),
                 value: 1
             )
-            .channelInitializer { $0.addBaseRedisHandlers() }
+            .channelInitializer { $0.pipeline.addBaseRedisHandlers() }
     }
 }
