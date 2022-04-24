@@ -526,7 +526,8 @@ extension RedisConnection {
                 }
                 logger.debug("subscription removed, with no current active subscriptions. leaving pubsub mode")
                 // otherwise, remove the handler and update our state
-                return self.channel.pipeline.removeHandler(handler)
+                return self.channel.pipeline
+                    .removeRedisPubSubHandler(handler)
                     .map {
                         self.state = .open
                         logger.debug("connection is now open to all commands")
