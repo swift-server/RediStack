@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,7 +19,7 @@ extension RedisConnection {
     /// The documented default port that Redis connects through.
     ///
     /// See [https://redis.io/topics/quickstart](https://redis.io/topics/quickstart)
-    @available(*, deprecated, message: "Use RedisConnection.Configuration.defaultPort")
+    @available(*, deprecated, renamed: "RedisConnection.Configuration.defaultPort")
     public static var defaultPort: Int { Configuration.defaultPort }
 
     /// Creates a new connection to a Redis instance.
@@ -132,10 +132,10 @@ extension RedisConnectionPool {
 }
 
 // MARK: - RedisKeyLifetime
-@available(*, deprecated, message: "renamed to RedisKey.Lifetime")
+@available(*, deprecated, renamed: "RedisKey.Lifetime")
 public typealias RedisKeyLifetime = RedisKey.Lifetime
 
 extension RedisKey.Lifetime {
-    @available(*, deprecated, message: "renamed to Duration")
+    @available(*, deprecated, renamed: "Duration")
     public typealias Lifetime = Duration
 }
