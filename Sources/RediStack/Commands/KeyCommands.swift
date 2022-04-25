@@ -94,7 +94,7 @@ extension RedisCommand {
 extension RedisClient {
     /// Deletes the given keys. Any key that does not exist is ignored.
     ///
-    /// See ``RedisCommand/.del(keys:)``
+    /// See ``RedisCommand/del(_:)``.
     /// - Parameters:
     ///     - keys: The list of keys to delete from the database.
     ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.
@@ -110,7 +110,7 @@ extension RedisClient {
 
     /// Deletes the given keys. Any key that does not exist is ignored.
     ///
-    /// See ``RedisCommand/del(keys:)``
+    /// See ``RedisCommand/del(_:)``
     /// - Parameters:
     ///     - keys: The list of keys to delete from the database.
     ///     - eventLoop: An optional event loop to hop to for any further chaining on the returned event loop future.

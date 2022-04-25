@@ -149,7 +149,7 @@ extension RedisCommand {
     }
 
     /// [HSET](https://redis.io/commands/hset)
-    /// - Note: If you do not want to overwrite existing values, use ``hsetnx(_:field:to:)``.
+    /// - Note: If you do not want to overwrite existing values, use ``hsetnx(_:to:in:)``.
     /// - Parameters:
     ///     - field: The key of the field in the hash being set.
     ///     - value: The value the hash field should be set to.
@@ -169,7 +169,7 @@ extension RedisCommand {
     }
 
     /// [HSETNX](https://redis.io/commands/hsetnx)
-    /// - Note: If you do not care about overwriting existing values, use ``hset(_:field:to:)``.
+    /// - Note: If you do not care about overwriting existing values, use ``hset(_:to:in:)``.
     /// - Parameters:
     ///     - field: The key of the field in the hash being set.
     ///     - value: The value the hash field should be set to.
