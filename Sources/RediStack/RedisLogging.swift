@@ -45,8 +45,8 @@ public enum RedisLogging {
         internal static var command: String { "rdstk_command" }
         internal static var commandResult: String { "rdstk_result" }
         internal static var connectionCount: String { "rdstk_conn_count" }
-        internal static var poolConnectionRetryBackoff: String { "rdstk_conn_retry_prev_backoff" }
-        internal static var poolConnectionRetryNewBackoff: String { "rdstk_conn_retry_new_backoff" }
+        internal static var poolConnectionRetryAmount: String { "rdstk_conn_retry_prev_amount" }
+        internal static var poolConnectionRetryNewAmount: String { "rdstk_conn_retry_new_amount" }
         internal static var poolConnectionCount: String { "rdstk_pool_active_connection_count" }
         internal static let pubsubTarget = "rdstk_ps_target"
         internal static let subscriptionCount = "rdstk_sub_count"

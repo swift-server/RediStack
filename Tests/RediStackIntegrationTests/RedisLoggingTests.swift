@@ -67,8 +67,8 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let pool = RedisConnectionPool(
             configuration: .init(
                 initialServerConnectionAddresses: [try .makeAddressResolvingHost(self.redisHostname, port: self.redisPort)],
-                maximumConnectionCount: .maximumActiveConnections(1),
-                connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword)
+                connectionCountBehavior: .strict(maximumConnectionCount: 1),
+                connectionConfiguration: .init(password: self.redisPassword)
             ),
             boundEventLoop: self.connection.eventLoop
         )
@@ -92,8 +92,8 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let hosts = InMemoryServiceDiscovery<String, SocketAddress>(configuration: .init())
         let config = RedisConnectionPool.Configuration(
             initialServerConnectionAddresses: [],
-            maximumConnectionCount: .maximumActiveConnections(1),
-            connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword)
+            connectionCountBehavior: .strict(maximumConnectionCount: 1),
+            connectionConfiguration: .init(password: self.redisPassword)
         )
         let client = RedisConnectionPool.activatedServiceDiscoveryPool(
             service: "default.local",

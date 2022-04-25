@@ -48,33 +48,21 @@ internal final class ConnectionPool {
     /// The event loop we're on.
     private let loop: EventLoop
 
-    /// The exponential backoff factor for connection attempts.
-    internal let backoffFactor: Float32
-
-    /// The initial delay for backing off a reconnection attempt.
-    internal let initialBackoffDelay: TimeAmount
-
-    /// The maximum number of connections the pool will preserve. Additional connections will be made available
-    /// past this limit if `leaky` is set to `true`, but they will not be persisted in the pool once used.
-    internal let maximumConnectionCount: Int
+    /// The strategy to use for finding and returning connections when requested.
+    internal let connectionRetryStrategy: RedisConnectionPool.PoolConnectionRetryStrategy
 
     /// The minimum number of connections the pool will keep alive. If a connection is disconnected while in the
     /// pool such that the number of connections drops below this number, the connection will be re-established.
     internal let minimumConnectionCount: Int
+    /// The maximum number of connections the pool will preserve.
+    internal let maximumConnectionCount: Int
+    /// The behavior to use for allowing or denying additional connections past the max connection count.
+    internal let maxConnectionCountBehavior: RedisConnectionPool.ConnectionCountBehavior.MaxConnectionBehavior
 
     /// The number of connection attempts currently outstanding.
     private var pendingConnectionCount: Int
-
     /// The number of connections that have been handed out to users and are in active use.
     private(set) var leasedConnectionCount: Int
-
-    /// Whether this connection pool is "leaky".
-    ///
-    /// The difference between a leaky and non-leaky connection pool is their behaviour when the pool is currently
-    /// entirely in-use. For a leaky pool, if a connection is requested and none are available, a new connection attempt
-    /// will be made and the connection will be passed to the user. For a non-leaky pool, the user will wait for a connection
-    /// to be returned to the pool.
-    internal let leaky: Bool
 
     /// The current state of this connection pool.
     private var state: State
@@ -85,49 +73,48 @@ internal final class ConnectionPool {
         return self.availableConnections.count + self.pendingConnectionCount + self.leasedConnectionCount
     }
 
-    /// Whether a connection can be added into the availableConnections pool when it's returned. This is true
-    /// for non-leaky pools if the sum of availableConnections and leased connections is less than max connections,
-    /// and for leaky pools if the number of availableConnections is less than max connections (as we went to all
-    /// the effort to create the connection, we may as well keep it).
-    /// Note that this means connection attempts in flight may not be used for anything. This is ok!
+    /// Whether a connection can be added into the availableConnections pool when it's returned.
     private var canAddConnectionToPool: Bool {
-        if self.leaky {
+        switch self.maxConnectionCountBehavior {
+        // only if the current available count is less than the max
+        case .elastic:
             return self.availableConnections.count < self.maximumConnectionCount
-        } else {
+
+        // only if the total connections count is less than the max
+        case .strict:
             return (self.availableConnections.count + self.leasedConnectionCount) < self.maximumConnectionCount
         }
     }
 
     internal init(
-        maximumConnectionCount: Int,
         minimumConnectionCount: Int,
-        leaky: Bool,
+        maximumConnectionCount: Int,
+        maxConnectionCountBehavior: RedisConnectionPool.ConnectionCountBehavior.MaxConnectionBehavior,
+        connectionRetryStrategy: RedisConnectionPool.PoolConnectionRetryStrategy,
         loop: EventLoop,
         poolLogger: Logger,
-        connectionBackoffFactor: Float32 = 2,
-        initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
         connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>
     ) {
-        guard minimumConnectionCount <= maximumConnectionCount else {
+        self.minimumConnectionCount = minimumConnectionCount
+        self.maximumConnectionCount = maximumConnectionCount
+        self.maxConnectionCountBehavior = maxConnectionCountBehavior
+
+        guard self.minimumConnectionCount <= self.maximumConnectionCount else {
             poolLogger.critical("pool's minimum connection count is higher than the maximum")
-            preconditionFailure("Minimum connection count must not exceed maximum")
+            preconditionFailure("minimum connection count must not exceed maximum")
         }
 
-        self.connectionFactory = connectionFactory
+        self.pendingConnectionCount = 0
+        self.leasedConnectionCount = 0
         self.availableConnections = []
-        self.availableConnections.reserveCapacity(maximumConnectionCount)
+        self.availableConnections.reserveCapacity(self.maximumConnectionCount)
 
         // 8 is a good number to skip the first few buffer resizings
         self.connectionWaiters = CircularBuffer(initialCapacity: 8)
         self.loop = loop
-        self.backoffFactor = connectionBackoffFactor
-        self.initialBackoffDelay = initialConnectionBackoffDelay
+        self.connectionFactory = connectionFactory
+        self.connectionRetryStrategy = connectionRetryStrategy
 
-        self.maximumConnectionCount = maximumConnectionCount
-        self.minimumConnectionCount = minimumConnectionCount
-        self.pendingConnectionCount = 0
-        self.leasedConnectionCount = 0
-        self.leaky = leaky
         self.state = .active
     }
 
@@ -154,12 +141,13 @@ internal final class ConnectionPool {
         }
     }
 
-    func leaseConnection(deadline: NIODeadline, logger: Logger) -> EventLoopFuture<RedisConnection> {
+    func leaseConnection(logger: Logger, deadline: NIODeadline? = nil) -> EventLoopFuture<RedisConnection> {
+        let deadline = deadline ?? .now() + self.connectionRetryStrategy.timeout
         if self.loop.inEventLoop {
-            return self._leaseConnection(deadline, logger: logger)
+            return self._leaseConnection(logger: logger, deadline: deadline)
         } else {
             return self.loop.flatSubmit {
-                return self._leaseConnection(deadline, logger: logger)
+                return self._leaseConnection(logger: logger, deadline: deadline)
             }
         }
     }
@@ -191,12 +179,16 @@ extension ConnectionPool {
             RedisLogging.MetadataKeys.connectionCount: "\(neededConnections)"
         ])
         while neededConnections > 0 {
-            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
+            self._createConnection(
+                retryDelay: self.connectionRetryStrategy.initialDelay,
+                startIn: .nanoseconds(0),
+                logger: logger
+            )
             neededConnections -= 1
         }
     }
 
-    private func _createConnection(backoff: TimeAmount, startIn delay: TimeAmount, logger: Logger) {
+    private func _createConnection(retryDelay: TimeAmount, startIn delay: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
         self.pendingConnectionCount += 1
 
@@ -212,7 +204,7 @@ extension ConnectionPool {
                         self.connectionCreationSucceeded(connection, logger: logger)
 
                     case .failure(let error):
-                        self.connectionCreationFailed(error, backoff: backoff, logger: logger)
+                        self.connectionCreationFailed(error, retryDelay: retryDelay, logger: logger)
                     }
                 }
         }
@@ -243,7 +235,7 @@ extension ConnectionPool {
         }
     }
 
-    private func connectionCreationFailed(_ error: Error, backoff: TimeAmount, logger: Logger) {
+    private func connectionCreationFailed(_ error: Error, retryDelay: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
 
         logger.warning("failed to create connection for pool", metadata: [
@@ -260,15 +252,17 @@ extension ConnectionPool {
         // for this connection. Waiters can time out: if they do, we can just give up this connection.
         // We know folks need this in the following conditions:
         //
-        // 1. For non-leaky buckets, we need this reconnection if there are any waiters AND the number of active connections (which includes
+        // 1. For non-elastic buckets, we need this reconnection if there are any waiters AND the number of active connections (which includes
         //     pending connection attempts) is less than max connections
-        // 2. For leaky buckets, we need this reconnection if connectionWaiters.count is greater than the number of pending connection attempts.
+        // 2. For elastic buckets, we need this reconnection if connectionWaiters.count is greater than the number of pending connection attempts.
         // 3. For either kind, if the number of active connections is less than the minimum.
         let shouldReconnect: Bool
-        if self.leaky {
+        switch self.maxConnectionCountBehavior {
+        case .elastic:
             shouldReconnect = (self.connectionWaiters.count > self.pendingConnectionCount)
                 || (self.minimumConnectionCount > self.activeConnectionCount)
-        } else {
+
+        case .strict:
             shouldReconnect = (!self.connectionWaiters.isEmpty && self.maximumConnectionCount > self.activeConnectionCount)
                 || (self.minimumConnectionCount > self.activeConnectionCount)
         }
@@ -279,12 +273,12 @@ extension ConnectionPool {
         }
 
         // Ok, we need the new connection.
-        let newBackoff = TimeAmount.nanoseconds(Int64(Float32(backoff.nanoseconds) * self.backoffFactor))
+        let nextRetryDelay = self.connectionRetryStrategy.determineNewDelay(currentDelay: retryDelay)
         logger.debug("reconnecting after failed connection attempt", metadata: [
-            RedisLogging.MetadataKeys.poolConnectionRetryBackoff: "\(backoff)ns",
-            RedisLogging.MetadataKeys.poolConnectionRetryNewBackoff: "\(newBackoff)ns"
+            RedisLogging.MetadataKeys.poolConnectionRetryAmount: "\(retryDelay)ns",
+            RedisLogging.MetadataKeys.poolConnectionRetryNewAmount: "\(nextRetryDelay)ns"
         ])
-        self._createConnection(backoff: newBackoff, startIn: backoff, logger: logger)
+        self._createConnection(retryDelay: nextRetryDelay, startIn: retryDelay, logger: logger)
     }
 
     /// A connection that was monitored by this pool has been closed.
@@ -352,7 +346,7 @@ extension ConnectionPool {
 
     /// This is the on-thread implementation for leasing connections out to users. Here we work out how to get a new
     /// connection, and attempt to do so.
-    private func _leaseConnection(_ deadline: NIODeadline, logger: Logger) -> EventLoopFuture<RedisConnection> {
+    private func _leaseConnection(logger: Logger, deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
         self.loop.assertInEventLoop()
 
         guard case .active = self.state else {
@@ -386,11 +380,22 @@ extension ConnectionPool {
         self.connectionWaiters.append(waiter)
 
         // Ok, we have connection targets. If the number of active connections is
-        // below the max, or the pool is leaky, we can create a new connection. Otherwise, we just have
+        // below the max, or the pool is elastic, we can create a new connection. Otherwise, we just have
         // to wait for a connection to come back.
-        if self.activeConnectionCount < self.maximumConnectionCount || self.leaky {
+
+        let shouldCreateConnection: Bool
+        switch self.maxConnectionCountBehavior {
+        case .elastic: shouldCreateConnection = true
+        case .strict: shouldCreateConnection = false
+        }
+
+        if self.activeConnectionCount < self.maximumConnectionCount || shouldCreateConnection {
             logger.trace("creating new connection")
-            self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
+            self._createConnection(
+                retryDelay: self.connectionRetryStrategy.initialDelay,
+                startIn: .nanoseconds(0),
+                logger: logger
+            )
         }
 
         return waiter.futureResult

@@ -39,23 +39,33 @@ final class ConnectionPoolTests: XCTestCase {
         return RedisConnection(configuredRESPChannel: channel, defaultLogger: .redisBaseConnectionLogger)
     }
 
-    func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool) -> ConnectionPool {
+    func createPool(
+        maximumConnectionCount: Int,
+        minimumConnectionCount: Int,
+        behavior: RedisConnectionPool.ConnectionCountBehavior.MaxConnectionBehavior
+    ) -> ConnectionPool {
         return ConnectionPool(
-            maximumConnectionCount: maximumConnectionCount,
             minimumConnectionCount: minimumConnectionCount,
-            leaky: leaky,
+            maximumConnectionCount: maximumConnectionCount,
+            maxConnectionCountBehavior: behavior,
+            connectionRetryStrategy: .exponentialBackoff(),
             loop: self.server.loop,
-            poolLogger: .redisBaseConnectionPoolLogger
-        ) { loop in
-            return loop.makeSucceededFuture(self.createAConnection())
-        }
+            poolLogger: .redisBaseConnectionPoolLogger,
+            connectionFactory: { return $0.makeSucceededFuture(self.createAConnection()) }
+        )
     }
 
-    func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool, connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>) -> ConnectionPool {
+    func createPool(
+        maximumConnectionCount: Int,
+        minimumConnectionCount: Int,
+        behavior: RedisConnectionPool.ConnectionCountBehavior.MaxConnectionBehavior,
+        connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>
+    ) -> ConnectionPool {
         return ConnectionPool(
-            maximumConnectionCount: maximumConnectionCount,
             minimumConnectionCount: minimumConnectionCount,
-            leaky: leaky,
+            maximumConnectionCount: maximumConnectionCount,
+            maxConnectionCountBehavior: behavior,
+            connectionRetryStrategy: .exponentialBackoff(),
             loop: self.server.loop,
             poolLogger: .redisBaseConnectionPoolLogger,
             connectionFactory: connectionFactory
@@ -63,7 +73,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testPoolMaintainsMinimumConnections() throws {
-        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 4, leaky: true)
+        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 4, behavior: .elastic)
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 0)
 
@@ -93,7 +103,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testConnectionPoolCanLeaseConnections() throws {
-        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 4, leaky: true)
+        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 4, behavior: .elastic)
         defer {
             pool.close()
         }
@@ -120,7 +130,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testNonLeakyParallelLease() throws {
-        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 1, behavior: .strict)
         defer {
             pool.close()
         }
@@ -179,7 +189,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testLeakyParallelLease() throws {
-        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 1, leaky: true)
+        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 1, behavior: .elastic)
         defer {
             pool.close()
         }
@@ -231,7 +241,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testReturningClosedConnectionsGetReopened() throws {
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict)
         defer {
             pool.close()
         }
@@ -266,7 +276,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testLeasingFromClosedPoolsFails() throws {
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict)
         pool.activate()
         pool.close()
 
@@ -276,7 +286,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testNothingBadHappensWhenYouRepeatedlyCloseAPool() throws {
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict)
         pool.activate()
 
         // Just spam close
@@ -286,7 +296,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testPendingWaitersAreFailedOnPoolClose() throws {
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict)
         defer {
             pool.close()
         }
@@ -322,7 +332,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testConnectionsThatCompleteAfterCloseAreClosed() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -345,7 +355,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testConnectionsCanFailAfterCloseWithoutIncident() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -372,7 +382,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testExponentialConnectionBackoff() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, behavior: .strict) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -382,7 +392,7 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertEqual(self.server.channels.count, 0)
         XCTAssertNotNil(connectionPromise)
 
-        var delay = pool.initialBackoffDelay
+        var delay = pool.connectionRetryStrategy.initialDelay
         let oneNanosecond = TimeAmount.nanoseconds(1)
         for _ in 0..<10 {
             let promise = connectionPromise
@@ -394,7 +404,7 @@ final class ConnectionPoolTests: XCTestCase {
             self.server.loop.advanceTime(by: oneNanosecond)
             XCTAssertNotNil(connectionPromise)
 
-            delay = .nanoseconds(Int64(Float32(delay.nanoseconds) * pool.backoffFactor))
+            delay = pool.connectionRetryStrategy.determineNewDelay(currentDelay: delay)
         }
 
         pool.close()
@@ -403,7 +413,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testNonLeakyBucketWillKeepConnectingIfThereIsSpaceAndWaiters() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: false) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, behavior: .strict) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -418,7 +428,7 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertNotNil(connectionPromise)
 
-        var delay = pool.initialBackoffDelay
+        var delay = pool.connectionRetryStrategy.initialDelay
         let oneNanosecond = TimeAmount.nanoseconds(1)
         for _ in 0..<10 {
             let promise = connectionPromise
@@ -430,7 +440,7 @@ final class ConnectionPoolTests: XCTestCase {
             self.server.loop.advanceTime(by: oneNanosecond)
             XCTAssertNotNil(connectionPromise)
 
-            delay = .nanoseconds(Int64(Float32(delay.nanoseconds) * pool.backoffFactor))
+            delay = pool.connectionRetryStrategy.determineNewDelay(currentDelay: delay)
         }
 
         pool.close()
@@ -442,7 +452,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testLeakyBucketWillKeepConnectingIfThereAreWaitersEvenIfTheresNoSpace() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: true) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, behavior: .elastic) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -469,7 +479,7 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertNotNil(connectionPromise)
 
-        var delay = pool.initialBackoffDelay
+        var delay = pool.connectionRetryStrategy.initialDelay
         let oneNanosecond = TimeAmount.nanoseconds(1)
         for _ in 0..<10 {
             let promise = connectionPromise
@@ -481,7 +491,7 @@ final class ConnectionPoolTests: XCTestCase {
             self.server.loop.advanceTime(by: oneNanosecond)
             XCTAssertNotNil(connectionPromise)
 
-            delay = .nanoseconds(Int64(Float32(delay.nanoseconds) * pool.backoffFactor))
+            delay = pool.connectionRetryStrategy.determineNewDelay(currentDelay: delay)
         }
 
         pool.close()
@@ -493,7 +503,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testDeadlinesWork() throws {
         var promises: [EventLoopPromise<RedisConnection>] = []
-        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 0, leaky: true) { loop in
+        let pool = self.createPool(maximumConnectionCount: 8, minimumConnectionCount: 0, behavior: .elastic) { loop in
             let connectionPromise = self.server.loop.makePromise(of: RedisConnection.self)
             promises.append(connectionPromise)
             return connectionPromise.futureResult
@@ -550,7 +560,7 @@ final class ConnectionPoolTests: XCTestCase {
 
     func testPoolWillStoreConnectionIfWaiterGoesAway() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: true) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, behavior: .elastic) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -586,7 +596,7 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func testPoolCorrectlyClosesItselfWhenLeasedConnectionsAreReturned() throws {
-        let pool = self.createPool(maximumConnectionCount: 2, minimumConnectionCount: 1, leaky: false)
+        let pool = self.createPool(maximumConnectionCount: 2, minimumConnectionCount: 1, behavior: .strict)
         defer {
             pool.close()
         }
@@ -615,7 +625,7 @@ final class ConnectionPoolTests: XCTestCase {
     func testLeasedConnectionsInExcessOfMaxReplacePooledOnes() throws {
         // This test validates that if a leaky pool has allowed extra connections, and all those connections are
         // returned back, the active connections are the ones that were returned to the pool last.
-        let pool = self.createPool(maximumConnectionCount: 4, minimumConnectionCount: 0, leaky: true)
+        let pool = self.createPool(maximumConnectionCount: 4, minimumConnectionCount: 0, behavior: .elastic)
         defer {
             pool.close()
         }
@@ -651,9 +661,9 @@ final class ConnectionPoolTests: XCTestCase {
 }
 
 extension ConnectionPoolTests {
-    private func stopReconnectingIfThereAreNoWaiters(leaky: Bool) throws {
+    private func stopReconnectingIfThereAreNoWaiters(behavior: RedisConnectionPool.ConnectionCountBehavior.MaxConnectionBehavior) throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
-        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: leaky) { loop in
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, behavior: behavior) { loop in
             XCTAssertTrue(loop === self.server.loop)
             connectionPromise = self.server.loop.makePromise()
             return connectionPromise!.futureResult
@@ -683,7 +693,7 @@ extension ConnectionPoolTests {
         XCTAssertNil(connectionPromise)
 
         // Now advance time the remaining amount.
-        XCTAssertNoThrow(self.server.loop.advanceTime(by: pool.initialBackoffDelay))
+        XCTAssertNoThrow(self.server.loop.advanceTime(by: pool.connectionRetryStrategy.initialDelay))
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertNotNil(connectionPromise)
 
@@ -699,12 +709,12 @@ extension ConnectionPoolTests {
     }
 
     func testLeakyPoolStopsReconnecting() throws {
-        try self.stopReconnectingIfThereAreNoWaiters(leaky: true)
+        try self.stopReconnectingIfThereAreNoWaiters(behavior: .elastic)
     }
 
     func testNonLeakyPoolStopsReconnectingIfThereAreNoWaiters() throws {
         // This is the same as the test above, but the pool isn't leaky.
-        try self.stopReconnectingIfThereAreNoWaiters(leaky: false)
+        try self.stopReconnectingIfThereAreNoWaiters(behavior: .strict)
     }
 }
 
@@ -714,7 +724,7 @@ extension ConnectionPool {
     func activate() { self.activate(logger: .redisBaseConnectionPoolLogger) }
     
     func leaseConnection(deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
-        return self.leaseConnection(deadline: deadline, logger: .redisBaseConnectionPoolLogger)
+        return self.leaseConnection(logger: .redisBaseConnectionPoolLogger, deadline: deadline)
     }
     
     func returnConnection(_ connection: RedisConnection) {

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -24,9 +24,8 @@ final class RedisServiceDiscoveryTests: RediStackConnectionPoolIntegrationTestCa
         let hosts = InMemoryServiceDiscovery<String, SocketAddress>(configuration: .init())
         let config = RedisConnectionPool.Configuration(
             initialServerConnectionAddresses: [],
-            maximumConnectionCount: .maximumActiveConnections(5),
-            connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
-            minimumConnectionCount: 1
+            connectionCountBehavior: .strict(maximumConnectionCount: 5),
+            connectionConfiguration: .init(password: self.redisPassword)
         )
         let client = RedisConnectionPool.activatedServiceDiscoveryPool(
             service: "default.local",

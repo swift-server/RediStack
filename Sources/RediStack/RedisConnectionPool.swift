@@ -73,13 +73,10 @@ public class RedisConnectionPool {
 
         self.loop = boundEventLoop
         self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: config.initialConnectionAddresses)
-        
-        // mix of terminology here with the loggers
-        // as we're being "forward thinking" in terms of the 'baggage context' future type
-        
-        var taggedConnectionLogger = config.factoryConfiguration.connectionDefaultLogger
+
+        var taggedConnectionLogger = config.connectionConfiguration.defaultLogger
         taggedConnectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
-        config.factoryConfiguration.connectionDefaultLogger = taggedConnectionLogger
+        config.connectionConfiguration.defaultLogger = taggedConnectionLogger
         
         var taggedPoolLogger = config.poolDefaultLogger
         taggedPoolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
@@ -88,13 +85,12 @@ public class RedisConnectionPool {
         self.configuration = config
         
         self.pool = ConnectionPool(
-            maximumConnectionCount: config.maximumConnectionCount.size,
-            minimumConnectionCount: config.minimumConnectionCount,
-            leaky: config.maximumConnectionCount.leaky,
+            minimumConnectionCount: self.configuration.connectionCountBehavior.minimumConnectionCount,
+            maximumConnectionCount: self.configuration.connectionCountBehavior.maximumConnectionCount,
+            maxConnectionCountBehavior: self.configuration.connectionCountBehavior.maxConnectionBehavior,
+            connectionRetryStrategy: self.configuration.retryStrategy,
             loop: boundEventLoop,
             poolLogger: config.poolDefaultLogger,
-            connectionBackoffFactor: config.connectionRetryConfiguration.backoff.factor,
-            initialConnectionBackoffDelay: config.connectionRetryConfiguration.backoff.initialDelay,
             connectionFactory: self.connectionFactory(_:)
         )
     }
@@ -249,8 +245,6 @@ extension RedisConnectionPool {
         // Validate the loop invariants.
         self.loop.preconditionInEventLoop()
         targetLoop.preconditionInEventLoop()
-        
-        let factoryConfig = self.configuration.factoryConfiguration
 
         guard let nextTarget = self.serverConnectionAddresses.nextTarget() else {
             // No valid connection target, we'll keep track of the request and attempt to satisfy it later.
@@ -270,9 +264,7 @@ extension RedisConnectionPool {
         do {
             connectionConfig = try .init(
                 address: nextTarget,
-                password: factoryConfig.connectionPassword,
-                initialDatabase: factoryConfig.connectionInitialDatabase,
-                defaultLogger: factoryConfig.connectionDefaultLogger
+                prototypeConfiguration: self.configuration.connectionConfiguration
             )
         } catch {
             // config validation failed, return the error
@@ -283,7 +275,7 @@ extension RedisConnectionPool {
             .make(
                 configuration: connectionConfig,
                 boundEventLoop: targetLoop,
-                configuredTCPClient: factoryConfig.tcpClient
+                configuredTCPClient: self.configuration.connectionConfiguration.tcpClient
             )
             .map { connection in
                 // disallow subscriptions on all connections by default to enforce our management of PubSub state
@@ -533,14 +525,24 @@ extension RedisConnectionPool: RedisClient {
         
         guard let connection = preferredConnection else {
             return pool
-                .leaseConnection(
-                    deadline: .now() + self.configuration.connectionRetryConfiguration.timeout,
-                    logger: logger
-                )
+                .leaseConnection(logger: logger)
                 .flatMap { operation($0, pool.returnConnection(_:logger:), logger) }
         }
 
         return operation(connection, pool.returnConnection(_:logger:), logger)
+    }
+}
+
+// MARK: Helper for creating connection configs
+
+extension RedisConnection.Configuration {
+    fileprivate init(address: SocketAddress, prototypeConfiguration: RedisConnectionPool.PoolConnectionConfiguration) throws {
+        try self.init(
+            address: address,
+            password: prototypeConfiguration.password,
+            initialDatabase: prototypeConfiguration.initialDatabase,
+            defaultLogger: prototypeConfiguration.defaultLogger
+        )
     }
 }
 
@@ -578,25 +580,6 @@ extension RedisConnectionPool {
         internal mutating func update(_ newAddresses: [SocketAddress]) {
             self.addresses = newAddresses
             self.index = self.addresses.startIndex
-        }
-    }
-}
-
-// MARK: RedisConnectionPoolSize helpers
-extension RedisConnectionPoolSize {
-    fileprivate var size: Int {
-        switch self {
-        case .maximumActiveConnections(let size), .maximumPreservedConnections(let size):
-            return size
-        }
-    }
-
-    fileprivate var leaky: Bool {
-        switch self {
-        case .maximumActiveConnections:
-            return false
-        case .maximumPreservedConnections:
-            return true
         }
     }
 }

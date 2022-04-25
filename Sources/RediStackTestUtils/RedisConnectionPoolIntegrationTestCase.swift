@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -78,18 +78,16 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     public func makeNewPool(
         initialAddresses: [SocketAddress]? = nil,
         initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
-        connectionRetryTimeout: TimeAmount? = .seconds(5),
+        connectionRetryTimeout: TimeAmount = .seconds(5),
         minimumConnectionCount: Int = 0
     ) throws -> RedisConnectionPool {
         let addresses = try initialAddresses ?? [SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)]
         let pool = RedisConnectionPool(
             configuration: .init(
                 initialServerConnectionAddresses: addresses,
-                maximumConnectionCount: .maximumActiveConnections(4),
-                connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
-                minimumConnectionCount: minimumConnectionCount,
-                initialConnectionBackoffDelay: initialConnectionBackoffDelay,
-                connectionRetryTimeout: connectionRetryTimeout
+                connectionCountBehavior: .strict(maximumConnectionCount: 4, minimumConnectionCount: minimumConnectionCount),
+                connectionConfiguration: .init(password: self.redisPassword),
+                retryStrategy: .exponentialBackoff(initialDelay: initialConnectionBackoffDelay, timeout: connectionRetryTimeout)
             ),
             boundEventLoop: self.eventLoopGroup.next()
         )
