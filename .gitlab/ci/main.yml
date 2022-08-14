@@ -59,6 +59,8 @@ Code Climate:
       codequality: gl-code-quality-report.json
 
 .standard-platform-test:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
   stage: Platform Tests
   trigger:
     strategy: depend

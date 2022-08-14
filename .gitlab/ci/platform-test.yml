@@ -15,9 +15,3 @@ stages:
   script:
     - swift build --build-tests --enable-test-discovery --sanitize=thread -v 
     - swift test --skip-build
-  only:
-    - branches
-    - tags
-  except:
-    - schedules
-    
