@@ -4,13 +4,13 @@
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.2+-orange.svg" alt="Swift 5.2+"></a>
+    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" alt="Swift 5.5+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 
 <p>
     <a href="https://gitlab.com/Mordil/RediStack/pipelines"><img src="https://gitlab.com/Mordil/RediStack/badges/master/pipeline.svg" alt="Build Status"></a>
-    <a href="https://docs.redistack.info"><img src="https://docs.redistack.info/badge.svg" alt="Documentation Coverage"></a>
+    <a href="https://swiftpackageindex.com/Mordil/RediStack/master/documentation/redistack"><img src="https://img.shields.io/badge/SPI-Documentation-blue.svg" alt="Documentation Coverage"></a>
     <a href="https://codeclimate.com/github/Mordil/RediStack/maintainability"><img src="https://api.codeclimate.com/v1/badges/b6fd5e7a3e669165a21b/maintainability" /></a>
 </p>
 </div>
@@ -77,7 +77,7 @@ print(result) // Optional("some value")
 
 ## Documentation
 
-The docs for the latest tagged release are always available at [docs.redistack.info](http://docs.redistack.info).
+The docs for the latest tagged release are always available from the [Swift Package Index](https://swiftpackageindex.com/Mordil/RediStack/master/documentation/redistack).
 
 ## Questions
 
