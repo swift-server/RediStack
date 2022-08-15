@@ -64,15 +64,17 @@ Code Climate:
     strategy: depend
     include: '/.gitlab/ci/standard-platforms.yml'
 
-Ubuntu Bionic:
-  extends: .standard-platform-test
-  variables:
-    SWIFT_PLATFORM_NAME: bionic
-
 Ubuntu Xenial:
   extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: xenial
+  trigger:
+    include: '/.gitlab/ci/eol-platforms-5.5.yml'
+
+Ubuntu Bionic:
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: bionic
 
 Ubuntu Focal:
   extends: .standard-platform-test
@@ -88,6 +90,8 @@ CentOS 8:
   extends: .standard-platform-test
   variables:
     SWIFT_PLATFORM_NAME: centos8
+  trigger:
+    include: '/.gitlab/ci/eol-platforms-5.5.yml'
 
 Amazon Linux 2:
   extends: .standard-platform-test

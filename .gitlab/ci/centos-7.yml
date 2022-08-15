@@ -10,17 +10,16 @@ include: '/.gitlab/ci/platform-test.yml'
 
 swift trunk:
   extends: .centos7
-  image: swiftlang/swift:nightly-master-centos7
-  except:
+  image: swiftlang/swift:nightly-main-centos7
+
+swift 5.7:
+  extends: .centos7
+  image: swiftlang/swift:nightly-5.7-centos7
+
+swift 5.6:
+  extends: .centos7
+  image: swift:5.6-centos7
 
 swift 5.5:
   extends: .centos7
   image: swift:5.5-centos7
-
-swift 5.4:
-  extends: .centos7
-  image: swift:5.4-centos7
-
-swift 5.3:
-  extends: .centos7
-  image: swift:5.3-centos7

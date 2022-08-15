@@ -2,17 +2,16 @@ include: '/.gitlab/ci/platform-test.yml'
 
 swift trunk:
   extends: .platform-test
-  image: swiftlang/swift:nightly-master-${SWIFT_PLATFORM_NAME}
-  except:
+  image: swiftlang/swift:nightly-main-${SWIFT_PLATFORM_NAME}  
+
+swift 5.7:
+  extends: .platform-test
+  image: swiftlang/swift:nightly-5.7-${SWIFT_PLATFORM_NAME}
+
+swift 5.6:
+  extends: .platform-test
+  image: swift:5.6-${SWIFT_PLATFORM_NAME}
 
 swift 5.5:
   extends: .platform-test
   image: swift:5.5-${SWIFT_PLATFORM_NAME}
-
-swift 5.4:
-  extends: .platform-test
-  image: swift:5.4-${SWIFT_PLATFORM_NAME}
-
-swift 5.3:
-  extends: .platform-test
-  image: swift:5.3-${SWIFT_PLATFORM_NAME}

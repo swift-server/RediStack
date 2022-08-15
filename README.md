@@ -124,15 +124,17 @@ This policy is to balance the desire for as much backwards compatibility as poss
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI) against the **current version** of **RediStack**.
 
-| Platform              | Swift 5.3 | 5.4 | 5.5 | Trunk |
-|:----------------------|:---------:|:---:|:---:|:-----:|
-| macOS Latest (Intel)  |    |   | ✅ |    |
-| Ubuntu 20.04 (Focal)  | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 18.04 (Bionic) | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 16.04 (Xenial) | ✅ | ✅ | ✅ | ✅ |
-| Amazon Linux 2        | ✅ | ✅ | ✅ | ✅ |
-| CentOS 8              | ✅ | ✅ | ✅ | ✅ |
-| CentOS 7              | ✅ | ✅ | ✅ | ✅ |
+| Platform                    | Swift 5.5 | 5.6 | 5.7 | Trunk |
+|:----------------------------|:---------:|:---:|:---:|:-----:|
+| macOS Latest (M1)           |    |   | ✅ |    |
+| Ubuntu 20.04 (Focal)        | ✅ | ✅ | ✅ | ✅ |
+| Ubuntu 18.04 (Bionic)       | ✅ | ✅ | ✅ | ✅ |
+| Ubuntu 16.04 (Xenial)**³**  | ✅ | ❌ | ❌ | ❌ |
+| Amazon Linux 2              | ✅ | ✅ | ✅ | ✅ |
+| CentOS 8**³**               | ✅ | ❌ | ❌ | ❌ |
+| CentOS 7                    | ✅ | ✅ | ✅ | ✅ |
+
+> **³** _CentOS 8 and Ubuntu 16.04 are no longer officially supported by Swift after [Swift 5.5](https://github.com/apple/swift-docker/pull/273)._
 
 For older versions of **RediStack**, view each summary below.
 
