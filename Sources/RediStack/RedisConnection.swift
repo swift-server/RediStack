@@ -14,6 +14,7 @@
 
 import struct Foundation.UUID
 import struct Dispatch.DispatchTime
+import Atomics
 import Logging
 import Metrics
 import NIO
@@ -119,10 +120,10 @@ public final class RedisConnection: RedisClient {
     /// - Important: Even when set to `true`, the host machine may still choose to delay sending commands.
     /// - Note: Setting this to `true` will immediately drain the buffer.
     public var sendCommandsImmediately: Bool {
-        get { return autoflush.load() }
+        get { return autoflush.load(ordering: .sequentiallyConsistent) }
         set(newValue) {
             if newValue { self.channel.flush() }
-            autoflush.store(newValue)
+            autoflush.store(newValue, ordering: .sequentiallyConsistent)
         }
     }
     /// Controls the permission of the connection to be able to have PubSub subscriptions or not.
@@ -130,11 +131,11 @@ public final class RedisConnection: RedisClient {
     /// When set to `true`, this connection is allowed to create subscriptions.
     /// When set to `false`, this connection is not allowed to create subscriptions. Any potentially existing subscriptions will be removed.
     public var allowSubscriptions: Bool {
-        get { self.allowPubSub.load() }
+        get { self.allowPubSub.load(ordering: .sequentiallyConsistent) }
         set(newValue) {
-            self.allowPubSub.store(newValue)
+            self.allowPubSub.store(newValue, ordering: .sequentiallyConsistent)
             // if we're subscribed, and we're not allowed to be in pubsub, end our subscriptions
-            guard self.isSubscribed && !self.allowPubSub.load() else { return }
+            guard self.isSubscribed && !self.allowPubSub.load(ordering: .sequentiallyConsistent) else { return }
             _ = EventLoopFuture<Void>.whenAllComplete([
                 self.unsubscribe(),
                 self.punsubscribe()
@@ -149,8 +150,8 @@ public final class RedisConnection: RedisClient {
 
     internal let channel: Channel
     
-    private let autoflush: NIOAtomic<Bool> = .makeAtomic(value: true)
-    private let allowPubSub: NIOAtomic<Bool> = .makeAtomic(value: true)
+    private let autoflush = ManagedAtomic<Bool>(true)
+    private let allowPubSub = ManagedAtomic<Bool>(true)
     private let _stateLock = Lock()
     private var _state = ConnectionState.open
     private var state: ConnectionState {
