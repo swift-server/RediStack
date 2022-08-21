@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import Metrics
 import NIOConcurrencyHelpers
 
@@ -69,10 +70,10 @@ extension RedisMetrics {
     /// A specialized wrapper class for working with `Metrics.Gauge` objects for the purpose of an incrementing or decrementing count of active objects.
     public class IncrementalGauge {
         private let gauge: Gauge
-        private let count = NIOAtomic<Int>.makeAtomic(value: 0)
+        private let count = ManagedAtomic<Int>(0)
         
         /// The number of the objects that are currently reported as active.
-        public var currentCount: Int { return count.load() }
+        public var currentCount: Int { return count.load(ordering: .sequentiallyConsistent) }
         
         internal init(_ label: Label) {
             self.gauge = .init(label: label)
@@ -81,21 +82,21 @@ extension RedisMetrics {
         /// Increments the current count by the amount specified.
         /// - Parameter amount: The number to increase the current count by. Default is `1`.
         public func increment(by amount: Int = 1) {
-            _ = self.count.add(amount)
-            self.gauge.record(self.count.load())
+            self.count.wrappingIncrement(by: amount, ordering: .sequentiallyConsistent)
+            self.gauge.record(self.count.load(ordering: .sequentiallyConsistent))
         }
         
         /// Decrements the current count by the amount specified.
         /// - Parameter amount: The number to decrease the current count by. Default is `1`.
         public func decrement(by amount: Int = 1) {
-            _ = self.count.sub(amount)
-            self.gauge.record(self.count.load())
+            self.count.wrappingDecrement(by: amount, ordering: .sequentiallyConsistent)
+            self.gauge.record(self.count.load(ordering: .sequentiallyConsistent))
         }
         
         /// Resets the current count to `0`.
         public func reset() {
-            _ = self.count.exchange(with: 0)
-            self.gauge.record(self.count.load())
+            _ = self.count.exchange(0, ordering: .sequentiallyConsistent)
+            self.gauge.record(self.count.load(ordering: .sequentiallyConsistent))
         }
     }
 }
