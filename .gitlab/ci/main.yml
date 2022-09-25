@@ -1,3 +1,5 @@
+include: '/.gitlab/ci/platform-test.yml'
+
 stages:
   - Platform Tests
   - Quality Checks
@@ -26,6 +28,18 @@ Code Climate:
     expire_in: 1 week
     reports:
       codequality: gl-code-quality-report.json
+
+Code Coverage:
+  extends: .platform-test
+  stage: Quality Checks
+  allow_failure: false
+  image: swift:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - '*.swift'
+  script: scripts/generate_code_coverage.sh
+  coverage: '/TOTAL.*(\s\d+\.\d+%)/'
 
 .standard-platform-test:
   rules:

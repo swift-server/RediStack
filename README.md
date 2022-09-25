@@ -9,7 +9,8 @@
 </p>
 
 <p>
-    <a href="https://gitlab.com/Mordil/RediStack/pipelines"><img src="https://gitlab.com/Mordil/RediStack/badges/master/pipeline.svg" alt="Build Status"></a>
+    <a href="https://gitlab.com/Mordil/RediStack/-/commits/master"><img alt="pipeline status" src="https://gitlab.com/Mordil/RediStack/badges/master/pipeline.svg" /></a>
+    <a href="https://gitlab.com/Mordil/RediStack/-/commits/master"><img alt="coverage report" src="https://gitlab.com/Mordil/RediStack/badges/master/coverage.svg"/></a>
     <a href="https://swiftpackageindex.com/Mordil/RediStack/master/documentation/redistack"><img src="https://img.shields.io/badge/SPI-Documentation-blue.svg" alt="Documentation Coverage"></a>
     <a href="https://codeclimate.com/github/Mordil/RediStack/maintainability"><img src="https://api.codeclimate.com/v1/badges/b6fd5e7a3e669165a21b/maintainability" /></a>
 </p>
