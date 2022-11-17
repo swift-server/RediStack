@@ -150,7 +150,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     
     private let autoflush: NIOAtomic<Bool> = .makeAtomic(value: true)
     private let allowPubSub: NIOAtomic<Bool> = .makeAtomic(value: true)
-    private let _stateLock = Lock()
+    private let _stateLock = NIOLock()
     private var _state = ConnectionState.open
     private var state: ConnectionState {
         get { return _stateLock.withLock { self._state } }
