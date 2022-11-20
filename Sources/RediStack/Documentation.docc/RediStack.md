@@ -41,6 +41,7 @@ print(result) // Optional("some value")
 ### Pub/Sub
 
 - ``RedisChannelName``
+- ``RedisPubSubEventReceiver``
 
 ### Error Handling
 

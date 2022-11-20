@@ -47,7 +47,7 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
 extension RedisConnectionTests {
     func test_subscriptionNotAllowedFails() throws {
         self.connection.allowSubscriptions = false
-        let subscription = self.connection.subscribe(to: #function) { (_, _) in }
+        let subscription = self.connection.subscribe(to: #function, { _ in })
 
         XCTAssertThrowsError(try subscription.wait()) {
             guard let error = $0 as? RedisClientError else {
@@ -66,15 +66,17 @@ extension RedisConnectionTests {
 
         _ = try connection.subscribe(
             to: #function,
-            messageReceiver:  { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in subscriptionClosedExpectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                subscriptionClosedExpectation.fulfill()
+            }
         ).wait()
         _ = try connection.psubscribe(
             to: #function,
-            messageReceiver:  { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in subscriptionClosedExpectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                subscriptionClosedExpectation.fulfill()
+            }
         ).wait()
 
         connection.allowSubscriptions = false
@@ -110,12 +112,12 @@ extension RedisConnectionTests {
         }
 
         try self.connection
-            .subscribe(to: #function, eventLoop: eventLoop) { _, _ in }
+            .subscribe(to: #function, eventLoop: eventLoop, { _ in })
             .map { _ in eventLoop.assertInEventLoop() }
             .wait()
 
         try self.connection
-            .subscribe(to: #function) { _, _ in }
+            .subscribe(to: #function, { _ in })
             .map { _ in
                 eventLoop.assertNotInEventLoop()
                 self.connection.eventLoop.assertInEventLoop()
@@ -133,12 +135,12 @@ extension RedisConnectionTests {
         }
 
         try self.connection
-            .psubscribe(to: #function, eventLoop: eventLoop) { _, _ in }
+            .psubscribe(to: #function, eventLoop: eventLoop, { _ in })
             .map { _ in eventLoop.assertInEventLoop() }
             .wait()
 
         try self.connection
-            .psubscribe(to: #function) { _, _ in }
+            .psubscribe(to: #function, { _ in })
             .map { _ in
                 eventLoop.assertNotInEventLoop()
                 self.connection.eventLoop.assertInEventLoop()

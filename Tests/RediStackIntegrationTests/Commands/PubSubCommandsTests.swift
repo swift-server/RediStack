@@ -28,29 +28,32 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         defer { try? subscriber.close().wait() }
 
         let message = "Hello from Redis!"
-        
+
         try subscriber.subscribe(
             to: #function,
-            messageReceiver: {
-                guard
-                    $0 == #function,
-                    $1.string == message
-                else { return }
-                messageExpectation.fulfill()
-            },
-            onSubscribe: {
-                guard $0 == #function, $1 == 1 else { return }
-                subscribeExpectation.fulfill()
-            },
-            onUnsubscribe: { details, eventSource in
-                switch eventSource {
-                case .clientError: return
-                case .userInitiated:
+            { event in
+                switch event {
+                case let .subscribed(key, currentSubscriptionCount):
                     guard
-                        details.subscriptionKey == #function,
-                        details.currentSubscriptionCount == 0
+                        key == #function,
+                        currentSubscriptionCount == 1
+                    else { return }
+                    subscribeExpectation.fulfill()
+
+                case let .unsubscribed(key, currentSubscriptionCount, source):
+                    guard
+                        case .userInitiated = source,
+                        key == #function,
+                        currentSubscriptionCount == 0
                     else { return }
                     unsubscribeExpectation.fulfill()
+
+                case let .message(key, body):
+                    guard
+                        key == #function,
+                        body.string == message
+                    else { return }
+                    messageExpectation.fulfill()
                 }
             }
         ).wait()
@@ -74,10 +77,22 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         let pattern = "\(channel.rawValue.dropLast(channel.rawValue.count / 2))*"
 
         try subscriber
-            .subscribe(to: channel) { (_, _) in channelMessageExpectation.fulfill() }
+            .subscribe(
+                to: channel,
+                {
+                    guard case .message = $0 else { return }
+                    channelMessageExpectation.fulfill()
+                }
+            )
             .wait()
         try subscriber
-            .psubscribe(to: pattern) { (_, _) in patternMessageExpectation.fulfill() }
+            .psubscribe(
+                to: pattern,
+                {
+                    guard case .message = $0 else { return }
+                    patternMessageExpectation.fulfill()
+                }
+            )
             .wait()
         
         let subscriberCount = try self.connection.publish("hello!", to: channel).wait()
@@ -91,7 +106,7 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
     }
     
     func test_blockedCommandsThrowInPubSubMode() throws {
-        try self.connection.subscribe(to: #function) { (_, _) in }.wait()
+        try self.connection.subscribe(to: #function, { _ in }).wait()
         defer { try? self.connection.unsubscribe(from: #function).wait() }
         
         XCTAssertThrowsError(try self.connection.send(.lpush("value", into: "List")).wait()) {
@@ -100,7 +115,7 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
     }
     
     func test_pingInPubSub() throws {
-        try self.connection.subscribe(to: #function) { (_, _) in }.wait()
+        try self.connection.subscribe(to: #function, { _ in }).wait()
         defer { try? self.connection.unsubscribe(from: #function).wait() }
         
         let pong = try self.connection.ping().wait()
@@ -111,7 +126,7 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
     }
     
     func test_quitInPubSub() throws {
-        try self.connection.subscribe(to: #function) { (_, _) in }.wait()
+        try self.connection.subscribe(to: #function, { _ in }).wait()
         defer { try? self.connection.unsubscribe(from: #function).wait() }
         
         let quit = RedisCommand<String>(keyword: "QUIT", arguments: [])
@@ -130,9 +145,10 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
 
         try subscriber.subscribe(
             to: channels,
-            messageReceiver: { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in expectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                expectation.fulfill()
+            }
         ).wait()
         
         XCTAssertTrue(subscriber.isSubscribed)
@@ -153,9 +169,10 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         
         try subscriber.psubscribe(
             to: patterns,
-            messageReceiver: { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in expectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                expectation.fulfill()
+            }
         ).wait()
         
         XCTAssertTrue(subscriber.isSubscribed)
@@ -176,17 +193,19 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
 
         try subscriber.subscribe(
             to: #function,
-            messageReceiver: { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in expectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                expectation.fulfill()
+            }
         ).wait()
         XCTAssertTrue(subscriber.isSubscribed)
         
         try subscriber.psubscribe(
             to: "*\(#function)",
-            messageReceiver: { _, _ in },
-            onSubscribe: nil,
-            onUnsubscribe: { _, _ in expectation.fulfill() }
+            {
+                guard case .unsubscribed = $0 else { return }
+                expectation.fulfill()
+            }
         ).wait()
         XCTAssertTrue(subscriber.isSubscribed)
 
@@ -217,12 +236,9 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         }
 
         for channelName in channelNames {
-            try subscriber.subscribe(
-                to: channelName,
-                messageReceiver: { _, _ in },
-                onSubscribe: nil,
-                onUnsubscribe: nil
-            ).wait()
+            try subscriber
+                .subscribe(to: channelName, { _ in })
+                .wait()
         }
         XCTAssertTrue(subscriber.isSubscribed)
         defer {
@@ -252,12 +268,9 @@ final class RedisPubSubCommandsTests: RediStackIntegrationTestCase {
         }
 
         for channelName in channelNames {
-            try subscriber.subscribe(
-                to: channelName,
-                messageReceiver: { _, _ in },
-                onSubscribe: nil,
-                onUnsubscribe: nil
-            ).wait()
+            try subscriber
+                .subscribe(to: channelName, { _ in })
+                .wait()
         }
         XCTAssertTrue(subscriber.isSubscribed)
         defer {
@@ -292,26 +305,29 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
         
         try subscriber.subscribe(
             to: #function,
-            messageReceiver: {
-                guard
-                    $0 == #function,
-                    $1.string == message
-                else { return }
-                messageExpectation.fulfill()
-            },
-            onSubscribe: {
-                guard $0 == #function, $1 == 1 else { return }
-                subscribeExpectation.fulfill()
-            },
-            onUnsubscribe: { details, eventSource in
-                switch eventSource {
-                case .clientError: return
-                case .userInitiated:
+            { event in
+                switch event {
+                case let .subscribed(key, count):
                     guard
-                        details.subscriptionKey == #function,
-                        details.currentSubscriptionCount == 0
+                        key == #function,
+                        count == 1
+                    else { return }
+                    subscribeExpectation.fulfill()
+
+                case let .unsubscribed(key, count, source):
+                    guard
+                        case .userInitiated = source,
+                        key == #function,
+                        count == 0
                     else { return }
                     unsubscribeExpectation.fulfill()
+
+                case let .message(key, body):
+                    guard
+                        key == #function,
+                        body.string == message
+                    else { return }
+                    messageExpectation.fulfill()
                 }
             }
         ).wait()
@@ -337,11 +353,17 @@ final class RedisPubSubCommandsPoolTests: RediStackConnectionPoolIntegrationTest
         let pattern = "\(channel.rawValue.dropLast(channel.rawValue.count / 2))*"
 
         try subscriber
-            .subscribe(to: channel) { (_, _) in channelMessageExpectation.fulfill() }
+            .subscribe(to: channel, {
+                guard case .message = $0 else { return }
+                channelMessageExpectation.fulfill()
+            })
             .wait()
         XCTAssertEqual(subscriber.leasedConnectionCount, 1)
         try subscriber
-            .psubscribe(to: pattern) { (_, _) in patternMessageExpectation.fulfill() }
+            .psubscribe(to: pattern, {
+                guard case .message = $0 else { return }
+                patternMessageExpectation.fulfill()
+            })
             .wait()
         XCTAssertEqual(subscriber.leasedConnectionCount, 1)
         
@@ -375,12 +397,15 @@ extension RedisPubSubCommandsTests {
         let subscribeFuture = connection
             .subscribe(
                 to: [.init(#function)],
-                messageReceiver: { _, _ in },
-                onSubscribe: { _, _ in subscribeExpectation.fulfill() },
-                onUnsubscribe: { _, eventSource in
-                    switch eventSource {
-                    case .userInitiated: return
-                    case .clientError: unsubscribeExpectation.fulfill()
+                { event in
+                    switch event {
+                    case .message: break
+
+                    case .subscribed: subscribeExpectation.fulfill()
+
+                    case let .unsubscribed(_, _, source):
+                        guard case .clientError = source else { return }
+                        unsubscribeExpectation.fulfill()
                     }
                 }
             )

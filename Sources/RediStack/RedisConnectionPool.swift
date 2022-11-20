@@ -354,22 +354,20 @@ extension RedisConnectionPool: RedisClient {
         to channels: [RedisChannelName],
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscribeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
+        _ receiver: @escaping RedisPubSubEventReceiver
     ) -> EventLoopFuture<Void> {
         return self._subscribe(
             using: {
-                $0.subscribe(
+                (connection, wrappedReceiver, logger) in
+
+                connection.subscribe(
                     to: channels,
                     eventLoop: eventLoop,
-                    logger: $2,
-                    messageReceiver: receiver,
-                    onSubscribe: subscribeHandler,
-                    onUnsubscribe: $1
+                    logger: logger,
+                    wrappedReceiver
                 )
             },
-            onUnsubscribe: unsubscribeHandler,
+            receiver: receiver,
             eventLoop: eventLoop,
             taskLogger: logger
         )
@@ -379,22 +377,20 @@ extension RedisConnectionPool: RedisClient {
         to patterns: [String],
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscribeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
+        _ receiver: @escaping RedisPubSubEventReceiver
     ) -> EventLoopFuture<Void> {
         return self._subscribe(
             using: {
-                $0.psubscribe(
+                (connection, wrappedReceiver, logger) in
+
+                connection.psubscribe(
                     to: patterns,
                     eventLoop: eventLoop,
-                    logger: $2,
-                    messageReceiver: receiver,
-                    onSubscribe: subscribeHandler,
-                    onUnsubscribe: $1
+                    logger: logger,
+                    wrappedReceiver
                 )
             },
-            onUnsubscribe: unsubscribeHandler,
+            receiver: receiver,
             eventLoop: eventLoop,
             taskLogger: logger
         )
@@ -424,9 +420,12 @@ extension RedisConnectionPool: RedisClient {
         )
     }
 
+    /// Handles the connection management for PubSub state, providing a dedicated connection to the operation to use.
+    ///
+    /// The provided receiver is wrapped to handle proper cleanup of PubSub state, which is provided to the operation to use.
     private func _subscribe(
-        using operation: @escaping (RedisConnection, @escaping RedisUnsubscribeHandler, Logger) -> EventLoopFuture<Void>,
-        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?,
+        using operation: @escaping (RedisConnection, @escaping RedisPubSubEventReceiver, Logger) -> EventLoopFuture<Void>,
+        receiver: @escaping RedisPubSubEventReceiver,
         eventLoop: EventLoop?,
         taskLogger: Logger?
     ) -> EventLoopFuture<Void> {
@@ -437,21 +436,30 @@ extension RedisConnectionPool: RedisClient {
                     connection.allowSubscriptions = true // allow pubsub commands which are to come
                     self.pubsubConnection = connection
                 }
-                
-                let onUnsubscribe: RedisUnsubscribeHandler = { subscriptionDetails, eventSource in
-                    defer { unsubscribeHandler?(subscriptionDetails, eventSource) }
-                    
-                    guard
-                        subscriptionDetails.currentSubscriptionCount == 0,
-                        let connection = self.pubsubConnection
-                    else { return }
 
-                    connection.allowSubscriptions = false // reset PubSub permissions
-                    returnConnection(connection, logger)
-                    self.pubsubConnection = nil // break ref cycle
+                let wrappedReceiver: RedisPubSubEventReceiver = { event in
+                    // we only care about unsubscribe events, everything else is just passed to the user's receiver
+                    switch event {
+                    case .subscribed, .message:
+                        receiver(event)
+
+                    case let .unsubscribed(_, connectionCount, _):
+                        // always make sure we're still passing to the user's receiver
+                        defer { receiver(event) }
+
+                        // we only care if this was the last subscription, and we haven't updated our internal state
+                        guard
+                            connectionCount == 0,
+                            let connection = self.pubsubConnection
+                        else { return }
+
+                        connection.allowSubscriptions = false // reset PubSub permissions
+                        returnConnection(connection, logger)
+                        self.pubsubConnection = nil // break ref cycle
+                    }
                 }
                 
-                return operation(connection, onUnsubscribe, logger)
+                return operation(connection, wrappedReceiver, logger)
             },
             preferredConnection: self.pubsubConnection,
             eventLoop: eventLoop,

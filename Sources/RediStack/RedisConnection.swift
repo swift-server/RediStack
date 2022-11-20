@@ -381,29 +381,23 @@ extension RedisConnection {
         to channels: [RedisChannelName],
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscribeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler?
+        _ receiver: @escaping RedisPubSubEventReceiver
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, eventLoop, logger)
+        return self._subscribe(.channels(channels), receiver, eventLoop, logger)
     }
 
     public func psubscribe(
         to patterns: [String],
         eventLoop: EventLoop? = nil,
         logger: Logger? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscribeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisUnsubscribeHandler? = nil
+        _ receiver: @escaping RedisPubSubEventReceiver
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, eventLoop, logger)
+        return self._subscribe(.patterns(patterns), receiver, eventLoop, logger)
     }
 
     private func _subscribe(
         _ target: RedisSubscriptionTarget,
-        _ receiver: @escaping RedisSubscriptionMessageReceiver,
-        _ onSubscribe: RedisSubscribeHandler?,
-        _ onUnsubscribe: RedisUnsubscribeHandler?,
+        _ receiver: @escaping RedisPubSubEventReceiver,
         _ eventLoop: EventLoop?,
         _ logger: Logger?
     ) -> EventLoopFuture<Void> {
@@ -433,7 +427,7 @@ extension RedisConnection {
                 .flatMap { handler in
                     logger.trace("handler added, adding subscription")
                     return handler
-                        .addSubscription(for: target, messageReceiver: receiver, onSubscribe: onSubscribe, onUnsubscribe: onUnsubscribe)
+                        .addSubscription(for: target, receiver: receiver)
                         .flatMapError { error in
                             logger.debug(
                                 "failed to add subscriptions that triggered pubsub mode. removing handler",
@@ -462,7 +456,7 @@ extension RedisConnection {
         
         // add the subscription and just ignore the subscription count
         return handler
-            .addSubscription(for: target, messageReceiver: receiver, onSubscribe: onSubscribe, onUnsubscribe: onUnsubscribe)
+            .addSubscription(for: target, receiver: receiver)
             .map { _ in logger.trace("subscription added") }
             .hop(to: finalEventLoop)
     }
