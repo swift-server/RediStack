@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import RediStack
 import XCTest
 

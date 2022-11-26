@@ -14,7 +14,7 @@
 
 import protocol Foundation.LocalizedError
 import struct Logging.Logger
-import NIO
+import NIOCore
 
 /// An object capable of sending commands and receiving responses.
 ///

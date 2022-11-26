@@ -12,7 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
+import NIOPosix
 @testable import RediStack
 import RediStackTestUtils
 import XCTest

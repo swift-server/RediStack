@@ -14,7 +14,7 @@
 
 import struct Logging.Logger
 import Foundation
-import NIO
+import NIOCore
 
 // MARK: Strings
 

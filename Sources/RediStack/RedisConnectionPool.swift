@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import struct Foundation.UUID
-import NIO
+import NIOCore
 import NIOConcurrencyHelpers
 import Logging
 import ServiceDiscovery

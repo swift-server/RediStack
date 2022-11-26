@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 /// Handles incoming byte messages from Redis
 /// and decodes them according to the Redis Serialization Protocol (RESP).

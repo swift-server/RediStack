@@ -14,7 +14,7 @@
 
 import Foundation
 import Logging
-import NIO
+import NIOCore
 
 extension RedisConnection.Configuration {
     public struct ValidationError: LocalizedError, Equatable {

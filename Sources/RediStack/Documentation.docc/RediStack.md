@@ -7,7 +7,7 @@ A non-blocking Swift client for Redis built on top of SwiftNIO.
 **RediStack** is quick to use - all you need is an [`EventLoop`](https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html) from **SwiftNIO**.
 
 ```swift
-import NIO
+import NIOCore
 import RediStack
 
 let eventLoop: EventLoop = ...

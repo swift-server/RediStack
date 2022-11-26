@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 /// The possible events that are received from Redis Pub/Sub channels.
 public enum RedisPubSubEvent {

@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
+import NIOCore
+import NIOEmbedded
 @testable import RediStack
 import XCTest
 

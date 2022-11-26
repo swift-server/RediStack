@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import struct Logging.Logger
-import NIO
+import NIOCore
 
 // MARK: Server
 

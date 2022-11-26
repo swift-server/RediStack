@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 
 // MARK: - Pool Connection Congfiguration
 

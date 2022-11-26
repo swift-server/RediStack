@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2022 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import struct Foundation.Data
-import NIO
+import NIOCore
 
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///

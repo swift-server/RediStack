@@ -14,7 +14,7 @@
 
 import Logging
 import ServiceDiscovery
-import NIO
+import NIOCore
 import RediStack
 import RediStackTestUtils
 import XCTest
