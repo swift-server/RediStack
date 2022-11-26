@@ -68,7 +68,7 @@ internal final class EmbeddedMockRedisServer {
     }
 
     func createConnectedChannel() -> Channel {
-        let channel = EmbeddedChannel(loop: self.loop)
+        let channel = EmbeddedChannel(handler: GracefulShutdownToCloseHandler(), loop: self.loop)
         channel.closeFuture.whenComplete { _ in
             self.channels.removeAll(where: { $0 === channel })
         }
@@ -82,5 +82,20 @@ internal final class EmbeddedMockRedisServer {
     func shutdown() throws {
         try self.runWhileActive()
         try self.loop.close()
+    }
+}
+
+/// A `ChannelHandler` that triggers a channel close once `RedisGracefulConnectionCloseEvent` is received
+private final class GracefulShutdownToCloseHandler: ChannelHandler, ChannelOutboundHandler {
+    typealias OutboundIn = NIOAny
+
+    func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case is RedisGracefulConnectionCloseEvent:
+            context.close(mode: .all, promise: promise)
+
+        default:
+            context.triggerUserOutboundEvent(event, promise: promise)
+        }
     }
 }

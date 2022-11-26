@@ -184,12 +184,17 @@ public final class RedisConnection: RedisClient {
         self.channel.closeFuture.whenSuccess {
             // if our state is still open, that means we didn't cause the closeFuture to resolve.
             // update state, metrics, and logging
-            guard self.state.isConnected else { return }
-            
+            let oldState = self.state
             self.state = .closed
-            self.defaultLogger.warning("connection was closed unexpectedly")
             RedisMetrics.activeConnectionCount.decrement()
-            self.onUnexpectedClosure?()
+
+            switch oldState {
+            case .shuttingDown, .closed:
+                break
+            case .open, .pubsub:
+                self.defaultLogger.warning("connection was closed unexpectedly")
+                self.onUnexpectedClosure?()
+            }
         }
 
         self.defaultLogger.trace("connection created")
@@ -300,10 +305,11 @@ extension RedisConnection {
 
         // we're now in a shutdown state, starting with the command queue.
         self.state = .shuttingDown
-        
-        let notification = self.sendQuitCommand(logger: logger) // send "QUIT" so that all the responses are written out
-            .flatMap { self.closeChannel() } // close the channel from our end
-            .hop(to: finalEventLoop)
+
+        // Inform ChannelHandler about close intent using "RedisGracefulConnectionCloseEvent"
+        let promise = finalEventLoop.makePromise(of: Void.self)
+        let notification = promise.futureResult
+        self.channel.triggerUserOutboundEvent(RedisGracefulConnectionCloseEvent(), promise: promise)
         
         notification.whenFailure {
             logger.warning("failed to close connection", metadata: [
@@ -311,53 +317,10 @@ extension RedisConnection {
             ])
         }
         notification.whenSuccess {
-            self.state = .closed
             logger.trace("connection is now closed")
-            RedisMetrics.activeConnectionCount.decrement()
         }
         
         return notification
-    }
-    
-    /// Bypasses everything for a normal command and explicitly just sends a "QUIT" command to Redis.
-    /// - Note: If the command fails, the `NIO.EventLoopFuture` will still succeed - as it's not critical for the command to succeed.
-    private func sendQuitCommand(logger: Logger) -> EventLoopFuture<Void> {
-        let payload: RedisCommandHandler.OutboundCommandPayload = (
-            RedisCommand<Void>(keyword: "QUIT", arguments: []).serialized(),
-            self.eventLoop.makePromise()
-        )
-
-        logger.trace("sending QUIT command")
-
-        return self.channel
-            .writeAndFlush(payload) // write the command
-            .flatMap { payload.responsePromise.futureResult } // chain the callback to the response's
-            .map { _ in logger.trace("sent QUIT command") } // ignore the result's value
-            .recover { _ in logger.debug("recovered from error sending QUIT") } // if there's an error, just return to void
-    }
-    
-    /// Attempts to close the `NIO.Channel`.
-    /// SwiftNIO throws a `NIO.EventLoopError.shutdown` if the channel is already closed,
-    /// so that case is captured to let this method's `NIO.EventLoopFuture` still succeed.
-    private func closeChannel() -> EventLoopFuture<Void> {
-        let promise = self.channel.eventLoop.makePromise(of: Void.self)
-        
-        self.channel.close(promise: promise)
-     
-        // if we succeed, great, if not - check the error that happened
-        return promise.futureResult
-            .flatMapError { error in
-                guard let e = error as? EventLoopError else {
-                    return self.eventLoop.makeFailedFuture(error)
-                }
-                
-                // if the error is that the channel is already closed, great - just succeed.
-                // otherwise, fail the chain
-                switch e {
-                case .shutdown: return self.eventLoop.makeSucceededFuture(())
-                default: return self.eventLoop.makeFailedFuture(e)
-                }
-            }
     }
 }
 
