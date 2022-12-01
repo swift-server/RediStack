@@ -30,11 +30,6 @@ public protocol RedisClient {
     /// The client's configured default logger instance, if set.
     var defaultLogger: Logger? { get }
 
-    /// Overrides the default logger on the client with the provided instance for the duration of the returned object.
-    /// - Parameter logger: The logger instance to use in commands on the returned client instance.
-    /// - Returns: A client using the temporary default logger override for command logging.
-    func logging(to logger: Logger) -> RedisClient
-
     /// Sends the given command to Redis.
     /// - Parameters:
     ///     - command: The command to send to Redis for execution.

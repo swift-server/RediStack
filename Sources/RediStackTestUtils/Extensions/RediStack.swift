@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Foundation
+import Logging
 import NIOCore
 import RediStack
 
@@ -23,9 +24,10 @@ extension RedisConnection.Configuration {
     public init(
         host: String = RedisConnection.Configuration.defaultHostname,
         port: Int = RedisConnection.Configuration.defaultPort,
-        password: String? = nil
+        password: String? = nil,
+        defaultLogger: Logger? = nil
     ) throws {
-        try self.init(hostname: host, port: port, password: password)
+        try self.init(hostname: host, port: port, password: password, defaultLogger: defaultLogger)
     }
 }
 

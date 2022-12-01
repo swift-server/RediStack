@@ -174,7 +174,8 @@ extension RedisConnectionPool {
     /// For example:
     /// ```swift
     /// let countFuture = pool.leaseConnection {
-    ///     let client = $0.logging(to: myLogger)
+    ///     client in
+    ///     
     ///     return client.authorize(with: userPassword)
     ///         .flatMap { connection.select(database: userDatabase) }
     ///         .flatMap { connection.increment(counterKey) }
@@ -324,10 +325,6 @@ extension RedisConnectionPool {
 // MARK: RedisClient
 extension RedisConnectionPool: RedisClient {
     public var eventLoop: EventLoop { self.loop }
-
-    public func logging(to logger: Logger) -> RedisClient {
-        return CustomLoggerRedisClient(defaultLogger: logger, client: self)
-    }
     
     public func send<CommandResult>(
         _ command: RedisCommand<CommandResult>,

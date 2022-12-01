@@ -28,24 +28,10 @@ to as [_Protocol-based Context Passing_](https://forums.swift.org/t/the-context-
 ```swift
 // example code, may not reflect current implementation
 
-private struct CustomLoggingRedisClient: RedisClient {
-    // a client that this object will act as a context proxy for
-    private let client: RedisClient
-    private let logger: Logger
-    /* conformance to RedisClient protocol */
-}
-
-extension RedisClient {
-    public func logging(to logger: Logger) -> RedisClient {
-        return CustomLoggingRedisClient(client: self, logger: logger)
-    }
-}
-
 let myCustomLogger = ...
 let connection = ...
-connection
-    .logging(to: myCustomLogger) // will use this logger for all 'user-space' logs for any requests made
-    .ping()
+// will use this logger for all 'user-space' logs generated while serving this command
+connection.ping(logger: myCustomLogger)
 ```
 
 ## Log Guidelines
@@ -53,18 +39,18 @@ connection
 1. Prefer logging at `trace` levels
 1. Prefer `debug` for any log that contains metadata, especially complex ones like structs or classes
   - exceptions to this guideline may include metadata such as object IDs that are triggering the logs
-1. Dynamic values should be attached as metadata rather than string interpolated
-1. All log metadata keys should be added to the `RedisLogging` namespace
-1. Log messages should be in all lowercase, with no punctuation preferred
-  - if a Redis command keyword (such as `QUIT`) is in the log message, it should be in all caps
-1. `warning` logs should be reserved for situations that could lead to `error` or `critical` conditions
-  - this may include leaks or bad state
+1. Dynamic values SHOULD be attached as metadata rather than string interpolated
+1. All log metadata keys SHOULD be added to the `RedisLogging` namespace
+1. Log messages SHOULD be in all lowercase, with no punctuation preferred
+  - if a Redis command keyword (such as `QUIT`) is in the log message, it MUST be in all caps
+1. `warning` logs SHOULD be reserved for situations that could lead to `error` or `critical` conditions
+  - this MAY include leaks or bad state
 1. Only use `error` in situations where the error cannot be expressed by the language, such as by throwing an error or failing `EventLoopFuture`s.
   - this is to avoid high severity logs that developers cannot control and must create filtering mechanisms if they want to ignore emitted logs from **RediStack**
 1. Log a `critical` message before any `preconditionFailure` or `fatalError`
 
 ### Metadata
 
-1. All keys should have the `rdstk` prefix to avoid collisions
-1. Public metadata keys should be 16 characters or less to avoid as many String allocations as possible
-1. Keys should be computed properties to avoid memory costs
+1. All keys SHOULD have the `rdstk` prefix to avoid collisions
+1. Public metadata keys SHOULD be 16 characters or less to avoid as many String allocations as possible
+1. Keys SHOULD be computed properties to avoid memory costs

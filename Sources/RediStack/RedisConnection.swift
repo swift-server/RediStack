@@ -364,10 +364,6 @@ extension RedisConnection {
 // MARK: Logging
 
 extension RedisConnection {
-    public func logging(to logger: Logger) -> RedisClient {
-        return CustomLoggerRedisClient(defaultLogger: self.prepareLoggerForUse(logger), client: self)
-    }
-
     private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
         guard var logger = logger else { return self.defaultLogger }
         logger[metadataKey: RedisLogging.MetadataKeys.connectionID] = "\(self.id)"

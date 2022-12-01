@@ -24,8 +24,7 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let handler = TestLogHandler()
         let logger = Logger(label: #function, factory: { _ in return handler })
         _ = try self.connection
-            .logging(to: logger)
-            .ping()
+            .ping(logger: logger)
             .wait()
         XCTAssertFalse(handler.events.isEmpty)
     }
@@ -34,11 +33,21 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let defaultHandler = TestLogHandler()
         let defaultLogger = Logger(label: #function, factory: { _ in return defaultHandler })
 
+        let connection = try RedisConnection.make(
+            configuration: .init(
+                host: self.redisHostname,
+                port: self.redisPort,
+                password: self.redisPassword,
+                defaultLogger: defaultLogger
+            ),
+            boundEventLoop: self.connection.eventLoop
+        ).wait()
+        defaultHandler.events = [] // empty out events from initialization
+
         let expectedHandler = TestLogHandler()
         let expectedLogger = Logger(label: "something_else", factory: { _ in return expectedHandler })
 
-        _ = try self.connection
-            .logging(to: defaultLogger)
+        _ = try connection
             .ping(logger: expectedLogger)
             .wait()
 
@@ -51,8 +60,7 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         let logger = Logger(label: #function, factory: { _ in return handler })
         
         _ = try self.connection
-            .logging(to: logger)
-            .ping()
+            .ping(logger: logger)
             .wait()
         XCTAssertEqual(
             handler.metadata[RedisLogging.MetadataKeys.connectionID],
@@ -76,8 +84,7 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         pool.activate()
         
         _ = try pool
-            .logging(to: logger)
-            .ping()
+            .ping(logger: logger)
             .wait()
         XCTAssertTrue(handler.metadata.keys.contains(RedisLogging.MetadataKeys.connectionID))
         XCTAssertEqual(
@@ -108,8 +115,7 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         hosts.register("default.local", instances: [address])
 
         _ = try client
-            .logging(to: logger)
-            .ping()
+            .ping(logger: logger)
             .wait()
         XCTAssertTrue(handler.metadata.keys.contains(RedisLogging.MetadataKeys.connectionID))
         XCTAssertEqual(
@@ -132,6 +138,7 @@ final class TestLogHandler: LogHandler {
 
     func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
         self.events.append((level, message, metadata, file, function, line))
+        // print(message, dump(metadata), file, function, line)
     }
 
     subscript(metadataKey key: String) -> Logger.Metadata.Value? {
