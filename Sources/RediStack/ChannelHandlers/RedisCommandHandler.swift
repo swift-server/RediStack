@@ -44,7 +44,9 @@ public final class RedisCommandHandler {
     }
     
     private enum State {
-        case `default`, error(Error)
+        case `default`
+        case draining(EventLoopPromise<Void>?)
+        case error(Error)
     }
 }
 
@@ -70,6 +72,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
     /// See `NIO.ChannelInboundHandler.channelInactive(context:)`
     /// - Note: `RedisMetrics.commandFailureCount` is **not** incremented from this method.
     public func channelInactive(context: ChannelHandlerContext) {
+        self.state = .error(RedisClientError.connectionClosed)
         self._failCommandQueue(because: RedisClientError.connectionClosed)
     }
     
@@ -100,6 +103,16 @@ extension RedisCommandHandler: ChannelInboundHandler {
             leadPromise.succeed(value)
             RedisMetrics.commandSuccessCount.increment()
         }
+
+        switch self.state {
+        case .draining(let promise):
+            if self.commandResponseQueue.isEmpty {
+                context.close(mode: .all, promise: promise)
+            }
+
+        case .error, .`default`:
+            break
+        }
     }
 }
 
@@ -119,7 +132,11 @@ extension RedisCommandHandler: ChannelOutboundHandler {
         let commandPayload = self.unwrapOutboundIn(data)
         
         switch self.state {
-        case let .error(e): commandPayload.responsePromise.fail(e)
+        case let .error(e):
+            commandPayload.responsePromise.fail(e)
+
+        case .draining:
+            commandPayload.responsePromise.fail(RedisClientError.connectionClosed)
             
         case .default:
             self.commandResponseQueue.append(commandPayload.responsePromise)
@@ -129,4 +146,39 @@ extension RedisCommandHandler: ChannelOutboundHandler {
             )
         }
     }
+
+    /// Listens for ``RedisGracefulConnectionCloseEvent``. If such an event is received the handler will wait
+    /// until all currently running commands have returned. Once all requests are fulfilled the handler will close the channel.
+    ///
+    /// If a command is sent on the channel, after the ``RedisGracefulConnectionCloseEvent`` was scheduled,
+    /// the command will be failed with a ``RedisClientError/connectionClosed``.
+    ///
+    /// See `NIO.ChannelOutboundHandler.triggerUserOutboundEvent(context:event:promise:)`
+    public func triggerUserOutboundEvent(context: ChannelHandlerContext, event: Any, promise: EventLoopPromise<Void>?) {
+        switch event {
+        case is RedisGracefulConnectionCloseEvent:
+            switch self.state {
+            case .default:
+                if self.commandResponseQueue.isEmpty {
+                    self.state = .error(RedisClientError.connectionClosed)
+                    context.close(mode: .all, promise: promise)
+                } else {
+                    self.state = .draining(promise)
+                }
+
+            case .error, .draining:
+                promise?.succeed(())
+                break
+            }
+
+        default:
+            context.triggerUserOutboundEvent(event, promise: promise)
+        }
+    }
+}
+
+/// A channel event that informs the ``RedisCommandHandler`` that it should close the channel gracefully
+public struct RedisGracefulConnectionCloseEvent {
+    /// Creates a ``RedisGracefulConnectionCloseEvent``
+    public init() {}
 }
