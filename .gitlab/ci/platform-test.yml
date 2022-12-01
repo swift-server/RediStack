@@ -1,8 +1,9 @@
 stages:
   - Test
 
-.unit-test:
+.platform-test:
   stage: Test
+  allow_failure: true
   tags:
     - docker
   variables:

@@ -1,7 +1,7 @@
-include: '/.gitlab/ci/test-template.yml'
+include: '/.gitlab/ci/platform-test.yml'
 
-.centos7-test-workaround:
-  extends: .unit-test
+.centos7:
+  extends: .platform-test
   before_script:
     - yum install -y make libcurl-devel
     - git clone https://github.com/git/git -bv2.28.0 --depth 1
@@ -9,14 +9,17 @@ include: '/.gitlab/ci/test-template.yml'
     - make prefix=/usr -j all install NO_OPENSSL=1 NO_EXPAT=1 NO_TCLTK=1 NO_GETTEXT=1 NO_PERL=1
 
 swift trunk:
-  extends: .centos7-test-workaround
-  image: swiftlang/swift:nightly-master-centos7
-  allow_failure: true
+  extends: .centos7
+  image: swiftlang/swift:nightly-main-centos7
 
-swift 5.3:
-  extends: .centos7-test-workaround
-  image: swift:5.3-centos7
+swift 5.7:
+  extends: .centos7
+  image: swiftlang/swift:nightly-5.7-centos7
 
-swift 5.2:
-  extends: .centos7-test-workaround
-  image: swift:5.2-centos7
+swift 5.6:
+  extends: .centos7
+  image: swift:5.6-centos7
+
+swift 5.5:
+  extends: .centos7
+  image: swift:5.5-centos7

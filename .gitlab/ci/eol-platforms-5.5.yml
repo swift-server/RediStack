@@ -1,0 +1,5 @@
+include: '/.gitlab/ci/platform-test.yml'
+
+swift 5.5:
+  extends: .platform-test
+  image: swift:5.5-${SWIFT_PLATFORM_NAME}

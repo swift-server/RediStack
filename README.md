@@ -4,7 +4,7 @@
 <p>
     <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
     <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.1+-orange.svg" alt="Swift 5.1+"></a>
+    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" alt="Swift 5.5+"></a>
     <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
 </p>
 
@@ -32,6 +32,7 @@ The table below lists the major releases alongside their compatible language, de
 | RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
 |:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
 | `from: "1.0.0"` | 5.1+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x ..< 3.0 |
+| `from: "1.4.0"` | 5.5+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x ..< 3.0 |
 
 > **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
 
@@ -117,15 +118,18 @@ This policy is to balance the desire for as much backwards compatibility as poss
 The following table shows the combination of Swift language versions and operating systems that
 receive regular unit testing (either in development, or with CI).
 
-| Platform              | Swift 5.1          | 5.2                | 5.3                | Trunk              |
-|:----------------------|:------------------:|:------------------:|:------------------:|:------------------:|
-| macOS Latest (Intel)  |                    |                    | :white_check_mark: |                    |
-| Ubuntu 20.04 (Focal)  |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Ubuntu 18.04 (Bionic) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Ubuntu 16.04 (Xenial) | :white_check_mark: | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| Amazon Linux 2        |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| CentOS 7              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
-| CentOS 8              |                    | :white_check_mark: | :white_check_mark: | :white_check_mark: |
+| Platform                    | Swift 5.5 | 5.6 | 5.7 | Trunk |
+|:----------------------------|:---------:|:---:|:---:|:-----:|
+| macOS Latest (M1)           |   |   | ✅ |   |
+| Ubuntu 20.04 (Focal)        | ✅ | ✅ | ✅ | ✅ |
+| Ubuntu 18.04 (Bionic)       | ✅ | ✅ | ✅ | ✅ |
+| Ubuntu 16.04 (Xenial)**³**  | ✅ | ❌ | ❌ | ❌ |
+| Amazon Linux 2              | ✅ | ✅ | ✅ | ✅ |
+| CentOS 8**³**               | ✅ | ❌ | ❌ | ❌ |
+| CentOS 7                    | ✅ | ✅ | ✅ | ✅ |
+
+> **³** _CentOS 8 and Ubuntu 16.04 are no longer officially supported by Swift after [Swift 5.5](https://github.com/apple/swift-docker/pull/273)._
+
 
 ## License
 

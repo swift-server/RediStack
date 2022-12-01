@@ -1,37 +1,8 @@
+include: '/.gitlab/ci/platform-test.yml'
+
 stages:
   - Platform Tests
   - Quality Checks
-  - Docs
- 
-pages:
-  stage: Docs
-  only:
-    - tags
-  image: norionomura/jazzy
-  tags:
-    - docker
-  variables:
-    MODULE_NAME: "RediStack"
-    REPO_URL: "https://gitlab.com/mordil/swift-redi-stack"
-  script: |
-    export VERSION=$(git describe --abbrev=0 --tags || echo "0.0.0")
-    swift build
-    sourcekitten doc --spm-module "$MODULE_NAME" > "./$MODULE_NAME.json"
-    jazzy --clean \
-          --author "Nathan Harris (Mordil)" \
-          --readme "./README.md" \
-          --author_url "https://www.mordil.info" \
-          --github_url "$REPO_URL" \
-          --github-file-prefix "$REPO_URL/blob/$VERSION" \
-          --root-url "https://mordil.gitlab.io/swift-redi-stack/" \
-          --module "$MODULE_NAME" \
-          --module-version "$VERSION" \
-          --theme docs/theme \
-          --sourcekitten-sourcefile "./$MODULE_NAME.json" \
-          --output "./public"
-  artifacts:
-    paths:
-      - public
 
 Code Climate:
   only:
@@ -58,38 +29,56 @@ Code Climate:
     reports:
       codequality: gl-code-quality-report.json
 
-Ubuntu Bionic:
+Code Coverage:
+  extends: .platform-test
+  stage: Quality Checks
+  allow_failure: false
+  image: swift:latest
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        - '*.swift'
+  script: scripts/generate_code_coverage.sh
+  coverage: '/TOTAL.*(\s\d+\.\d+%)/'
+
+.standard-platform-test:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "push"
   stage: Platform Tests
   trigger:
     strategy: depend
-    include: '/.gitlab/ci/ubuntu-bionic.yml'
+    include: '/.gitlab/ci/standard-platforms.yml'
 
 Ubuntu Xenial:
-  stage: Platform Tests
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: xenial
   trigger:
-    strategy: depend
-    include: '/.gitlab/ci/ubuntu-xenial.yml'
+    include: '/.gitlab/ci/eol-platforms-5.5.yml'
+
+Ubuntu Bionic:
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: bionic
 
 Ubuntu Focal:
-  stage: Platform Tests
-  trigger:
-    strategy: depend
-    include: '/.gitlab/ci/ubuntu-focal.yml'
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: focal
 
 CentOS 7:
-  stage: Platform Tests
+  extends: .standard-platform-test
   trigger:
-    strategy: depend
     include: '/.gitlab/ci/centos-7.yml'
 
 CentOS 8:
-  stage: Platform Tests
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: centos8
   trigger:
-    strategy: depend
-    include: '/.gitlab/ci/centos-8.yml'
+    include: '/.gitlab/ci/eol-platforms-5.5.yml'
 
 Amazon Linux 2:
-  stage: Platform Tests
-  trigger:
-    strategy: depend
-    include: '/.gitlab/ci/amazonlinux-2.yml'
+  extends: .standard-platform-test
+  variables:
+    SWIFT_PLATFORM_NAME: amazonlinux2
