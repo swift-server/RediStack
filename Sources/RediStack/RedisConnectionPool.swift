@@ -544,6 +544,7 @@ extension RedisConnection.Configuration {
     fileprivate init(address: SocketAddress, prototypeConfiguration: RedisConnectionPool.PoolConnectionConfiguration) throws {
         try self.init(
             address: address,
+            username: prototypeConfiguration.username,
             password: prototypeConfiguration.password,
             initialDatabase: prototypeConfiguration.initialDatabase,
             defaultLogger: prototypeConfiguration.defaultLogger

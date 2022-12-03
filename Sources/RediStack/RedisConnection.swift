@@ -64,7 +64,7 @@ extension RedisConnection {
         // if a password is specified, use it to authenticate before further operations happen
         if let password = config.password {
             future = future.flatMap { connection in
-                return connection.authorize(with: password).map { connection }
+                return connection.authorize(username: config.username, password: password).map { connection }
             }
         }
 

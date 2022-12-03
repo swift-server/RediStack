@@ -80,6 +80,8 @@ extension RedisConnection {
         /// The port of the connection address. If the address is a Unix socket, then it will be `nil`.
         public var port: Int? { self.address.port }
         /// The password used to authenticate the connection.
+        public let username: String?
+        /// The password used to authenticate the connection.
         public let password: String?
         /// The initial database index that the connection should use.
         public let initialDatabase: Int?
@@ -91,6 +93,7 @@ extension RedisConnection {
         /// Creates a new connection configuration with the provided details.
         /// - Parameters:
         ///     - address: The socket address information to use for creating the Redis connection.
+        ///     - username: The optional username to authenticate the connection with. The default is `nil`.
         ///     - password: The optional password to authenticate the connection with. The default is `nil`.
         ///     - initialDatabase: The optional database index to initially connect to. The default is `nil`.
         ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
@@ -99,6 +102,7 @@ extension RedisConnection {
         /// - Throws: `RedisConnection.Configuration.ValidationError` if invalid arguments are provided.
         public init(
             address: SocketAddress,
+            username: String? = nil,
             password: String? = nil,
             initialDatabase: Int? = nil,
             defaultLogger: Logger? = nil
@@ -108,6 +112,7 @@ extension RedisConnection {
             }
             
             self.address = address
+            self.username = username
             self.password = password
             self.initialDatabase = initialDatabase
             self.defaultLogger = defaultLogger ?? Configuration.defaultLogger
@@ -117,6 +122,7 @@ extension RedisConnection {
         /// - Parameters:
         ///     - hostname: The remote hostname to connect to.
         ///     - port: The port that the Redis instance connects with. The default is `RedisConnection.Configuration.defaultPort`.
+        ///     - username: The optional username to authenticate the connection with. The default is `nil`.
         ///     - password: The optional password to authenticate the connection with. The default is `nil`.
         ///     - initialDatabase: The optional database index to initially connect to. The default is `nil`.
         ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
@@ -128,12 +134,14 @@ extension RedisConnection {
         public init(
             hostname: String,
             port: Int = Self.defaultPort,
+            username: String? = nil,
             password: String? = nil,
             initialDatabase: Int? = nil,
             defaultLogger: Logger? = nil
         ) throws {
             try self.init(
                 address: try .makeAddressResolvingHost(hostname, port: port),
+                username: username,
                 password: password,
                 initialDatabase: initialDatabase,
                 defaultLogger: defaultLogger
@@ -187,6 +195,7 @@ extension RedisConnection {
             
             try self.init(
                 address: try .makeAddressResolvingHost(host, port: url.port ?? Self.defaultPort),
+                username: url.user,
                 password: url.password,
                 initialDatabase: databaseID,
                 defaultLogger: defaultLogger

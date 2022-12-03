@@ -31,6 +31,9 @@ open class RedisIntegrationTestCase: XCTestCase {
     /// The port to connect over to Redis, defaulting to `RedisConnection.defaultPort`.
     open var redisPort: Int { RedisConnection.Configuration.defaultPort }
     
+    /// The username to use to connect to Redis. Default is `nil` - use password authentication only.
+    open var redisUsername: String? { return nil }
+
     /// The password to use to connect to Redis. Default is `nil` - no password authentication.
     open var redisPassword: String? { return nil }
     
@@ -85,6 +88,7 @@ open class RedisIntegrationTestCase: XCTestCase {
             configuration: .init(
                 host: self.redisHostname,
                 port: self.redisPort,
+                username: self.redisUsername,
                 password: self.redisPassword
             ),
             boundEventLoop: eventLoopGroup.next()

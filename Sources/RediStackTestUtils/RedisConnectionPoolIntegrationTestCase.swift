@@ -33,6 +33,9 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     open var redisPort: Int { RedisConnection.Configuration.defaultPort }
 
     /// The password to use to connect to Redis. Default is `nil` - no password authentication.
+    open var redisUsername: String? { return nil }
+
+    /// The password to use to connect to Redis. Default is `nil` - no password authentication.
     open var redisPassword: String? { return nil }
 
     public var pool: RedisConnectionPool!
@@ -87,7 +90,7 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
             configuration: .init(
                 initialServerConnectionAddresses: addresses,
                 connectionCountBehavior: .strict(maximumConnectionCount: 4, minimumConnectionCount: minimumConnectionCount),
-                connectionConfiguration: .init(password: self.redisPassword),
+                connectionConfiguration: .init(username: redisUsername, password: self.redisPassword),
                 retryStrategy: .exponentialBackoff(initialDelay: initialConnectionBackoffDelay, timeout: connectionRetryTimeout)
             ),
             boundEventLoop: self.eventLoopGroup.next()
