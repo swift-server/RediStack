@@ -12,7 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
+import NIOPosix
+import NIOEmbedded
+import Atomics
 @testable import RediStack
 import XCTest
 
@@ -41,6 +44,83 @@ final class RedisCommandHandlerTests: XCTestCase {
                 return
             }
             XCTAssertEqual(error, .connectionClosed)
+        }
+    }
+
+    func testCloseIsTriggeredOnceCommandQueueIsEmpty() {
+        let loop = EmbeddedEventLoop()
+        let channel = EmbeddedChannel(handler: RedisCommandHandler(), loop: loop)
+
+        XCTAssertNoThrow(try channel.connect(to: .init(unixDomainSocketPath: "/foo")).wait())
+        XCTAssertTrue(channel.isActive)
+
+        let getFoo = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "foo"))])
+        let promiseFoo = loop.makePromise(of: RESPValue.self)
+        let commandFoo = (message: getFoo, responsePromise: promiseFoo)
+        XCTAssertNoThrow(try channel.writeOutbound(commandFoo))
+        XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getFoo)
+
+        let getBar = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "bar"))])
+        let promiseBar = loop.makePromise(of: RESPValue.self)
+        let commandBar = (message: getBar, responsePromise: promiseBar)
+        XCTAssertNoThrow(try channel.writeOutbound(commandBar))
+        XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getBar)
+
+        let getBaz = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "baz"))])
+        let promiseBaz = loop.makePromise(of: RESPValue.self)
+        let commandBaz = (message: getBaz, responsePromise: promiseBaz)
+        XCTAssertNoThrow(try channel.writeOutbound(commandBaz))
+        XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getBaz)
+
+        let gracefulClosePromise = loop.makePromise(of: Void.self)
+        let channelCloseHitCounter = ManagedAtomic<Int>(0)
+        gracefulClosePromise.futureResult.whenComplete { _ in
+            channelCloseHitCounter.wrappingIncrement(ordering: .relaxed)
+        }
+        channel.triggerUserOutboundEvent(RedisGracefulConnectionCloseEvent(), promise: gracefulClosePromise)
+        XCTAssertEqual(channelCloseHitCounter.load(ordering: .relaxed), 0)
+
+        let fooResponse = RESPValue.simpleString(.init(string: "fooresult"))
+        XCTAssertNoThrow(try channel.writeInbound(fooResponse))
+        XCTAssertTrue(channel.isActive)
+        XCTAssertEqual(channelCloseHitCounter.load(ordering: .relaxed), 0)
+        XCTAssertEqual(try promiseFoo.futureResult.wait(), fooResponse)
+
+        let barResponse = RESPValue.simpleString(.init(string: "barresult"))
+        XCTAssertNoThrow(try channel.writeInbound(barResponse))
+        XCTAssertTrue(channel.isActive)
+        XCTAssertEqual(channelCloseHitCounter.load(ordering: .relaxed), 0)
+        XCTAssertEqual(try promiseBar.futureResult.wait(), barResponse)
+
+        let bazResponse = RESPValue.simpleString(.init(string: "bazresult"))
+        XCTAssertNoThrow(try channel.writeInbound(bazResponse))
+        XCTAssertEqual(try promiseBaz.futureResult.wait(), bazResponse)
+        XCTAssertFalse(channel.isActive)
+        XCTAssertEqual(channelCloseHitCounter.load(ordering: .relaxed), 1)
+        XCTAssertNoThrow(try gracefulClosePromise.futureResult.wait())
+    }
+
+    func testCloseIsTriggeredRightAwayIfCommandQueueIsEmpty() {
+        let loop = EmbeddedEventLoop()
+        let channel = EmbeddedChannel(handler: RedisCommandHandler(), loop: loop)
+        XCTAssertNoThrow(try channel.connect(to: .init(unixDomainSocketPath: "/foo")).wait())
+        XCTAssertTrue(channel.isActive)
+
+        let gracefulClosePromise = loop.makePromise(of: Void.self)
+        let gracefulCloseHitCounter = ManagedAtomic<Int>(0)
+        gracefulClosePromise.futureResult.whenComplete { _ in
+            gracefulCloseHitCounter.wrappingIncrement(ordering: .relaxed)
+        }
+        channel.triggerUserOutboundEvent(RedisGracefulConnectionCloseEvent(), promise: gracefulClosePromise)
+        XCTAssertFalse(channel.isActive)
+        XCTAssertEqual(gracefulCloseHitCounter.load(ordering: .relaxed), 1)
+
+        let getBar = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "bar"))])
+        let promiseBar = loop.makePromise(of: RESPValue.self)
+        let commandBar = (message: getBar, responsePromise: promiseBar)
+        channel.write(commandBar, promise: nil)
+        XCTAssertThrowsError(try promiseBar.futureResult.wait()) {
+            XCTAssertEqual($0 as? RedisClientError, .connectionClosed)
         }
     }
 }
