@@ -274,3 +274,63 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(elements.count, 3)
     }
 }
+
+// MARK: #116 tests
+
+extension ListCommandsTests {
+    func test_rpoplpush_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.rpoplpush(from: "list1", to: "\(#function)"))
+            .wait()
+        XCTAssertNil(result)
+    }
+
+    func test_rpop_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.rpop(from: "\(#function)"))
+            .wait()
+        XCTAssertNil(result)
+    }
+
+    func test_lpop_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.lpop(from: "\(#function)"))
+            .wait()
+        XCTAssertNil(result)
+    }
+
+    func test_lindex_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.lindex(3, from: "\(#function)"))
+            .wait()
+        XCTAssertNil(result)
+    }
+
+    func test_lrange_whenEmpty_succeeds_withEmpty() throws {
+        let result = try self
+            .connection
+            .send(.lrange(from: "\(#function)", firstIndex: 0, lastIndex: 3))
+            .wait()
+        XCTAssertTrue(result.isEmpty)
+    }
+
+    func test_brpoplpush_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.brpoplpush(from: "\(#function)", to: "list1", timeout: .seconds(1)))
+            .wait()
+        XCTAssertNil(result)
+    }
+
+    func test_brpop_whenEmpty_succeeds_withNil() throws {
+        let result = try self
+            .connection
+            .send(.brpop(from: "\(#function)", timeout: .seconds(1)))
+            .wait()
+        XCTAssertNil(result)
+    }
+}

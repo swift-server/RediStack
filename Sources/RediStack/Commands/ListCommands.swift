@@ -25,6 +25,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The value popped from the list, otherwise `nil`.
     public static func blpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> RedisCommand<RESPValue?> {
         return ._bpop(keyword: "BLPOP", [key], timeout, { $0?.1 })
     }
@@ -37,6 +38,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - keys: The list of keys to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The popped value and the key of its source list, otherwise `nil`.
     public static func blpop(
         from keys: [RedisKey],
         timeout: TimeAmount = .seconds(0)
@@ -52,6 +54,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - keys: The list of keys to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The popped value and the key of its source list, otherwise `nil`.
     public static func blpop(
         from keys: RedisKey...,
         timeout: TimeAmount = .seconds(0)
@@ -65,6 +68,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The value popped from the list, otherwise `nil`.
     public static func brpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> RedisCommand<RESPValue?> {
         return ._bpop(keyword: "BRPOP", [key], timeout, { $0?.1 })
     }
@@ -77,6 +81,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The popped value and the key of its source list, otherwise `nil`.
     public static func brpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> RedisCommand<(RedisKey, RESPValue)?> {
         return ._bpop(keyword: "BRPOP", keys, timeout, { $0 })
     }
@@ -89,6 +94,7 @@ extension RedisCommand {
     /// - Parameters:
     ///     - key: The key of the list to pop from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    /// - Returns: The popped value and the key of its source list, otherwise `nil`.
     public static func brpop(
         from keys: RedisKey...,
         timeout: TimeAmount = .seconds(0)
@@ -103,23 +109,26 @@ extension RedisCommand {
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
     ///     - timeout: The max time to wait for a value to use. `0` seconds means to wait indefinitely.
+    /// - Returns: The value removed from the `source`, otherwise `nil`.
     public static func brpoplpush(
         from source: RedisKey,
         to dest: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) -> RedisCommand<RESPValue?> {
+        assert(timeout >= .seconds(0), "anything smaller than a second will be treated as 0 seconds")
         let args: [RESPValue] = [
             .init(from: source),
             .init(from: dest),
             .init(from: timeout.seconds)
         ]
-        return .init(keyword: "BRPOPLPUSH", arguments: args)
+        return .init(keyword: "BRPOPLPUSH", arguments: args, mapValueToResult: { try? $0.map() })
     }
 
     /// [LINDEX](https://redis.io/commands/lindex)
     /// - Parameters:
     ///     - index: The 0-based index of the element to get.
     ///     - key: The key of the list.
+    /// - Returns: The value stored at the index, otherwise `nil`.
     public static func lindex(_ index: Int, from key: RedisKey) -> RedisCommand<RESPValue?> {
         let args: [RESPValue] = [
             .init(from: key),
@@ -161,6 +170,7 @@ extension RedisCommand {
 
     /// [LPOP](https://redis.io/commands/lpop)
     /// - Parameter key: The key of the list to pop from.
+    /// - Returns: The value popped from the list, otherwise `nil`.
     public static func lpop(from key: RedisKey) -> RedisCommand<RESPValue?> {
         let args = [RESPValue(from: key)]
         return .init(keyword: "LPOP", arguments: args) { try? $0.map() }
@@ -472,6 +482,7 @@ extension RedisCommand {
 
     /// [RPOP](https://redis.io/commands/rpop)
     /// - Parameter key: The key of the list to pop from.
+    /// - Returns: The value popped from the list, otherwise `nil`.
     public static func rpop(from key: RedisKey) -> RedisCommand<RESPValue?> {
         let args = [RESPValue(from: key)]
         return .init(keyword: "RPOP", arguments: args) { try? $0.map() }
@@ -481,12 +492,13 @@ extension RedisCommand {
     /// - Parameters:
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
+    /// - Returns: The value removed from the `source`, otherwise `nil`.
     public static func rpoplpush(from source: RedisKey, to dest: RedisKey) -> RedisCommand<RESPValue?> {
         let args: [RESPValue] = [
             .init(from: source),
             .init(from: dest)
         ]
-        return .init(keyword: "RPOPLPUSH", arguments: args)
+        return .init(keyword: "RPOPLPUSH", arguments: args, mapValueToResult: { try? $0.map() })
     }
 
     /// [RPUSH](https://redis.io/commands/rpush)
@@ -537,6 +549,8 @@ extension RedisCommand {
         _ timeout: TimeAmount,
         _ transform: @escaping ((RedisKey, RESPValue)?) throws -> ResultType?
     ) -> RedisCommand<ResultType?> {
+        assert(timeout >= .seconds(0), "anything smaller than a second will be treated as 0 seconds")
+
         var args = keys.map(RESPValue.init(from:))
         args.append(.init(bulk: timeout.seconds))
         
