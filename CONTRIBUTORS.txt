@@ -13,9 +13,13 @@ needs to be listed here.
 ### Contributors
 
 - Cory Benfield <lukasa@apple.com>
+- Daniel Ramteke <danramteke@gmail.com>
+- Fabian Fett <fabianfett@apple.com>
 - George Barnett <gbarnett@apple.com>
+- Michael Stegeman <michael@stegeman.me>
 - Nathan Harris <nathan@mordil.info>
 - Ondrej Rafaj <ondrej.rafaj@gmail.com>
+- Peter Adams <pp_adams@apple.com>
 - Tanner Nelson <me@tanner.xyz>
 
 **Updating this list**
