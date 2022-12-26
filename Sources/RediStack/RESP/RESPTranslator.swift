@@ -15,18 +15,96 @@
 import protocol Foundation.LocalizedError
 import NIOCore
 
+extension UInt8 {
+    static let newline = UInt8(ascii: "\n")
+    static let carriageReturn = UInt8(ascii: "\r")
+    static let dollar = UInt8(ascii: "$")
+    static let asterisk = UInt8(ascii: "*")
+    static let plus = UInt8(ascii: "+")
+    static let hyphen = UInt8(ascii: "-")
+    static let colon = UInt8(ascii: ":")
+}
+
+// This is not ready for prime-time
+
+/// An exhaustive list of the available versions of the Redis Serialization Protocol.
+/// - Warning: These values are not generally intended to be used outside of this library,
+/// so no guarantees to source stability are given.
+fileprivate enum RESPVersion {
+    /// The RESP version first made available in Redis 1.2.
+    ///
+    /// It was made the default version in Redis 2.0.
+    case v2
+    /// The RESP version first made available in Redis 6.0.
+    case v3
+}
+
+extension RESPTranslator {
+    /// Possible errors thrown while parsing RESP messages.
+    /// - Important: Any of these errors should be considered a **BUG**.
+    ///
+    /// Please file a bug at [https://www.gitlab.com/swift-server-community/RediStack/-/issues](https://www.gitlab.com/swift-server-community/RediStack/-/issues).
+    public struct ParsingError: LocalizedError, Equatable {
+        /// An invalid RESP data type identifier was found.
+        public static let invalidToken = ParsingError(.invalidToken)
+        /// A bulk string size did not match the RESP schema.
+        public static let invalidBulkStringSize = ParsingError(.invalidBulkStringSize)
+        /// A bulk string's declared size did not match its content size.
+        public static let bulkStringSizeMismatch = ParsingError(.bulkStringSizeMismatch)
+        /// A RESP integer did not follow the RESP schema.
+        public static let invalidIntegerFormat = ParsingError(.invalidIntegerFormat)
+
+        public var errorDescription: String? {
+            return self.base.rawValue
+        }
+
+        private let base: Base
+        private init(_ base: Base) { self.base = base }
+
+        private enum Base: String, Equatable {
+            case invalidToken = "Cannot parse RESP: invalid token"
+            case invalidBulkStringSize = "Cannot parse RESP Bulk String: received invalid size"
+            case bulkStringSizeMismatch = "Cannot parse RESP Bulk String: declared size and content size do not match"
+            case invalidIntegerFormat = "Cannot parse RESP Integer: invalid integer format"
+        }
+    }
+}
+
 /// A helper object for translating between raw bytes and Swift types according to the Redis Serialization Protocol (RESP).
 ///
 /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public struct RESPTranslator {
-    public init() { }
+    private let version: RESPVersion
+
+    public init() {
+        self.version = .v2
+    }
+
+    /// Attempts to read a complete `RESPValue` from the `ByteBuffer`.
+    /// - Important: The provided `buffer` will have its reader index moved on a successful read.
+    /// - Throws:
+    ///     - `RESPTranslator.ParsingError.invalidToken` if the first byte is not an expected RESP Data Type token.
+    /// - Parameter buffer: The buffer that contains the bytes that need to be parsed.
+    /// - Returns: The parsed `RESPValue` or nil.
+    public func read(from buffer: inout ByteBuffer) throws -> RESPValue? {
+        return try self.parseBytesV2(from: &buffer)
+    }
+
+    /// Writes the value into the desired `ByteBuffer` in RESP format.
+    /// - Parameters:
+    ///     - value: The value to write into the buffer.
+    ///     - out: The `ByteBuffer` that should be written to.
+    @inlinable
+    public func write<Value: RESPValueConvertible>(_ value: Value, into out: inout ByteBuffer) {
+        out.writeRESPValue(value.convertedToRESPValue())
+    }
 }
 
 // MARK: Writing RESP
 
 /// The carriage return and newline escape symbols, used as the standard signal in RESP for a "message" end.
 /// A "message" in this case is a single data type.
-fileprivate let respEnd: StaticString = "\r\n"
+fileprivate let kSegmentEnd: StaticString = "\r\n"
 
 extension ByteBuffer {
     /// Writes the `RESPValue` into the current buffer, following the RESP specification.
@@ -38,14 +116,14 @@ extension ByteBuffer {
         case .simpleString(var buffer):
             self.writeStaticString("+")
             self.writeBuffer(&buffer)
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             
         case .bulkString(.some(var buffer)):
             self.writeStaticString("$")
             self.writeString("\(buffer.readableBytes)")
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             self.writeBuffer(&buffer)
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             
         case .bulkString(.none):
             self.writeStaticString("$0\r\n\r\n")
@@ -53,7 +131,7 @@ extension ByteBuffer {
         case .integer(let number):
             self.writeStaticString(":")
             self.writeString(number.description)
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             
         case .null:
             self.writeStaticString("$-1\r\n")
@@ -61,78 +139,21 @@ extension ByteBuffer {
         case .error(let error):
             self.writeStaticString("-")
             self.writeString(error.message)
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             
         case .array(let array):
             self.writeStaticString("*")
             self.writeString("\(array.count)")
-            self.writeStaticString(respEnd)
+            self.writeStaticString(kSegmentEnd)
             array.forEach { self.writeRESPValue($0) }
         }
     }
 }
 
-extension RESPTranslator {
-    /// Writes the value into the desired `ByteBuffer` in RESP format.
-    /// - Parameters:
-    ///     - value: The value to write into the buffer.
-    ///     - out: The `ByteBuffer` that should be written to.
-    public func write<Value: RESPValueConvertible>(_ value: Value, into out: inout ByteBuffer) {
-        out.writeRESPValue(value.convertedToRESPValue())
-    }
-}
-
-// MARK: Reading RESP
-
-extension UInt8 {
-    static let newline = UInt8(ascii: "\n")
-    static let carriageReturn = UInt8(ascii: "\r")
-    static let dollar = UInt8(ascii: "$")
-    static let asterisk = UInt8(ascii: "*")
-    static let plus = UInt8(ascii: "+")
-    static let hyphen = UInt8(ascii: "-")
-    static let colon = UInt8(ascii: ":")
-}
+// MARK: V2 Parsing
 
 extension RESPTranslator {
-    /// Possible errors thrown while parsing RESP messages.
-    /// - Important: Any of these errors should be considered a **BUG**.
-    ///
-    /// Please file a bug at [https://www.gitlab.com/mordil/RediStack/-/issues](https://www.gitlab.com/mordil/RediStack/-/issues).
-    public struct ParsingError: LocalizedError, Equatable {
-        /// An invalid RESP data type identifier was found.
-        public static let invalidToken = ParsingError(.invalidToken)
-        /// A bulk string size did not match the RESP schema.
-        public static let invalidBulkStringSize = ParsingError(.invalidBulkStringSize)
-        /// A bulk string's declared size did not match its content size.
-        public static let bulkStringSizeMismatch = ParsingError(.bulkStringSizeMismatch)
-        /// A RESP integer did not follow the RESP schema.
-        public static let invalidIntegerFormat = ParsingError(.invalidIntegerFormat)
-        
-        public var errorDescription: String? {
-            return self.base.rawValue
-        }
-        
-        private let base: Base
-        private init(_ base: Base) { self.base = base }
-        
-        private enum Base: String, Equatable {
-            case invalidToken = "Cannot parse RESP: invalid token"
-            case invalidBulkStringSize = "Cannot parse RESP Bulk String: received invalid size"
-            case bulkStringSizeMismatch = "Cannot parse RESP Bulk String: declared size and content size do not match"
-            case invalidIntegerFormat = "Cannot parse RESP Integer: invalid integer format"
-        }
-    }
-}
-
-extension RESPTranslator {
-    /// Attempts to parse a `RESPValue` from the `ByteBuffer`.
-    /// - Important: The provided `buffer` will have its reader index moved on a successful parse.
-    /// - Throws:
-    ///     - `RESPTranslator.ParsingError.invalidToken` if the first byte is not an expected RESP Data Type token.
-    /// - Parameter buffer: The buffer that contains the bytes that need to be parsed.
-    /// - Returns: The parsed `RESPValue` or nil.
-    public func parseBytes(from buffer: inout ByteBuffer) throws -> RESPValue? {
+    private func parseBytesV2(from buffer: inout ByteBuffer) throws -> RESPValue? {
         var copy = buffer
 
         guard let token = copy.readInteger(as: UInt8.self) else { return nil }
@@ -253,7 +274,7 @@ extension RESPTranslator {
         
         for _ in 0..<elementCount {
             guard buffer.readableBytes > 0 else { return nil }
-            guard let element = try self.parseBytes(from: &buffer) else { return nil }
+            guard let element = try self.read(from: &buffer) else { return nil }
             results.append(element)
         }
         

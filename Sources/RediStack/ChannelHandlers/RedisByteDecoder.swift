@@ -30,7 +30,7 @@ public struct RedisByteDecoder: NIOSingleStepByteToMessageDecoder {
 
     /// See `NIOSingleStepByteToMessageDecoder.decode(buffer:)`
     public func decode(buffer: inout ByteBuffer) throws -> RESPValue? {
-        try self.parser.parseBytes(from: &buffer)
+        try self.parser.read(from: &buffer)
     }
 
     /// See `NIOSingleStepByteToMessageDecoder.decodeLast(buffer:seenEOF)`

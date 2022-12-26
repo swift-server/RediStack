@@ -108,7 +108,7 @@ extension RESPTranslatorTests {
     func testParsing_invalidToken() {
         var buffer = self.allocator.buffer(capacity: 128)
         buffer.writeString("!!!!")
-        XCTAssertThrowsError(try self.parser.parseBytes(from: &buffer)) { error in
+        XCTAssertThrowsError(try self.parser.read(from: &buffer)) { error in
             XCTAssertEqual(error as? RESPTranslator.ParsingError, .invalidToken)
         }
     }
@@ -118,7 +118,7 @@ extension RESPTranslatorTests {
         var buffer = allocator.buffer(capacity: testRESP.count)
         buffer.writeString(testRESP)
         
-        XCTAssertThrowsError(try parser.parseBytes(from: &buffer))
+        XCTAssertThrowsError(try parser.read(from: &buffer))
         XCTAssertEqual(buffer.readerIndex, 0)
     }
     
@@ -211,7 +211,7 @@ extension RESPTranslatorTests {
         var buffer = allocator.buffer(capacity: expectedContent.count)
         buffer.writeString(testString)
         
-        guard let value = try parser.parseBytes(from: &buffer) else { return XCTFail("Failed to parse error") }
+        guard let value = try parser.read(from: &buffer) else { return XCTFail("Failed to parse error") }
         
         XCTAssertEqual(value.error?.message.contains(expectedContent), true)
     }
@@ -224,7 +224,7 @@ extension RESPTranslatorTests {
         var buffer = allocator.buffer(capacity: input.count)
         buffer.writeBytes(input)
         
-        let result = try parser.parseBytes(from: &buffer)
+        let result = try parser.read(from: &buffer)
         assert(buffer.readerIndex == buffer.writerIndex)
         
         return result
@@ -242,7 +242,7 @@ extension RESPTranslatorTests {
         for chunk in messageChunks {
             buffer.writeBytes(chunk)
             
-            guard let result = try parser.parseBytes(from: &buffer) else { continue }
+            guard let result = try parser.read(from: &buffer) else { continue }
             
             results.append(result)
         }
