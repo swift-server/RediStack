@@ -246,11 +246,11 @@ extension RedisClient {
 /// When working with `RedisClient`, runtime errors can be thrown to indicate problems with connection state, decoding assertions, or otherwise.
 public struct RedisClientError: LocalizedError, Equatable, Hashable {
     /// The connection is closed, but was used to try and send a command to Redis.
-    public static let connectionClosed = RedisClientError(.connectionClosed)
+    public static var connectionClosed: RedisClientError { .init(.connectionClosed) }
     /// A race condition was triggered between unsubscribing from the last target while subscribing to a new target.
-    public static let subscriptionModeRaceCondition = RedisClientError(.subscriptionModeRaceCondition)
+    public static var subscriptionModeRaceCondition: RedisClientError { .init(.subscriptionModeRaceCondition) }
     /// A connection that is not authorized for PubSub subscriptions attempted to create a subscription.
-    public static let pubsubNotAllowed = RedisClientError(.pubsubNotAllowed)
+    public static var pubsubNotAllowed: RedisClientError { .init(.pubsubNotAllowed) }
     
     /// Conversion from `RESPValue` to the specified type failed.
     ///
