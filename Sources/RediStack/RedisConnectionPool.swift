@@ -67,7 +67,7 @@ public class RedisConnectionPool {
     /// are buffered only when there are no available addresses to connect to, so in practice it's highly unlikely this will be
     /// hit, but either way, 100 concurrent connection requests ought to be plenty in this case.
     private static let maximumBufferedConnectionRequests = 100
-    
+
     public init(configuration: Configuration, boundEventLoop: EventLoop) {
         var config = configuration
 
@@ -77,13 +77,13 @@ public class RedisConnectionPool {
         var taggedConnectionLogger = config.connectionConfiguration.defaultLogger
         taggedConnectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         config.connectionConfiguration.defaultLogger = taggedConnectionLogger
-        
+
         var taggedPoolLogger = config.poolDefaultLogger
         taggedPoolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         config.poolDefaultLogger = taggedPoolLogger
-        
+
         self.configuration = config
-        
+
         self.pool = ConnectionPool(
             minimumConnectionCount: self.configuration.connectionCountBehavior.minimumConnectionCount,
             maximumConnectionCount: self.configuration.connectionCountBehavior.maximumConnectionCount,
@@ -175,7 +175,7 @@ extension RedisConnectionPool {
     /// ```swift
     /// let countFuture = pool.leaseConnection {
     ///     client in
-    ///     
+    ///
     ///     return client.authorize(with: userPassword)
     ///         .flatMap { connection.select(database: userDatabase) }
     ///         .flatMap { connection.increment(counterKey) }
@@ -203,7 +203,7 @@ extension RedisConnectionPool {
         return self.forwardOperationToConnection(
             {
                 (connection, returnConnection, logger) in
-        
+
                 return operation(connection)
                     .always { _ in returnConnection(connection, logger) }
             },
@@ -228,7 +228,7 @@ extension RedisConnectionPool {
             .info("pool updated with new target addresses", metadata: [
                 RedisLogging.MetadataKeys.newConnectionPoolTargetAddresses: "\(newAddresses)"
             ])
-        
+
         self.loop.execute {
             self.serverConnectionAddresses.update(newAddresses)
 
@@ -260,7 +260,7 @@ extension RedisConnectionPool {
             self.requestsForConnections.append(promise)
             return promise.futureResult
         }
-        
+
         let connectionConfig: RedisConnection.Configuration
         do {
             connectionConfig = try .init(
@@ -281,6 +281,9 @@ extension RedisConnectionPool {
             .map { connection in
                 // disallow subscriptions on all connections by default to enforce our management of PubSub state
                 connection.allowSubscriptions = false
+                connection.onUnexpectedClosure = { [weak self] in
+                    self?.configuration.onUnexpectedConnectionClose?(connection)
+                }
                 return connection
             }
     }
@@ -325,7 +328,7 @@ extension RedisConnectionPool {
 // MARK: RedisClient
 extension RedisConnectionPool: RedisClient {
     public var eventLoop: EventLoop { self.loop }
-    
+
     public func send<CommandResult>(
         _ command: RedisCommand<CommandResult>,
         eventLoop: EventLoop? = nil,
@@ -346,7 +349,7 @@ extension RedisConnectionPool: RedisClient {
         )
         .hop(to: eventLoop ?? self.eventLoop)
     }
-    
+
     public func subscribe(
         to channels: [RedisChannelName],
         eventLoop: EventLoop? = nil,
@@ -369,7 +372,7 @@ extension RedisConnectionPool: RedisClient {
             taskLogger: logger
         )
     }
-    
+
     public func psubscribe(
         to patterns: [String],
         eventLoop: EventLoop? = nil,
@@ -392,7 +395,7 @@ extension RedisConnectionPool: RedisClient {
             taskLogger: logger
         )
     }
-    
+
     public func unsubscribe(
         from channels: [RedisChannelName],
         eventLoop: EventLoop? = nil,
@@ -404,7 +407,7 @@ extension RedisConnectionPool: RedisClient {
             taskLogger: logger
         )
     }
-    
+
     public func punsubscribe(
         from patterns: [String],
         eventLoop: EventLoop? = nil,
@@ -455,7 +458,7 @@ extension RedisConnectionPool: RedisClient {
                         self.pubsubConnection = nil // break ref cycle
                     }
                 }
-                
+
                 return operation(connection, wrappedReceiver, logger)
             },
             preferredConnection: self.pubsubConnection,
@@ -527,7 +530,7 @@ extension RedisConnectionPool: RedisClient {
         }
 
         let logger = self.prepareLoggerForUse(taskLogger)
-        
+
         guard let connection = preferredConnection else {
             return pool
                 .leaseConnection(logger: logger)
@@ -558,30 +561,30 @@ extension RedisConnectionPool {
         private var addresses: [SocketAddress]
 
         private var index: Array<SocketAddress>.Index
-        
+
         internal init(initialAddresses: [SocketAddress]) {
             self.addresses = initialAddresses
             self.index = self.addresses.startIndex
         }
-        
+
         internal mutating func nextTarget() -> SocketAddress? {
             // early exit on 0, makes life easier
             guard !self.addresses.isEmpty else {
                 self.index = self.addresses.startIndex
                 return nil
             }
-            
+
             let nextTarget = self.addresses[self.index]
-            
+
             // it's an invariant of this function that the index is always valid for subscripting the collection
             self.addresses.formIndex(after: &self.index)
             if self.index == self.addresses.endIndex {
                 self.index = self.addresses.startIndex
             }
-            
+
             return nextTarget
         }
-        
+
         internal mutating func update(_ newAddresses: [SocketAddress]) {
             self.addresses = newAddresses
             self.index = self.addresses.startIndex

@@ -22,7 +22,7 @@ import NIOConcurrencyHelpers
 import NIOPosix
 
 extension RedisConnection {
-    
+
     /// Creates a new connection with provided configuration and sychronization objects.
     ///
     /// If you would like to specialize the `NIO.ClientBootstrap` that the connection communicates on, override the default by passing it in as `configuredTCPClient`.
@@ -56,7 +56,7 @@ extension RedisConnection {
         configuredTCPClient client: ClientBootstrap? = nil
     ) -> EventLoopFuture<RedisConnection> {
         let client = client ?? .makeRedisTCPClient(group: eventLoop)
-        
+
         var future = client
             .connect(to: config.address)
             .map { return RedisConnection(configuredRESPChannel: $0, defaultLogger: config.defaultLogger) }
@@ -74,7 +74,7 @@ extension RedisConnection {
                 return connection.select(database: database).map { connection }
             }
         }
-        
+
         return future
     }
 }
@@ -150,7 +150,7 @@ public final class RedisConnection: RedisClient {
     public var onUnexpectedClosure: (() -> Void)?
 
     internal let channel: Channel
-    
+
     private let autoflush = ManagedAtomic<Bool>(true)
     private let allowPubSub = ManagedAtomic<Bool>(true)
     private let _stateLock = NIOLock()
@@ -159,14 +159,14 @@ public final class RedisConnection: RedisClient {
         get { return _stateLock.withLock { self._state } }
         set(newValue) { _stateLock.withLockVoid { self._state = newValue } }
     }
-    
+
     deinit {
         if isConnected {
             assertionFailure("close() was not called before deinit!")
             self.defaultLogger.warning("connection was not properly shutdown before deinit")
         }
     }
-    
+
     internal init(configuredRESPChannel: Channel, defaultLogger: Logger) {
         self.channel = configuredRESPChannel
         // there is a mix of verbiage here as the API is forward thinking towards "baggage context"
@@ -178,7 +178,7 @@ public final class RedisConnection: RedisClient {
 
         RedisMetrics.activeConnectionCount.increment()
         RedisMetrics.totalConnectionCount.increment()
-        
+
         // attach a callback to the channel to capture situations where the channel might be closed out from under
         // the connection
         self.channel.closeFuture.whenSuccess {
@@ -199,13 +199,13 @@ public final class RedisConnection: RedisClient {
 
         self.defaultLogger.trace("connection created")
     }
-    
+
     internal enum ConnectionState {
         case open
         case pubsub(RedisPubSubHandler)
         case shuttingDown
         case closed
-        
+
         var isConnected: Bool {
             switch self {
             case .open, .pubsub: return true
@@ -236,25 +236,25 @@ extension RedisConnection {
             return finalEventLoop.makeFailedFuture(error)
         }
         logger.trace("received command request")
-        
+
         logger.debug("sending command", metadata: [
             RedisLogging.MetadataKeys.command: "\(command)"
         ])
-        
+
         let promise = self.eventLoop.makePromise(of: RESPValue.self)
-        
+
         let startTime = DispatchTime.now().uptimeNanoseconds
         promise.futureResult.whenComplete { result in
             let duration = DispatchTime.now().uptimeNanoseconds - startTime
             RedisMetrics.commandRoundTripTime.recordNanoseconds(duration)
-            
+
             // log data based on the result
             switch result {
             case let .failure(error):
                 logger.debug("command failed", metadata: [
                     RedisLogging.MetadataKeys.error: "\(error.localizedDescription)"
                 ])
-                
+
             case let .success(value):
                 logger.debug("command succeeded", metadata: [
                     RedisLogging.MetadataKeys.commandResult: "\(value)"
@@ -263,7 +263,7 @@ extension RedisConnection {
         }
 
         defer { logger.trace("command sent") }
-        
+
         let outboundData: RedisCommandHandler.OutboundCommandPayload = (command.serialized(), promise)
         let writeFuture: EventLoopFuture<Void> = self.sendCommandsImmediately
             ? self.channel.writeAndFlush(outboundData)
@@ -310,7 +310,7 @@ extension RedisConnection {
         let promise = finalEventLoop.makePromise(of: Void.self)
         let notification = promise.futureResult
         self.channel.triggerUserOutboundEvent(RedisGracefulConnectionCloseEvent(), promise: promise)
-        
+
         notification.whenFailure {
             logger.warning("failed to close connection", metadata: [
                 RedisLogging.MetadataKeys.error: "\($0)"
@@ -319,7 +319,7 @@ extension RedisConnection {
         notification.whenSuccess {
             logger.trace("connection is now closed")
         }
-        
+
         return notification
     }
 }
@@ -363,9 +363,9 @@ extension RedisConnection {
     ) -> EventLoopFuture<Void> {
         let logger = self.prepareLoggerForUse(logger)
         let finalEventLoop = eventLoop ?? self.eventLoop
-        
+
         logger.trace("received subscribe request")
-        
+
         // if we're closed, just error out
         guard self.state.isConnected else { return finalEventLoop.makeFailedFuture(RedisClientError.connectionClosed) }
 
@@ -413,7 +413,7 @@ extension RedisConnection {
                 }
                 .hop(to: finalEventLoop)
         }
-        
+
         // add the subscription and just ignore the subscription count
         return handler
             .addSubscription(for: target, receiver: receiver)
@@ -432,7 +432,7 @@ extension RedisConnection {
     ) -> EventLoopFuture<Void> {
         return self._unsubscribe(.channels(channels), eventLoop, logger)
     }
-    
+
     public func punsubscribe(
         from patterns: [String],
         eventLoop: EventLoop? = nil,
@@ -440,7 +440,7 @@ extension RedisConnection {
     ) -> EventLoopFuture<Void> {
         return self._unsubscribe(.patterns(patterns), eventLoop, logger)
     }
-    
+
     private func _unsubscribe(
         _ target: RedisSubscriptionTarget,
         _ eventLoop: EventLoop?,
@@ -448,12 +448,12 @@ extension RedisConnection {
     ) -> EventLoopFuture<Void> {
         let logger = self.prepareLoggerForUse(logger)
         let finalEventLoop = eventLoop ?? self.eventLoop
-        
+
         logger.trace("received unsubscribe request")
 
         // if we're closed, just error out
         guard self.state.isConnected else { return finalEventLoop.makeFailedFuture(RedisClientError.connectionClosed) }
-        
+
         // if we're not in pubsub mode, then we just succeed as a no-op
         guard case let .pubsub(handler) = self.state else {
             // but we still assert just to give some notification to devs at debug
@@ -462,11 +462,11 @@ extension RedisConnection {
             ])
             return self.eventLoop.makeSucceededFuture(())
         }
-        
+
         logger.trace("removing subscription", metadata: [
             RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
         ])
-        
+
         // remove the subscription
         return handler
             .removeSubscription(for: target)
