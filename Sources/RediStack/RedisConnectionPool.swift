@@ -47,26 +47,26 @@ public class RedisConnectionPool {
     private var serverConnectionAddresses: ConnectionAddresses
     // This needs to be a var because its value changes as the pool enters/leaves pubsub mode to reuse the same connection.
     private var pubsubConnection: RedisConnection?
-    
+
     public init(configuration: Configuration, boundEventLoop: EventLoop) {
         var config = configuration
 
         self.loop = boundEventLoop
         self.serverConnectionAddresses = ConnectionAddresses(initialAddresses: config.initialConnectionAddresses)
-        
+
         // mix of terminology here with the loggers
         // as we're being "forward thinking" in terms of the 'baggage context' future type
-        
+
         var taggedConnectionLogger = config.factoryConfiguration.connectionDefaultLogger
         taggedConnectionLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         config.factoryConfiguration.connectionDefaultLogger = taggedConnectionLogger
-        
+
         var taggedPoolLogger = config.poolDefaultLogger
         taggedPoolLogger[metadataKey: RedisLogging.MetadataKeys.connectionPoolID] = "\(self.id)"
         config.poolDefaultLogger = taggedPoolLogger
-        
+
         self.configuration = config
-        
+
         self.pool = ConnectionPool(
             maximumConnectionCount: config.maximumConnectionCount.size,
             minimumConnectionCount: config.minimumConnectionCount,
@@ -144,7 +144,7 @@ extension RedisConnectionPool {
         return self.forwardOperationToConnection(
             {
                 (connection, returnConnection, context) in
-        
+
                 return operation(connection)
                     .always { _ in returnConnection(connection, context) }
             },
@@ -168,7 +168,7 @@ extension RedisConnectionPool {
             .info("pool updated with new target addresses", metadata: [
                 RedisLogging.MetadataKeys.newConnectionPoolTargetAddresses: "\(newAddresses)"
             ])
-        
+
         self.loop.execute {
             self.serverConnectionAddresses.update(newAddresses)
         }
@@ -178,14 +178,14 @@ extension RedisConnectionPool {
         // Validate the loop invariants.
         self.loop.preconditionInEventLoop()
         targetLoop.preconditionInEventLoop()
-        
+
         let factoryConfig = self.configuration.factoryConfiguration
 
         guard let nextTarget = self.serverConnectionAddresses.nextTarget() else {
             // No valid connection target, we'll fail.
             return targetLoop.makeFailedFuture(RedisConnectionPoolError.noAvailableConnectionTargets)
         }
-        
+
         let connectionConfig: RedisConnection.Configuration
         do {
             connectionConfig = try .init(
@@ -208,6 +208,10 @@ extension RedisConnectionPool {
             .map { connection in
                 // disallow subscriptions on all connections by default to enforce our management of PubSub state
                 connection.allowSubscriptions = false
+                connection.onUnexpectedClosure = { [weak self, weak connection] in
+                    guard let connection else { return }
+                    self?.configuration.onUnexpectedConnectionClose?(connection)
+                }
                 return connection
             }
     }
@@ -230,7 +234,7 @@ extension RedisConnectionPool: RedisClient {
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
         return self.send(command: command, with: arguments, context: nil)
     }
-    
+
     public func subscribe(
         to channels: [RedisChannelName],
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
@@ -245,7 +249,7 @@ extension RedisConnectionPool: RedisClient {
             context: nil
         )
     }
-    
+
     public func psubscribe(
         to patterns: [String],
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
@@ -260,11 +264,11 @@ extension RedisConnectionPool: RedisClient {
             context: nil
         )
     }
-    
+
     public func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
         return self.unsubscribe(from: channels, context: nil)
     }
-    
+
     public func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
         return self.punsubscribe(from: patterns, context: nil)
     }
@@ -351,10 +355,10 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                     connection.allowSubscriptions = true // allow pubsub commands which are to come
                     self.pubsubConnection = connection
                 }
-                
+
                 let onUnsubscribe: RedisSubscriptionChangeHandler = { channelName, subCount in
                     defer { unsubscribeHandler?(channelName, subCount) }
-                    
+
                     guard
                         subCount == 0,
                         let connection = self.pubsubConnection
@@ -364,7 +368,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                     returnConnection(connection, context)
                     self.pubsubConnection = nil // break ref cycle
                 }
-                
+
                 return operation(connection, onUnsubscribe, context)
             },
             preferredConnection: self.pubsubConnection,
@@ -419,7 +423,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         }
 
         let logger = self.prepareLoggerForUse(context)
-        
+
         guard let connection = preferredConnection else {
             return pool
                 .leaseConnection(
@@ -440,30 +444,30 @@ extension RedisConnectionPool {
         private var addresses: [SocketAddress]
 
         private var index: Array<SocketAddress>.Index
-        
+
         internal init(initialAddresses: [SocketAddress]) {
             self.addresses = initialAddresses
             self.index = self.addresses.startIndex
         }
-        
+
         internal mutating func nextTarget() -> SocketAddress? {
             // early exit on 0, makes life easier
             guard !self.addresses.isEmpty else {
                 self.index = self.addresses.startIndex
                 return nil
             }
-            
+
             let nextTarget = self.addresses[self.index]
-            
+
             // it's an invariant of this function that the index is always valid for subscripting the collection
             self.addresses.formIndex(after: &self.index)
             if self.index == self.addresses.endIndex {
                 self.index = self.addresses.startIndex
             }
-            
+
             return nextTarget
         }
-        
+
         internal mutating func update(_ newAddresses: [SocketAddress]) {
             self.addresses = newAddresses
             self.index = self.addresses.startIndex

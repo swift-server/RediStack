@@ -27,20 +27,20 @@ extension RedisConnection.Configuration {
         var localizedDescription: String { self.kind.localizedDescription }
 
         private let kind: Kind
-        
+
         private init(_ kind: Kind) { self.kind = kind }
-        
+
         public static func ==(lhs: ValidationError, rhs: ValidationError) -> Bool {
             return lhs.kind == rhs.kind
         }
-        
+
         private enum Kind: LocalizedError {
             case invalidURLString
             case missingURLScheme
             case invalidURLScheme
             case missingURLHost
             case outOfBoundsDatabaseID
-            
+
             var localizedDescription: String {
                 let message: String = {
                     switch self {
@@ -66,7 +66,7 @@ extension RedisConnection {
         ///
         /// See [https://redis.io/topics/quickstart](https://redis.io/topics/quickstart)
         public static var defaultPort = 6379
-        
+
         internal static let defaultLogger = Logger.redisBaseConnectionLogger
 
         /// The hostname of the connection address. If the address is a Unix socket, then it will be `nil`.
@@ -85,9 +85,9 @@ extension RedisConnection {
         public let initialDatabase: Int?
         /// The logger prototype that will be used by the connection by default when generating logs.
         public let defaultLogger: Logger
-        
+
         internal let address: SocketAddress
-        
+
         /// Creates a new connection configuration with the provided details.
         /// - Parameters:
         ///     - address: The socket address information to use for creating the Redis connection.
@@ -106,7 +106,7 @@ extension RedisConnection {
             if initialDatabase != nil && initialDatabase! < 0 {
                 throw ValidationError.outOfBoundsDatabaseID
             }
-            
+
             self.address = address
             self.password = password
             self.initialDatabase = initialDatabase
@@ -182,9 +182,9 @@ extension RedisConnection {
             try Self.validateRedisURL(url)
 
             guard let host = url.host, !host.isEmpty else { throw ValidationError.missingURLHost }
-            
+
             let databaseID = Int(url.lastPathComponent)
-            
+
             try self.init(
                 address: try .makeAddressResolvingHost(host, port: url.port ?? Self.defaultPort),
                 password: url.password,
@@ -219,7 +219,7 @@ extension RedisConnectionPool {
         public let connectionInitialDatabase: Int?
         /// The pre-configured TCP client for connections to use.
         public let tcpClient: ClientBootstrap?
-    
+
         /// Creates a new connection factory configuration with the provided options.
         /// - Parameters:
         ///     - connectionInitialDatabase: The optional database index to initially connect to. The default is `nil`.
@@ -255,11 +255,13 @@ extension RedisConnectionPool {
         public let maximumConnectionCount: RedisConnectionPoolSize
         /// The configuration object that controls the connection retry behavior.
         public let connectionRetryConfiguration: (backoff: (initialDelay: TimeAmount, factor: Float32), timeout: TimeAmount)
+        /// Called when a connection in the pool is closed unexpectedly.
+        public let onUnexpectedConnectionClose: ((RedisConnection) -> Void)?
         // these need to be var so they can be updated by the pool in some cases
         public internal(set) var factoryConfiguration: ConnectionFactoryConfiguration
         /// The logger prototype that will be used by the connection pool by default when generating logs.
         public internal(set) var poolDefaultLogger: Logger
-        
+
         /// Creates a new connection configuration with the provided options.
         /// - Parameters:
         ///     - initialServerConnectionAddresses: The set of Redis servers to which this pool is initially willing to connect.
@@ -284,6 +286,7 @@ extension RedisConnectionPool {
             connectionBackoffFactor: Float32 = 2,
             initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
             connectionRetryTimeout: TimeAmount? = .seconds(60),
+            onUnexpectedConnectionClose: ((RedisConnection) -> Void)? = nil,
             poolDefaultLogger: Logger? = nil
         ) {
             self.initialConnectionAddresses = initialServerConnectionAddresses
@@ -294,6 +297,7 @@ extension RedisConnectionPool {
                 (initialConnectionBackoffDelay, connectionBackoffFactor),
                 connectionRetryTimeout ?? .milliseconds(10) // always default to a baseline 10ms
             )
+            self.onUnexpectedConnectionClose = onUnexpectedConnectionClose
             self.poolDefaultLogger = poolDefaultLogger ?? .redisBaseConnectionPoolLogger
         }
     }
