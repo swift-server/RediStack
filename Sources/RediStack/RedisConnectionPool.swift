@@ -209,7 +209,7 @@ extension RedisConnectionPool {
                 // disallow subscriptions on all connections by default to enforce our management of PubSub state
                 connection.allowSubscriptions = false
                 connection.onUnexpectedClosure = { [weak self, weak connection] in
-                    guard let connection else { return }
+                    guard let connection = connection else { return }
                     self?.configuration.onUnexpectedConnectionClose?(connection)
                 }
                 return connection
