@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 extension RedisKey.Lifetime {
     /// The lifetime duration for a `RedisKey` which has an expiry set.
