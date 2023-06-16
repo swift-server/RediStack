@@ -16,7 +16,7 @@
 </div>
 
 <table><thead><tr align="center"><th width="9999">
-The <a href="https://github.com/Mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitHub repository</a> is a <b>read-only</b> mirror of the GitLab repository. For issues and merge requests, <a href="https://gitlab.com/mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitLab</a>.
+The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHab repository. For issues and pull requests, <a href="https://gitlab.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
 </th></tr></thead></table>
 
 ## Introduction
