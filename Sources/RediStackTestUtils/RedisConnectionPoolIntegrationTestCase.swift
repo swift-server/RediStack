@@ -80,7 +80,7 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     ) throws -> RedisConnectionPool {
         let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
         let pool = RedisConnectionPool(
-            configuration: .init(
+            configuration: RedisConnectionPool.Configuration(
                 initialServerConnectionAddresses: [address],
                 maximumConnectionCount: .maximumActiveConnections(4),
                 connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
