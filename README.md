@@ -2,19 +2,15 @@
 <p><img src="https://repository-images.githubusercontent.com/161592209/e0dfc700-a1c2-11e9-9302-a4b00958c76f" width="350" alt="RediStack logo"></p>
 
 <p>
-    <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
-    <a href="https://github.com/swift-server/RediStack/blob/main/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" alt="Swift 5.5+"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
-</p>
-
-<p>
-    <a href="https://docs.redistack.info"><img src="https://docs.redistack.info/badge.svg" alt="Documentation Coverage"></a>
+    [![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
+    [![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
+    [![MIT License](http://img.shields.io/badge/license-MIT-brightgreen.svg)][Apache License]
+    [![Swift 5.6](http://img.shields.io/badge/swift-5.6-brightgreen.svg)][Swift 5.6]
 </p>
 </div>
 
 <table><thead><tr align="center"><th width="9999">
-The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHab repository. For issues and pull requests, <a href="https://gitlab.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
+The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHab repository. For issues and pull requests, <a href="https://github.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
 </th></tr></thead></table>
 
 ## Introduction
@@ -75,7 +71,7 @@ print(result) // Optional("some value")
 
 ## Documentation
 
-The docs for the latest tagged release are always available at [docs.redistack.info](http://docs.redistack.info).
+The docs for the latest tagged release are always available at the [Swift Package Index][Documentation].
 
 ## Questions
 
@@ -83,7 +79,7 @@ For bugs or feature requests, file a new [issue](https://github.com/swift-server
 
 ## Changelog
 
-[SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://github.com/swift-server/RediStack/releases).
+[SemVer](https://semver.org/) changes are documented for each release on the [releases page][Releases].
 
 ## Contributing
 
@@ -95,7 +91,7 @@ Check out [CONTRIBUTORS.txt](https://github.com/swift-server/RediStack/blob/main
 
 ## Swift on Server Ecosystem
 
-**RediStack** is part of the [Swift on Server Working Group](https://github.com/swift-server/sswg) ecosystem - currently recommended as [**Sandbox Maturity**](https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level).
+**RediStack** is part of the [Swift on Server Working Group][SSWG] ecosystem - currently recommended as [**Sandbox Maturity**][SSWG Incubation].
 
 | Proposal | Pitch | Discussion | Review | Vote |
 |:---:|:---:|:---:|:---:|:---:|
@@ -129,7 +125,7 @@ receive regular unit testing (either in development, or with CI).
 
 ## License
 
-[Apache 2.0](https://github.com/swift-server/RediStack/blob/main/LICENSE.txt)
+[Apache 2.0][Apache License]
 
 Copyright (c) 2019-present, Nathan Harris (@mordil)
 
@@ -138,3 +134,10 @@ _This project contains code written by others not affliated with this project. A
 _**Redis** is a registered trademark of **Redis Labs**. Any use of their trademark is under the established [trademark guidelines](https://redis.io/topics/trademark) and does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
 
 _**Swift** is a registered trademark of **Apple, Inc**. Any use of their trademark does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
+
+[SSWG Incubation]: https://www.swift.org/sswg/incubation-process.html
+[SSWG]: https://www.swift.org/sswg/
+[Documentation]: https://swiftpackageindex.com/swift-server/RediStack/documentation
+[Apache License]: LICENSE
+[Swift 5.6]: https://swift.org
+[Releases]: https://github.com/swift-server/RediStack/releases
