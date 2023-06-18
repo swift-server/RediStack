@@ -40,6 +40,7 @@ final class RedisConnectionPoolTests: RediStackConnectionPoolIntegrationTestCase
     
     func test_nilConnectionRetryTimeoutStillWorks() throws {
         let pool = try self.makeNewPool(connectionRetryTimeout: nil)
+        defer { pool.close() }
         XCTAssertNoThrow(try pool.get(#function).wait())
     }
 }

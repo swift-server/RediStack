@@ -221,7 +221,7 @@ extension RESPTranslator {
         let expectedRemainingMessageSize = size + 2
         guard buffer.readableBytes >= expectedRemainingMessageSize else { return nil }
         
-        // sanity check that the declared content size matches the actual size.
+        // soundness check that the declared content size matches the actual size.
         guard
             buffer.getInteger(at: buffer.readerIndex + expectedRemainingMessageSize - 1, as: UInt8.self) == .newline
         else { throw ParsingError.bulkStringSizeMismatch }

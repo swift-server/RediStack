@@ -23,6 +23,7 @@ let package = Package(
         .library(name: "RedisTypes", targets: ["RedisTypes"])
     ],
     dependencies: [
+        .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
         .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0" ..< "3.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.43.0"),
@@ -34,6 +35,7 @@ let package = Package(
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOPosix", package: "swift-nio"),
                 .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
+                .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Metrics", package: "swift-metrics")
             ]
@@ -50,7 +52,9 @@ let package = Package(
         .testTarget(
             name: "RediStackTests",
             dependencies: [
-                "RediStack", "RediStackTestUtils",
+                "RediStack",
+                "RediStackTestUtils",
+                .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "NIO", package: "swift-nio"),
                 .product(name: "NIOTestUtils", package: "swift-nio")
             ]
