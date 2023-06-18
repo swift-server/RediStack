@@ -1,21 +1,19 @@
-<div align="center">
-<p><img src="https://repository-images.githubusercontent.com/161592209/e0dfc700-a1c2-11e9-9302-a4b00958c76f" width="350" alt="RediStack logo"></p>
+# RediStack
 
-<p>
-    [![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
-    [![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
-    [![MIT License](http://img.shields.io/badge/license-MIT-brightgreen.svg)][Apache License]
-    [![Swift 5.6](http://img.shields.io/badge/swift-5.6-brightgreen.svg)][Swift 5.6]
-</p>
-</div>
-
-<table><thead><tr align="center"><th width="9999">
-The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHab repository. For issues and pull requests, <a href="https://github.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
-</th></tr></thead></table>
-
-## Introduction
+[![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
+[![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
+[![MIT License](http://img.shields.io/badge/license-Apache-brightgreen.svg)][Apache License]
+[![Swift 5.6](http://img.shields.io/badge/swift-5.6-brightgreen.svg)][Swift 5.6]
 
 **RediStack** (pronounced like "ready stack") is a _non-blocking_ Swift client for [Redis](https://redis.io) built on top of [SwiftNIO](https://github.com/apple/swift-nio).
+
+<table><thead><tr align="center"><th width="9999">
+The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHub repository. For issues and pull requests, <a href="https://github.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
+</th></tr></thead></table>
+
+
+
+## Introduction
 
 It communicates over the network using Redis' [**Re**dis **S**eralization **P**rotocol (RESP2)](https://redis.io/topics/protocol).
 
