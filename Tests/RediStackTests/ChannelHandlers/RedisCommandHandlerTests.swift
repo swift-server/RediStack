@@ -56,19 +56,19 @@ final class RedisCommandHandlerTests: XCTestCase {
 
         let getFoo = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "foo"))])
         let promiseFoo = loop.makePromise(of: RESPValue.self)
-        let commandFoo = (message: getFoo, responsePromise: promiseFoo)
+        let commandFoo = RedisCommand(message: getFoo, responsePromise: promiseFoo)
         XCTAssertNoThrow(try channel.writeOutbound(commandFoo))
         XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getFoo)
 
         let getBar = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "bar"))])
         let promiseBar = loop.makePromise(of: RESPValue.self)
-        let commandBar = (message: getBar, responsePromise: promiseBar)
+        let commandBar = RedisCommand(message: getBar, responsePromise: promiseBar)
         XCTAssertNoThrow(try channel.writeOutbound(commandBar))
         XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getBar)
 
         let getBaz = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "baz"))])
         let promiseBaz = loop.makePromise(of: RESPValue.self)
-        let commandBaz = (message: getBaz, responsePromise: promiseBaz)
+        let commandBaz = RedisCommand(message: getBaz, responsePromise: promiseBaz)
         XCTAssertNoThrow(try channel.writeOutbound(commandBaz))
         XCTAssertEqual(try channel.readOutbound(as: RESPValue.self), getBaz)
 
@@ -117,7 +117,7 @@ final class RedisCommandHandlerTests: XCTestCase {
 
         let getBar = RESPValue.array([.bulkString(.init(string: "GET")), .bulkString(.init(string: "bar"))])
         let promiseBar = loop.makePromise(of: RESPValue.self)
-        let commandBar = (message: getBar, responsePromise: promiseBar)
+        let commandBar = RedisCommand(message: getBar, responsePromise: promiseBar)
         channel.write(commandBar, promise: nil)
         XCTAssertThrowsError(try promiseBar.futureResult.wait()) {
             XCTAssertEqual($0 as? RedisClientError, .connectionClosed)
