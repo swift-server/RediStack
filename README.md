@@ -40,8 +40,6 @@ The table below lists the major releases alongside their compatible language, de
 
 **RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases)**²**.
 
-> **²** See the [platform support matrix below for more details](#language-and-platform-support).
-
 ## Installing
 
 To install **RediStack**, just add the package as a dependency in your **Package.swift**.
@@ -114,22 +112,6 @@ Major version releases will be scheduled around official Swift releases, taking 
 Major version releases will drop support for any version of Swift older than the last **3** Swift versions.
 
 This policy is to balance the desire for as much backwards compatibility as possible, while also being able to take advantage of new Swift features for the best API design possible.
-
-The following table shows the combination of Swift language versions and operating systems that
-receive regular unit testing (either in development, or with CI).
-
-| Platform                    | Swift 5.5 | 5.6 | 5.7 | Trunk |
-|:----------------------------|:---------:|:---:|:---:|:-----:|
-| macOS Latest (M1)           |   |   | ✅ |   |
-| Ubuntu 20.04 (Focal)        | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 18.04 (Bionic)       | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 16.04 (Xenial)**³**  | ✅ | ❌ | ❌ | ❌ |
-| Amazon Linux 2              | ✅ | ✅ | ✅ | ✅ |
-| CentOS 8**³**               | ✅ | ❌ | ❌ | ❌ |
-| CentOS 7                    | ✅ | ✅ | ✅ | ✅ |
-
-> **³** _CentOS 8 and Ubuntu 16.04 are no longer officially supported by Swift after [Swift 5.5](https://github.com/apple/swift-docker/pull/273)._
-
 
 ## License
 
