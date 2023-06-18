@@ -115,20 +115,12 @@ Major version releases will drop support for any version of Swift older than the
 
 This policy is to balance the desire for as much backwards compatibility as possible, while also being able to take advantage of new Swift features for the best API design possible.
 
-The following table shows the combination of Swift language versions and operating systems that
-receive regular unit testing (either in development, or with CI).
+The following table shows the combination of Swift language versions and operating systems that receive regular unit testing (either in development, or with CI).
 
-| Platform                    | Swift 5.5 | 5.6 | 5.7 | Trunk |
-|:----------------------------|:---------:|:---:|:---:|:-----:|
-| macOS Latest (M1)           |   |   | ✅ |   |
-| Ubuntu 20.04 (Focal)        | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 18.04 (Bionic)       | ✅ | ✅ | ✅ | ✅ |
-| Ubuntu 16.04 (Xenial)**³**  | ✅ | ❌ | ❌ | ❌ |
-| Amazon Linux 2              | ✅ | ✅ | ✅ | ✅ |
-| CentOS 8**³**               | ✅ | ❌ | ❌ | ❌ |
-| CentOS 7                    | ✅ | ✅ | ✅ | ✅ |
-
-> **³** _CentOS 8 and Ubuntu 16.04 are no longer officially supported by Swift after [Swift 5.5](https://github.com/apple/swift-docker/pull/273)._
+| Platform                    | Swift 5.6 | 5.7 | 5.8 | 5.9 | Nightly
+|:----------------------------|:---------:|:---:|:---:|:---:|:-------:|
+| macOS Latest (M1)           |           |     | ✅  | ✅  |    
+| Ubuntu 22.04 (Jammy)        | ✅        | ✅ | ✅ |   ✅ |  ✅
 
 
 ## License
