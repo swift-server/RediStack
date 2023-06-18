@@ -31,7 +31,9 @@ let package = Package(
         .target(
             name: "RediStack",
             dependencies: [
-                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOPosix", package: "swift-nio"),
+                .product(name: "NIOConcurrencyHelpers", package: "swift-nio"),
                 .product(name: "Logging", package: "swift-log"),
                 .product(name: "Metrics", package: "swift-metrics")
             ]
@@ -40,7 +42,8 @@ let package = Package(
         .target(
             name: "RediStackTestUtils",
             dependencies: [
-                .product(name: "NIO", package: "swift-nio"),
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOEmbedded", package: "swift-nio"),
                 "RediStack"
             ]
         ),
