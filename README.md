@@ -27,15 +27,6 @@ It communicates over the network using Redis' [**Re**dis **S**eralization **P**r
 
 This library is primarily developed for Redis v5, but is backwards compatible to Redis v3**¹**.
 
-The table below lists the major releases alongside their compatible language, dependency, and Redis versions.
-
-| RediStack Release | [Swift](https://swift.org/download) | [Redis](https://redis.io) | [SwiftNIO](https://github.com/apple/swift-nio) | [SwiftLog](https://github.com/apple/swift-log) | [SwiftMetrics](https://github.com/apple/swift-metrics) |
-|:-----------------:|:-----------------------------------:|:-------------------------:|:----------------------------------------------:|:----------------------------------------------:|:------------------------------:|
-| `from: "1.0.0"` | 5.1+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x ..< 3.0 |
-| `from: "1.4.0"` | 5.5+ | 3.x**¹** < 6.x | 2.x | 1.x | 1.x ..< 3.0 |
-
-> **¹** _Use of newer Redis features on older Redis versions is done at your own risk. See Redis' release notes for [v5](https://raw.githubusercontent.com/antirez/redis/5.0/00-RELEASENOTES), [v4](https://raw.githubusercontent.com/antirez/redis/4.0/00-RELEASENOTES), and [v3](https://raw.githubusercontent.com/antirez/redis/3.0/00-RELEASENOTES) for what is supported for each version of Redis._
-
 ### Supported Operating Systems
 
 **RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases)**²**.
