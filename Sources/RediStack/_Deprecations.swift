@@ -13,7 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
+import NIOCore
+import NIOPosix
 
 extension RedisConnection {
     /// The documented default port that Redis connects through.

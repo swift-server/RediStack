@@ -17,8 +17,9 @@ import struct Dispatch.DispatchTime
 import Atomics
 import Logging
 import Metrics
-import NIO
+import NIOCore
 import NIOConcurrencyHelpers
+import NIOPosix
 
 extension RedisConnection {
 

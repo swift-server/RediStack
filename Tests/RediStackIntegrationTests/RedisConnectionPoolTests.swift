@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import Logging
 @testable import RediStack
 import RediStackTestUtils

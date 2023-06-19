@@ -15,7 +15,8 @@
 @testable import RediStack
 @testable import RediStackTestUtils
 import XCTest
-import NIO
+import NIOCore
+import NIOEmbedded
 
 enum ConnectionPoolTestError: Error {
     case connectionFailedForSomeReason
