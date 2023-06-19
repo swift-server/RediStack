@@ -25,7 +25,7 @@ The <a href="https://github.com/Mordil/RediStack" rel="nofollow noreferrer noope
 
 It communicates over the network using Redis' [**Re**dis **S**eralization **P**rotocol (RESP2)](https://redis.io/topics/protocol).
 
-This library is primarily developed for Redis v5, but is backwards compatible to Redis v3**¹**.
+This library is primarily developed for Redis v5, but is backwards compatible to Redis v3.
 
 ## Installing
 
