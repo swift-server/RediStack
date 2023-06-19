@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 import RediStack
 import XCTest
+import NIOPosix
 
 /// A helper `XCTestCase` subclass that does the standard work of creating a connection pool to use in test cases.
 ///

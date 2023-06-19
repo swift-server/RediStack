@@ -14,7 +14,8 @@
 
 import RediStack
 import XCTest
-import NIO
+import NIOCore
+import NIOEmbedded
 
 internal enum MockConnectionPoolError: Error {
     case unexpectedMessage

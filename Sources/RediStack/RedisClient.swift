@@ -14,7 +14,7 @@
 
 import protocol Foundation.LocalizedError
 import struct Logging.Logger
-import NIO
+import NIOCore
 
 // - Important: Any RedisClient defined by RediStack should conform to the RedisClientWithUserContext protocol as well
 

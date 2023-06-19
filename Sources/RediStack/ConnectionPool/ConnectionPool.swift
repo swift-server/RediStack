@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import Logging
-import NIO
+import NIOCore
 
 /// `ConnectionPool` is RediStack's internal representation of a pool of Redis connections.
 ///

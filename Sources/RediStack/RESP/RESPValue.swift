@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import struct Foundation.Data
-import NIO
+import NIOCore
 
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
@@ -168,7 +168,7 @@ extension RESPValue: RESPValueConvertible {
 
 // MARK: EventLoopFuture Extensions
 
-import NIO
+import NIOCore
 
 extension EventLoopFuture where Value == RESPValue {
     /// Attempts to convert the resolved RESPValue to the desired type.
