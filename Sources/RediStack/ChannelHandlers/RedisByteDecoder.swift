@@ -18,7 +18,7 @@ import NIOCore
 /// and decodes them according to the Redis Serialization Protocol (RESP).
 ///
 /// See `NIO.NIOSingleStepByteToMessageDecoder`, `RESPTranslator` and [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
-public struct RedisByteDecoder: NIOSingleStepByteToMessageDecoder {
+public final class RedisByteDecoder: NIOSingleStepByteToMessageDecoder {
     /// `ByteToMessageDecoder.InboundOut`
     public typealias InboundOut = RESPValue
     
