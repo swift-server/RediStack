@@ -27,10 +27,6 @@ It communicates over the network using Redis' [**Re**dis **S**eralization **P**r
 
 This library is primarily developed for Redis v5, but is backwards compatible to Redis v3**¹**.
 
-### Supported Operating Systems
-
-**RediStack** runs anywhere that is officially supported by the [Swift project](https://swift.org/download/#releases)**²**.
-
 ## Installing
 
 To install **RediStack**, just add the package as a dependency in your **Package.swift**.
