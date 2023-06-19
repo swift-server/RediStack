@@ -43,6 +43,56 @@ final class RedisConnectionPoolTests: RediStackConnectionPoolIntegrationTestCase
         defer { pool.close() }
         XCTAssertNoThrow(try pool.get(#function).wait())
     }
+
+    func test_noConnectionAttemptsUntilAddressesArePresent() throws {
+        // Note the config here: we have no initial addresses, the connecton backoff delay is 10 seconds, and the retry timeout is only 5 seconds.
+        // The effect of this config is that if we fail a connection attempt, we'll fail it forever.
+        let pool = try self.makeNewPool(initialAddresses: [], initialConnectionBackoffDelay: .seconds(10), connectionRetryTimeout: .seconds(5), minimumConnectionCount: 0)
+        defer { pool.close() }
+
+        // As above we're gonna try to insert a bunch of elements into a set. This time,
+        // the pool has no addresses yet. We expect that when we add an address later everything will work nicely.
+        // We do fewer here.
+        let operations = (0..<10).map { number in
+            pool.sadd([number], to: #function)
+        }
+
+        // Now that we've kicked those off, let's hand over a new address.
+        try pool.updateConnectionAddresses([SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)])
+
+        // We should get the results.
+        let results = try EventLoopFuture<Int>.whenAllSucceed(operations, on: self.eventLoopGroup.next()).wait()
+        XCTAssertEqual(results, Array(repeating: 1, count: 10))
+    }
+
+    func testDelayedConnectionsFailOnClose() throws {
+        // Note the config here: we have no initial addresses, the connecton backoff delay is 10 seconds, and the retry timeout is only 5 seconds.
+        // The effect of this config is that if we fail a connection attempt, we'll fail it forever.
+        let pool = try self.makeNewPool(initialAddresses: [], initialConnectionBackoffDelay: .seconds(10), connectionRetryTimeout: .seconds(5), minimumConnectionCount: 0)
+        defer { pool.close() }
+
+        // As above we're gonna try to insert a bunch of elements into a set. This time,
+        // the pool has no addresses yet. We expect that when we add an address later everything will work nicely.
+        // We do fewer here.
+        let operations = (0..<10).map { number in
+            pool.sadd([number], to: #function)
+        }
+
+        // Now that we've kicked those off, let's close.
+        pool.close()
+
+        let results = try EventLoopFuture<Int>.whenAllComplete(operations, on: self.eventLoopGroup.next()).wait()
+        for result in results {
+            switch result {
+            case .success:
+                XCTFail("Request succeeded")
+            case .failure(let error) where error as? RedisConnectionPoolError == .poolClosed:
+                ()  // Pass
+            case .failure(let error):
+                XCTFail("Unexpected failure: \(error)")
+            }
+        }
+    }
 }
 
 // MARK: Leasing a connection
