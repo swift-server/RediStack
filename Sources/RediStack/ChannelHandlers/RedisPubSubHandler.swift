@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 /// A closure receiver of individual Pub/Sub messages from Redis subscriptions to channels and patterns.
 /// - Warning: The receiver is called on the same `NIO.EventLoop` that processed the message.

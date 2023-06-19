@@ -14,7 +14,7 @@
 
 import protocol Foundation.LocalizedError
 import struct Logging.Logger
-import NIO
+import NIOCore
 
 // - Important: Any RedisClient defined by RediStack should conform to the RedisClientWithUserContext protocol as well
 
@@ -148,7 +148,6 @@ extension RedisClient {
         return self.punsubscribe(from: patterns)
     }
 
-    #if swift(>=5.3)
     public func subscribe(
         to channels: [RedisChannelName],
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
@@ -184,61 +183,6 @@ extension RedisClient {
     ) -> EventLoopFuture<Void> {
         return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
     }
-    #else
-    public func subscribe(
-        to channels: RedisChannelName...,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
-    ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-
-    public func subscribe(
-        to channels: RedisChannelName...,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver
-    ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-
-    public func subscribe(
-        to channels: [RedisChannelName],
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver
-    ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-
-    public func psubscribe(
-        to patterns: String...,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
-    ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-
-    public func psubscribe(
-        to patterns: [String],
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver
-    ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-
-    public func psubscribe(
-        to patterns: String...,
-        onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil,
-        messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver
-    ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
-    }
-    #endif
 }
 
 // MARK: Errors

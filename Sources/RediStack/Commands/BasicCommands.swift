@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 extension RedisClient {
     /// Echos the provided message through the Redis instance.
