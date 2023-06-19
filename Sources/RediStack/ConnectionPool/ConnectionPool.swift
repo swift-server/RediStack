@@ -385,7 +385,7 @@ extension ConnectionPool {
         }
         self.connectionWaiters.append(waiter)
 
-        // What are we going to wait for? Well, now we check. If the number of active connections is
+        // Ok, we have connection targets. If the number of active connections is
         // below the max, or the pool is leaky, we can create a new connection. Otherwise, we just have
         // to wait for a connection to come back.
         if self.activeConnectionCount < self.maximumConnectionCount || self.leaky {

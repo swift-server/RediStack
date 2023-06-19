@@ -74,18 +74,33 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
         self.pool.close()
         self.pool = nil
     }
-    
+
     public func makeNewPool(
         connectionRetryTimeout: TimeAmount? = .seconds(5),
         minimumConnectionCount: Int = 0
     ) throws -> RedisConnectionPool {
-        let address = try SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
+        try self.makeNewPool(
+            initialAddresses: nil,
+            initialConnectionBackoffDelay: .milliseconds(100),
+            connectionRetryTimeout: connectionRetryTimeout,
+            minimumConnectionCount: minimumConnectionCount
+        )
+    }
+
+    public func makeNewPool(
+        initialAddresses: [SocketAddress]?,
+        initialConnectionBackoffDelay: TimeAmount,
+        connectionRetryTimeout: TimeAmount?,
+        minimumConnectionCount: Int
+    ) throws -> RedisConnectionPool {
+        let addresses = try initialAddresses ?? [SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)]
         let pool = RedisConnectionPool(
             configuration: RedisConnectionPool.Configuration(
-                initialServerConnectionAddresses: [address],
+                initialServerConnectionAddresses: addresses,
                 maximumConnectionCount: .maximumActiveConnections(4),
                 connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword),
                 minimumConnectionCount: minimumConnectionCount,
+                initialConnectionBackoffDelay: initialConnectionBackoffDelay,
                 connectionRetryTimeout: connectionRetryTimeout
             ),
             boundEventLoop: self.eventLoopGroup.next()
