@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 #if DEBUG
 // used only for debugging purposes where we build a formatted string for the encoded bytes

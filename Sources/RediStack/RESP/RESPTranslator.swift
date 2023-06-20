@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import protocol Foundation.LocalizedError
-import NIO
+import NIOCore
 
 /// A helper object for translating between raw bytes and Swift types according to the Redis Serialization Protocol (RESP).
 ///

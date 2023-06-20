@@ -13,7 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import struct Foundation.Data
-import NIO
+import NIOCore
 @testable import RediStack
 import XCTest
 

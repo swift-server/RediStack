@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 import struct Foundation.UUID
-import NIO
+import NIOCore
 import NIOConcurrencyHelpers
 import Logging
 
@@ -47,6 +47,14 @@ public class RedisConnectionPool {
     private var serverConnectionAddresses: ConnectionAddresses
     // This needs to be a var because its value changes as the pool enters/leaves pubsub mode to reuse the same connection.
     private var pubsubConnection: RedisConnection?
+    // This array buffers any request for a connection that cannot be succeeded right away in the case where we have no target.
+    // We never allow this to get larger than a specific bound, to resist DoS attacks. Past that bound we will fast-fail.
+    private var requestsForConnections: [EventLoopPromise<RedisConnection>] = []
+
+    /// The maximum number of connection requests we'll buffer in `requestsForConnections` before we start fast-failing. These
+    /// are buffered only when there are no available addresses to connect to, so in practice it's highly unlikely this will be
+    /// hit, but either way, 100 concurrent connection requests ought to be plenty in this case.
+    private static let maximumBufferedConnectionRequests = 100
 
     public init(configuration: Configuration, boundEventLoop: EventLoop) {
         var config = configuration
@@ -109,6 +117,11 @@ extension RedisConnectionPool {
 
             // This breaks the cycle between us and the pool.
             self.pool = nil
+
+            // Drop all pending connection attempts. No need to empty this manually, it'll get dropped regardless.
+            for request in self.requestsForConnections {
+                request.fail(RedisConnectionPoolError.poolClosed)
+            }
         }
     }
 
@@ -171,6 +184,14 @@ extension RedisConnectionPool {
 
         self.loop.execute {
             self.serverConnectionAddresses.update(newAddresses)
+
+            // Shiny, we can unbuffer any pending connections and pass them on as they now have somewhere to go.
+            let unbufferedRequests = self.requestsForConnections
+            self.requestsForConnections = []
+
+            for request in unbufferedRequests {
+                request.completeWith(self.connectionFactory(self.loop))
+            }
         }
     }
 
@@ -182,8 +203,17 @@ extension RedisConnectionPool {
         let factoryConfig = self.configuration.factoryConfiguration
 
         guard let nextTarget = self.serverConnectionAddresses.nextTarget() else {
-            // No valid connection target, we'll fail.
-            return targetLoop.makeFailedFuture(RedisConnectionPoolError.noAvailableConnectionTargets)
+            // No valid connection target, we'll keep track of the request and attempt to satisfy it later.
+            // First, confirm we have space to keep track of this. If not, fast-fail.
+            guard self.requestsForConnections.count < RedisConnectionPool.maximumBufferedConnectionRequests else {
+                return targetLoop.makeFailedFuture(RedisConnectionPoolError.noAvailableConnectionTargets)
+            }
+
+            // Ok, we can buffer, let's do that.
+            self.prepareLoggerForUse(nil).notice("waiting for target addresses")
+            let promise = targetLoop.makePromise(of: RedisConnection.self)
+            self.requestsForConnections.append(promise)
+            return promise.futureResult
         }
 
         let connectionConfig: RedisConnection.Configuration

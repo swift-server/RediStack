@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIO
+import NIOCore
 
 /// The `NIO.ChannelOutboundHandler.OutboundIn` type for `RedisCommandHandler`.
 ///
