@@ -1,17 +1,5 @@
-## Motivation
+## Repository Moved
 
-_[Provide context for the changes. Why are you making these changes? What is the problem you're trying to solve?_
+Gitlab is a mirror of the [github repo](https://github.com/swift-server/RediStack).
+Please make a PR for your changes there.
 
-## Modifications
-
-_[Provide an overview the changes you've made]_
-
-## Result
-
-_[After your change, what will change from the perspective of end users?]_
-
-## Checklist
-
-- [ ] Copyright headers in new files (see [CONTRIBUTING.md](https://gitlab.com/Mordil/RediStack/-/blob/master/CONTRIBUTING.md))
-- [ ] Unit tests added
-- [ ] API Documentation comments

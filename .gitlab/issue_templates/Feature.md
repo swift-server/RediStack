@@ -1,8 +1,4 @@
-## Problem Statement
-_[a short description of the problem that this solution will fix]_
+## Repository Moved
 
-## Proposed Solution
-_[provide details of what you think this feature should look like]_
-
-## Alternatives
-_[outline alternative designs, or alternative solutions to still accomplish the stated goal]_
+Gitlab is a mirror of the [github repo](https://github.com/swift-server/RediStack).
+Please file your issues there.
