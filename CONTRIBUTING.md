@@ -51,11 +51,9 @@ docker run -d -p 6379:6379 --name redis redis:5
 
 Otherwise, install Redis directly on your machine from [Redis.io](https://redis.io/download).
   
-### Submitting a Merge Request
-
-> The easiest way to create a great merge requests is to use one of the [Merge Request Templates](./.gitlab/merge_request_templates).
+### Submitting a Pull Request
   
-A great MR that is likely to be merged quickly is:
+A great PR that is likely to be merged quickly is:
   
 1. Concise, with as few changes as needed to achieve the end result.
 1. Tested, ensuring that regressions aren't introduced now or in the future.

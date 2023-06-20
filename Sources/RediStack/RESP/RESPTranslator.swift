@@ -98,7 +98,7 @@ extension RESPTranslator {
     /// Possible errors thrown while parsing RESP messages.
     /// - Important: Any of these errors should be considered a **BUG**.
     ///
-    /// Please file a bug at [https://www.gitlab.com/mordil/RediStack/-/issues](https://www.gitlab.com/mordil/RediStack/-/issues).
+    /// Please file a bug at [https://www.github.com/swift-server/RediStack/issues/new](https://www.github.com/swift-server/RediStack/issues/new).
     public struct ParsingError: LocalizedError, Equatable {
         /// An invalid RESP data type identifier was found.
         public static let invalidToken = ParsingError(.invalidToken)

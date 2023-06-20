@@ -1,26 +1,17 @@
-<div align="center">
-<p><img src="https://repository-images.githubusercontent.com/161592209/e0dfc700-a1c2-11e9-9302-a4b00958c76f" width="350" alt="RediStack logo"></p>
+# RediStack
 
-<p>
-    <a href="https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level"><img src="https://img.shields.io/badge/sswg-sandbox-lightgrey.svg" alt="SSWG Maturity"></a>
-    <a href="https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt"><img src="https://img.shields.io/badge/License-Apache%202.0-yellow.svg" alt="Apache 2 License"></a>
-    <a href="https://swift.org"><img src="https://img.shields.io/badge/Swift-5.5+-orange.svg" alt="Swift 5.5+"></a>
-    <a href="https://redis.io"><img src="https://img.shields.io/badge/Redis-5.0-red.svg" alt="Redis 5.0"></a>
-</p>
+[![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
+[![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
+[![MIT License](http://img.shields.io/badge/license-Apache-brightgreen.svg)][Apache License]
+[![Swift 5.6](http://img.shields.io/badge/swift-5.6-brightgreen.svg)][Swift 5.6]
 
-<p>
-    <a href="https://gitlab.com/Mordil/RediStack/pipelines"><img src="https://gitlab.com/Mordil/RediStack/badges/master/pipeline.svg" alt="Build Status"></a>
-    <a href="https://docs.redistack.info"><img src="https://docs.redistack.info/badge.svg" alt="Documentation Coverage"></a>
-</p>
-</div>
+**RediStack** (pronounced like "ready stack") is a _non-blocking_ Swift client for [Redis](https://redis.io) built on top of [SwiftNIO](https://github.com/apple/swift-nio).
 
 <table><thead><tr align="center"><th width="9999">
-The <a href="https://github.com/Mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitHub repository</a> is a <b>read-only</b> mirror of the GitLab repository. For issues and merge requests, <a href="https://gitlab.com/mordil/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitLab</a>.
+The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHub repository. For issues and pull requests, <a href="https://github.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
 </th></tr></thead></table>
 
 ## Introduction
-
-**RediStack** (pronounced like "ready stack") is a _non-blocking_ Swift client for [Redis](https://redis.io) built on top of [SwiftNIO](https://github.com/apple/swift-nio).
 
 It communicates over the network using Redis' [**Re**dis **S**eralization **P**rotocol (RESP2)](https://redis.io/topics/protocol).
 
@@ -32,7 +23,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://gitlab.com/mordil/RediStack.git", from: "1.0.0")
+    .package(url: "https://github.com/swift-server/RediStack.git", from: "1.4.1")
 ]
 ```
 
@@ -61,29 +52,27 @@ print(result) // Optional("some value")
 
 ## Documentation
 
-The docs for the latest tagged release are always available at [docs.redistack.info](http://docs.redistack.info).
+The docs for the latest tagged release are always available at the [Swift Package Index][Documentation].
 
 ## Questions
 
-For bugs or feature requests, file a new [issue](https://gitlab.com/mordil/RediStack/-/issues).
-
-For all other support requests, please email [support@redistack.info](mailto:support@redistack.info).
+For bugs or feature requests, file a new [issue](https://github.com/swift-server/RediStack/issues/new).
 
 ## Changelog
 
-[SemVer](https://semver.org/) changes are documented for each release on the [releases page](https://gitlab.com/Mordil/RediStack/-/releases).
+[SemVer](https://semver.org/) changes are documented for each release on the [releases page][Releases].
 
 ## Contributing
 
-Check out [CONTRIBUTING.md](https://gitlab.com/Mordil/RediStack/blob/master/CONTRIBUTING.md) for more information on how to help with **RediStack**.
+Check out [CONTRIBUTING.md](https://github.com/swift-server/RediStack/blob/main/CONTRIBUTING.md) for more information on how to help with **RediStack**.
 
 ## Contributors
 
-Check out [CONTRIBUTORS.txt](https://gitlab.com/Mordil/RediStack/blob/master/CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
+Check out [CONTRIBUTORS.txt](https://github.com/swift-server/RediStack/blob/main/CONTRIBUTORS.txt) to see the full list. This list is updated for each release.
 
 ## Swift on Server Ecosystem
 
-**RediStack** is part of the [Swift on Server Working Group](https://github.com/swift-server/sswg) ecosystem - currently recommended as [**Sandbox Maturity**](https://github.com/swift-server/sswg/blob/master/process/incubation.md#sandbox-level).
+**RediStack** is part of the [Swift on Server Working Group][SSWG] ecosystem - currently recommended as [**Sandbox Maturity**][SSWG Incubation].
 
 | Proposal | Pitch | Discussion | Review | Vote |
 |:---:|:---:|:---:|:---:|:---:|
@@ -101,12 +90,19 @@ This policy is to balance the desire for as much backwards compatibility as poss
 
 ## License
 
-[Apache 2.0](https://gitlab.com/Mordil/RediStack/blob/master/LICENSE.txt)
+[Apache 2.0][Apache License]
 
 Copyright (c) 2019-present, Nathan Harris (@mordil)
 
-_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](https://gitlab.com/Mordil/RediStack/blob/master/NOTICE.txt)_
+_This project contains code written by others not affliated with this project. All copyright claims are reserved by them. For a full list, with their claimed rights, see [NOTICE.txt](https://github.com/swift-server/RediStack/blob/main/NOTICE.txt)_
 
 _**Redis** is a registered trademark of **Redis Labs**. Any use of their trademark is under the established [trademark guidelines](https://redis.io/topics/trademark) and does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
 
 _**Swift** is a registered trademark of **Apple, Inc**. Any use of their trademark does not imply any affiliation with or endorsement by them, and all rights are reserved by them._
+
+[SSWG Incubation]: https://www.swift.org/sswg/incubation-process.html
+[SSWG]: https://www.swift.org/sswg/
+[Documentation]: https://swiftpackageindex.com/swift-server/RediStack/documentation
+[Apache License]: LICENSE.txt
+[Swift 5.6]: https://swift.org
+[Releases]: https://github.com/swift-server/RediStack/releases
