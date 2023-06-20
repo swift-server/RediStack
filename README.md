@@ -11,8 +11,6 @@
 The <a href="https://gitlab.com/swift-server-community/RediStack" rel="nofollow noreferrer noopener" target="_blank">GitLab repository</a> is a <b>read-only</b> mirror of the GitHub repository. For issues and pull requests, <a href="https://github.com/swift-server/RediStack" rel="nofollow noreferrer noopener" target="_blank">please visit GitHub</a>.
 </th></tr></thead></table>
 
-
-
 ## Introduction
 
 It communicates over the network using Redis' [**Re**dis **S**eralization **P**rotocol (RESP2)](https://redis.io/topics/protocol).
@@ -105,6 +103,6 @@ _**Swift** is a registered trademark of **Apple, Inc**. Any use of their tradema
 [SSWG Incubation]: https://www.swift.org/sswg/incubation-process.html
 [SSWG]: https://www.swift.org/sswg/
 [Documentation]: https://swiftpackageindex.com/swift-server/RediStack/documentation
-[Apache License]: LICENSE
+[Apache License]: LICENSE.txt
 [Swift 5.6]: https://swift.org
 [Releases]: https://github.com/swift-server/RediStack/releases
