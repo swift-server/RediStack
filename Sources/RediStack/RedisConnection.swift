@@ -57,25 +57,12 @@ extension RedisConnection {
     ) -> EventLoopFuture<RedisConnection> {
         let client = client ?? .makeRedisTCPClient(group: eventLoop)
 
-        var future = client
+        return client
             .connect(to: config.address)
-            .map { return RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger) }
-
-        // if a password is specified, use it to authenticate before further operations happen
-        if let password = config.password {
-            future = future.flatMap { connection in
-                return connection.authorize(with: password).map { connection }
+            .flatMap {
+                let connection = RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger)
+                return connection.start(configuration: config).map({ _ in connection })
             }
-        }
-
-        // if a database index is specified, use it to switch the selected database before further operations happen
-        if let database = config.initialDatabase {
-            future = future.flatMap { connection in
-                return connection.select(database: database).map { connection }
-            }
-        }
-
-        return future
     }
 }
 
@@ -192,6 +179,28 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         }
 
         self.logger.trace("connection created")
+    }
+
+    fileprivate func start(configuration: Configuration) -> EventLoopFuture<Void> {
+        let future: EventLoopFuture<Void>
+
+        // if a password is specified, use it to authenticate before further operations happen
+        if let password = configuration.password {
+            if let username = configuration.username {
+                future = self.authorize(username: username, password: password)
+            } else {
+                future = self.authorize(with: password)
+            }
+        } else {
+            future = self.eventLoop.makeSucceededVoidFuture()
+        }
+
+        // if a database index is specified, use it to switch the selected database before further operations happen
+        if let database = configuration.initialDatabase {
+            return future.flatMap { self.select(database: database) }
+        }
+
+        return future
     }
 
     internal enum ConnectionState {

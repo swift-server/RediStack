@@ -80,6 +80,9 @@ extension RedisConnection {
         }
         /// The port of the connection address. If the address is a Unix socket, then it will be `nil`.
         public var port: Int? { self.address.port }
+        /// The user name used to authenticate connections with.
+        /// - Warning: This property should only be provided if you are running against Redis 6 or higher.
+        public let username: String?
         /// The password used to authenticate the connection.
         public let password: String?
         /// The initial database index that the connection should use.
@@ -100,6 +103,7 @@ extension RedisConnection {
         /// - Throws: `RedisConnection.Configuration.ValidationError` if invalid arguments are provided.
         public init(
             address: SocketAddress,
+            username: String? = nil,
             password: String? = nil,
             initialDatabase: Int? = nil,
             defaultLogger: Logger? = nil
@@ -109,9 +113,34 @@ extension RedisConnection {
             }
 
             self.address = address
+            self.username = username
             self.password = password
             self.initialDatabase = initialDatabase
             self.defaultLogger = defaultLogger ?? Configuration.defaultLogger
+        }
+
+        /// Creates a new connection configuration with the provided details.
+        /// - Parameters:
+        ///     - address: The socket address information to use for creating the Redis connection.
+        ///     - password: The optional password to authenticate the connection with. The default is `nil`.
+        ///     - initialDatabase: The optional database index to initially connect to. The default is `nil`.
+        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///     - defaultLogger: The optional prototype logger to use as the default logger instance when generating logs from the connection.
+        ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
+        /// - Throws: `RedisConnection.Configuration.ValidationError` if invalid arguments are provided.
+        public init(
+            address: SocketAddress,
+            password: String? = nil,
+            initialDatabase: Int? = nil,
+            defaultLogger: Logger? = nil
+        ) throws {
+            try self.init(
+                address: address,
+                username: nil,
+                password: password,
+                initialDatabase: initialDatabase,
+                defaultLogger: defaultLogger
+            )
         }
 
         /// Creates a new connection configuration with exact details.
@@ -214,6 +243,8 @@ extension RedisConnectionPool {
         // this needs to be var so it can be updated by the pool with the pool id
         /// The logger prototype that will be used by connections by default when generating logs.
         public internal(set) var connectionDefaultLogger: Logger
+        /// The username used to authenticate connections.
+        public let connectionUsername: String?
         /// The password used to authenticate connections.
         public let connectionPassword: String?
         /// The initial database index that connections should use.
@@ -235,7 +266,33 @@ extension RedisConnectionPool {
             connectionDefaultLogger: Logger? = nil,
             tcpClient: ClientBootstrap? = nil
         ) {
+            self.init(
+                connectionInitialDatabase: connectionInitialDatabase,
+                connectionUsername: nil,
+                connectionPassword: connectionPassword,
+                connectionDefaultLogger: connectionDefaultLogger,
+                tcpClient: tcpClient
+            )
+        }
+
+        /// Creates a new connection factory configuration with the provided options.
+        /// - Parameters:
+        ///     - connectionInitialDatabase: The optional database index to initially connect to. The default is `nil`.
+        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///     - connectionUsername: The optional username to authenticate connections with. The default is `nil`. Works only with Redis 6 and greater.
+        ///     - connectionPassword: The optional password to authenticate connections with. The default is `nil`.
+        ///     - connectionDefaultLogger: The optional prototype logger to use as the default logger instance when generating logs from connections.
+        ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
+        ///     - tcpClient: If you have chosen to configure a `NIO.ClientBootstrap` yourself, this will be used instead of the `.makeRedisTCPClient` factory instance.
+        public init(
+            connectionInitialDatabase: Int? = nil,
+            connectionUsername: String? = nil,
+            connectionPassword: String? = nil,
+            connectionDefaultLogger: Logger? = nil,
+            tcpClient: ClientBootstrap? = nil
+        ) {
             self.connectionInitialDatabase = connectionInitialDatabase
+            self.connectionUsername = connectionUsername
             self.connectionPassword = connectionPassword
             self.connectionDefaultLogger = connectionDefaultLogger ?? RedisConnection.Configuration.defaultLogger
             self.tcpClient = tcpClient

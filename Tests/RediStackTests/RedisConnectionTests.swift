@@ -49,4 +49,10 @@ extension RedisConnectionTests {
 
         self.waitForExpectations(timeout: 0.5)
     }
+
+    func testAuthorizationWithUsername() {
+        let loop = EmbeddedEventLoop()
+
+
+    }
 }

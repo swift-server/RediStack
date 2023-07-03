@@ -220,6 +220,7 @@ extension RedisConnectionPool {
         do {
             connectionConfig = try .init(
                 address: nextTarget,
+                username: factoryConfig.connectionUsername,
                 password: factoryConfig.connectionPassword,
                 initialDatabase: factoryConfig.connectionInitialDatabase,
                 defaultLogger: factoryConfig.connectionDefaultLogger
