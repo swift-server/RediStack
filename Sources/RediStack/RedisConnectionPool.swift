@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2023 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -80,7 +80,7 @@ public class RedisConnectionPool {
             minimumConnectionCount: config.minimumConnectionCount,
             leaky: config.maximumConnectionCount.leaky,
             loop: boundEventLoop,
-            systemContext: config.poolDefaultLogger,
+            backgroundLogger: config.poolDefaultLogger,
             connectionBackoffFactor: config.connectionRetryConfiguration.backoff.factor,
             initialConnectionBackoffDelay: config.connectionRetryConfiguration.backoff.initialDelay,
             connectionFactory: self.connectionFactory(_:)
@@ -257,11 +257,11 @@ extension RedisConnectionPool: RedisClient {
     public var eventLoop: EventLoop { self.loop }
 
     public func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self, context: self.prepareLoggerForUse(logger))
+        return UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
     }
 
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: arguments, context: nil)
+        return self.send(command: command, with: arguments, logger: nil)
     }
 
     public func subscribe(
@@ -275,7 +275,7 @@ extension RedisConnectionPool: RedisClient {
             messageReceiver: receiver,
             onSubscribe: subscribeHandler,
             onUnsubscribe: unsubscribeHandler,
-            context: nil
+            logger: nil
         )
     }
 
@@ -290,33 +290,33 @@ extension RedisConnectionPool: RedisClient {
             messageReceiver: receiver,
             onSubscribe: subscribeHandler,
             onUnsubscribe: unsubscribeHandler,
-            context: nil
+            logger: nil
         )
     }
 
     public func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: channels, context: nil)
+        return self.unsubscribe(from: channels, logger: nil)
     }
 
     public func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: patterns, context: nil)
+        return self.punsubscribe(from: patterns, logger: nil)
     }
 }
 
 // MARK: RedisClientWithUserContext conformance
 extension RedisConnectionPool: RedisClientWithUserContext {
-    internal func send(command: String, with arguments: [RESPValue], context: Logger?) -> EventLoopFuture<RESPValue> {
+    internal func send(command: String, with arguments: [RESPValue], logger: Logger?) -> EventLoopFuture<RESPValue> {
         return self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
 
                 connection.sendCommandsImmediately = true
 
                 return connection
-                    .send(command: command, with: arguments, context: context)
+                    .send(command: command, with: arguments, logger: context)
                     .always { _ in returnConnection(connection, context) }
             },
             preferredConnection: nil,
-            context: context
+            context: logger
         )
     }
 
@@ -325,7 +325,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void> {
         return self.subscribe(
             using: {
@@ -334,16 +334,16 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                     messageReceiver: receiver,
                     onSubscribe: subscribeHandler,
                     onUnsubscribe: $1,
-                    context: $2
+                    logger: $2
                 )
             },
             onUnsubscribe: unsubscribeHandler,
-            context: context
+            context: logger
         )
     }
 
-    internal func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void> {
-        return self.unsubscribe(using: { $0.unsubscribe(from: channels, context: $1) }, context: context)
+    internal func unsubscribe(from channels: [RedisChannelName], logger: Logger?) -> EventLoopFuture<Void> {
+        return self.unsubscribe(using: { $0.unsubscribe(from: channels, logger: $1) }, context: logger)
     }
 
     internal func psubscribe(
@@ -351,7 +351,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void> {
         return self.subscribe(
             using: {
@@ -360,22 +360,22 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                     messageReceiver: receiver,
                     onSubscribe: subscribeHandler,
                     onUnsubscribe: $1,
-                    context: $2
+                    logger: $2
                 )
             },
             onUnsubscribe: unsubscribeHandler,
-            context: context
+            context: logger
         )
     }
 
-    internal func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void> {
-        return self.unsubscribe(using: { $0.punsubscribe(from: patterns, context: $1) }, context: context)
+    internal func punsubscribe(from patterns: [String], logger: Logger?) -> EventLoopFuture<Void> {
+        return self.unsubscribe(using: { $0.punsubscribe(from: patterns, logger: $1) }, context: logger)
     }
 
     private func subscribe(
-        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Context) -> EventLoopFuture<Void>,
+        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) -> EventLoopFuture<Void>,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        context: Logger?
     ) -> EventLoopFuture<Void> {
         return self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
@@ -406,8 +406,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
     }
 
     private func unsubscribe(
-        using operation: @escaping (RedisConnection, Context) -> EventLoopFuture<Void>,
-        context: Context?
+        using operation: @escaping (RedisConnection, Logger) -> EventLoopFuture<Void>,
+        context: Logger?
     ) -> EventLoopFuture<Void> {
         return self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
@@ -430,9 +430,9 @@ extension RedisConnectionPool: RedisClientWithUserContext {
 
     @usableFromInline
     internal func forwardOperationToConnection<T>(
-        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Context) -> Void, Context) -> EventLoopFuture<T>,
+        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Logger) -> Void, Logger) -> EventLoopFuture<T>,
         preferredConnection: RedisConnection?,
-        context: Context?
+        context: Logger?
     ) -> EventLoopFuture<T> {
         // Establish event loop context then jump to the in-loop version.
         guard self.loop.inEventLoop else {
