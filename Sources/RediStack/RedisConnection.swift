@@ -181,7 +181,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         self.logger.trace("connection created")
     }
 
-    fileprivate func start(configuration: Configuration) -> EventLoopFuture<Void> {
+    func start(configuration: Configuration) -> EventLoopFuture<Void> {
         let future: EventLoopFuture<Void>
 
         // if a password is specified, use it to authenticate before further operations happen
@@ -232,12 +232,24 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        self.eventLoop.flatSubmit {
-            return self.send(command: command, with: arguments, logger: nil)
-        }
+        return self.send0(command: command, with: arguments, logger: nil)
     }
 
     internal func send(
+        command: String,
+        with arguments: [RESPValue],
+        logger: Logger?
+    ) -> EventLoopFuture<RESPValue> {
+        if self.eventLoop.inEventLoop {
+            return self.send0(command: command, with: arguments, logger: logger)
+        }
+
+        return self.eventLoop.flatSubmit {
+            self.send0(command: command, with: arguments, logger: logger)
+        }
+    }
+
+    internal func send0(
         command: String,
         with arguments: [RESPValue],
         logger: Logger?
