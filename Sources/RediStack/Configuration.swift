@@ -94,11 +94,12 @@ extension RedisConnection {
 
         /// Creates a new connection configuration with the provided details.
         /// - Parameters:
-        ///     - address: The socket address information to use for creating the Redis connection.
-        ///     - password: The optional password to authenticate the connection with. The default is `nil`.
-        ///     - initialDatabase: The optional database index to initially connect to. The default is `nil`.
-        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
-        ///     - defaultLogger: The optional prototype logger to use as the default logger instance when generating logs from the connection.
+        ///     - `address`: The socket address information to use for creating the Redis connection.
+        ///     - `username`: The optional username to authenticate the connection with. The default is `nil`.
+        ///     - `password`: The optional password to authenticate the connection with. The default is `nil`.
+        ///     - `initialDatabase`: The optional database index to initially connect to. The default is `nil`.
+        ///       Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///     - `defaultLogger`: The optional prototype logger to use as the default logger instance when generating logs from the connection.
         ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
         /// - Throws: `RedisConnection.Configuration.ValidationError` if invalid arguments are provided.
         public init(
@@ -121,11 +122,11 @@ extension RedisConnection {
 
         /// Creates a new connection configuration with the provided details.
         /// - Parameters:
-        ///     - address: The socket address information to use for creating the Redis connection.
-        ///     - password: The optional password to authenticate the connection with. The default is `nil`.
-        ///     - initialDatabase: The optional database index to initially connect to. The default is `nil`.
-        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
-        ///     - defaultLogger: The optional prototype logger to use as the default logger instance when generating logs from the connection.
+        ///     - `address`: The socket address information to use for creating the Redis connection.
+        ///     - `password`: The optional password to authenticate the connection with. The default is `nil`.
+        ///     - `initialDatabase`: The optional database index to initially connect to. The default is `nil`.
+        ///       Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///     - `defaultLogger`: The optional prototype logger to use as the default logger instance when generating logs from the connection.
         ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
         /// - Throws: `RedisConnection.Configuration.ValidationError` if invalid arguments are provided.
         public init(
@@ -244,6 +245,7 @@ extension RedisConnectionPool {
         /// The logger prototype that will be used by connections by default when generating logs.
         public internal(set) var connectionDefaultLogger: Logger
         /// The username used to authenticate connections.
+        /// - Warning: This property should only be provided if you are running against Redis 6 or higher.
         public let connectionUsername: String?
         /// The password used to authenticate connections.
         public let connectionPassword: String?
@@ -255,7 +257,7 @@ extension RedisConnectionPool {
         /// Creates a new connection factory configuration with the provided options.
         /// - Parameters:
         ///     - connectionInitialDatabase: The optional database index to initially connect to. The default is `nil`.
-        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///       Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
         ///     - connectionPassword: The optional password to authenticate connections with. The default is `nil`.
         ///     - connectionDefaultLogger: The optional prototype logger to use as the default logger instance when generating logs from connections.
         ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
@@ -278,11 +280,11 @@ extension RedisConnectionPool {
         /// Creates a new connection factory configuration with the provided options.
         /// - Parameters:
         ///     - connectionInitialDatabase: The optional database index to initially connect to. The default is `nil`.
-        ///     Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
+        ///       Redis by default opens connections against index `0`, so only set this value if the desired default is not `0`.
         ///     - connectionUsername: The optional username to authenticate connections with. The default is `nil`. Works only with Redis 6 and greater.
         ///     - connectionPassword: The optional password to authenticate connections with. The default is `nil`.
         ///     - connectionDefaultLogger: The optional prototype logger to use as the default logger instance when generating logs from connections.
-        ///     If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
+        ///       If one is not provided, one will be generated. See `RedisLogging.baseConnectionLogger`.
         ///     - tcpClient: If you have chosen to configure a `NIO.ClientBootstrap` yourself, this will be used instead of the `.makeRedisTCPClient` factory instance.
         public init(
             connectionInitialDatabase: Int? = nil,

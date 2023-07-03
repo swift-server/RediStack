@@ -90,10 +90,9 @@ extension RedisClient {
 
     /// Requests the client to authenticate with Redis to allow other commands to be executed.
     /// - Parameters:
+    ///     - username: The username to authenticate with.
     ///     - password: The password to authenticate with.
-    ///     - username: The optional username to authenticate connections with. The default is `nil`.
-    ///
-    ///  Warning: This parameter should only be provided if you are running against Redis 6 or higher.
+    ///  Warning: This function should only be used if you are running against Redis 6 or higher.
     public func authorize(
         username: String,
         password: String
