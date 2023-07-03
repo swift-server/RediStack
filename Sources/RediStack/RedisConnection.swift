@@ -57,25 +57,12 @@ extension RedisConnection {
     ) -> EventLoopFuture<RedisConnection> {
         let client = client ?? .makeRedisTCPClient(group: eventLoop)
 
-        var future = client
+        return client
             .connect(to: config.address)
-            .map { return RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger) }
-
-        // if a password is specified, use it to authenticate before further operations happen
-        if let password = config.password {
-            future = future.flatMap { connection in
-                return connection.authorize(with: password).map { connection }
+            .flatMap {
+                let connection = RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger)
+                return connection.start(configuration: config).map({ _ in connection })
             }
-        }
-
-        // if a database index is specified, use it to switch the selected database before further operations happen
-        if let database = config.initialDatabase {
-            future = future.flatMap { connection in
-                return connection.select(database: database).map { connection }
-            }
-        }
-
-        return future
     }
 }
 
@@ -194,6 +181,28 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         self.logger.trace("connection created")
     }
 
+    func start(configuration: Configuration) -> EventLoopFuture<Void> {
+        let future: EventLoopFuture<Void>
+
+        // if a password is specified, use it to authenticate before further operations happen
+        if let password = configuration.password {
+            if let username = configuration.username {
+                future = self.authorize(username: username, password: password)
+            } else {
+                future = self.authorize(with: password)
+            }
+        } else {
+            future = self.eventLoop.makeSucceededVoidFuture()
+        }
+
+        // if a database index is specified, use it to switch the selected database before further operations happen
+        if let database = configuration.initialDatabase {
+            return future.flatMap { self.select(database: database) }
+        }
+
+        return future
+    }
+
     internal enum ConnectionState {
         case open
         case pubsub(RedisPubSubHandler)
@@ -223,12 +232,24 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        self.eventLoop.flatSubmit {
-            return self.send(command: command, with: arguments, logger: nil)
-        }
+        return self.send(command: command, with: arguments, logger: nil)
     }
 
     internal func send(
+        command: String,
+        with arguments: [RESPValue],
+        logger: Logger?
+    ) -> EventLoopFuture<RESPValue> {
+        if self.eventLoop.inEventLoop {
+            return self.send0(command: command, with: arguments, logger: logger)
+        }
+
+        return self.eventLoop.flatSubmit {
+            self.send0(command: command, with: arguments, logger: logger)
+        }
+    }
+
+    private func send0(
         command: String,
         with arguments: [RESPValue],
         logger: Logger?
