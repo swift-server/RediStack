@@ -232,7 +232,7 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send0(command: command, with: arguments, logger: nil)
+        return self.send(command: command, with: arguments, logger: nil)
     }
 
     internal func send(
@@ -249,7 +249,7 @@ extension RedisConnection {
         }
     }
 
-    internal func send0(
+    private func send0(
         command: String,
         with arguments: [RESPValue],
         logger: Logger?
