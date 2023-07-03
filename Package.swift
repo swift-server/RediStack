@@ -68,6 +68,13 @@ let package = Package(
             ]
         ),
         .testTarget(
+            name: "RESP3Tests",
+            dependencies: [
+                "RediStack",
+                .product(name: "NIO", package: "swift-nio")
+            ]
+        ),
+        .testTarget(
             name: "RediStackIntegrationTests",
             dependencies: [
                 "RediStack", "RediStackTestUtils",
