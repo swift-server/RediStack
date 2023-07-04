@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2023 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,7 +37,7 @@ final class ConnectionPoolTests: XCTestCase {
         let channel = self.server.createConnectedChannel()
 
         // Wrap it
-        return RedisConnection(configuredRESPChannel: channel, context: .redisBaseConnectionLogger)
+        return RedisConnection(configuredRESPChannel: channel, backgroundLogger: .redisBaseConnectionLogger)
     }
 
     func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool) -> ConnectionPool {
@@ -46,7 +46,7 @@ final class ConnectionPoolTests: XCTestCase {
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
             loop: self.server.loop,
-            systemContext: .redisBaseConnectionPoolLogger
+            backgroundLogger: .redisBaseConnectionPoolLogger
         ) { loop in
             return loop.makeSucceededFuture(self.createAConnection())
         }
@@ -58,7 +58,7 @@ final class ConnectionPoolTests: XCTestCase {
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
             loop: self.server.loop,
-            systemContext: .redisBaseConnectionPoolLogger,
+            backgroundLogger: .redisBaseConnectionPoolLogger,
             connectionFactory: connectionFactory
         )
     }

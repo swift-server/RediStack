@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2021 RediStack project authors
+// Copyright (c) 2019-2023 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -57,25 +57,12 @@ extension RedisConnection {
     ) -> EventLoopFuture<RedisConnection> {
         let client = client ?? .makeRedisTCPClient(group: eventLoop)
 
-        var future = client
+        return client
             .connect(to: config.address)
-            .map { return RedisConnection(configuredRESPChannel: $0, context: config.defaultLogger) }
-
-        // if a password is specified, use it to authenticate before further operations happen
-        if let password = config.password {
-            future = future.flatMap { connection in
-                return connection.authorize(with: password).map { connection }
+            .flatMap {
+                let connection = RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger)
+                return connection.start(configuration: config).map({ _ in connection })
             }
-        }
-
-        // if a database index is specified, use it to switch the selected database before further operations happen
-        if let database = config.initialDatabase {
-            future = future.flatMap { connection in
-                return connection.select(database: database).map { connection }
-            }
-        }
-
-        return future
     }
 }
 
@@ -147,8 +134,8 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     public var onUnexpectedClosure: (() -> Void)?
 
     internal let channel: Channel
-    private let systemContext: Context
-    private var logger: Logger { self.systemContext }
+    private let backgroundLogger: Logger
+    private var logger: Logger { self.backgroundLogger }
 
     private let autoflush = ManagedAtomic<Bool>(true)
     private let allowPubSub = ManagedAtomic<Bool>(true)
@@ -166,14 +153,14 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         }
     }
 
-    internal init(configuredRESPChannel: Channel, context: Context) {
+    internal init(configuredRESPChannel: Channel, backgroundLogger: Logger) {
         self.channel = configuredRESPChannel
         // there is a mix of verbiage here as the API is forward thinking towards "baggage context"
         // while right now it's just an alias of a 'Logging.logger'
         // in the future this will probably be a property _on_ the context
-        var logger = context
+        var logger = backgroundLogger
         logger[metadataKey: RedisLogging.MetadataKeys.connectionID] = "\(self.id.description)"
-        self.systemContext = logger
+        self.backgroundLogger = logger
 
         RedisMetrics.activeConnectionCount.increment()
         RedisMetrics.totalConnectionCount.increment()
@@ -192,6 +179,28 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
         }
 
         self.logger.trace("connection created")
+    }
+
+    func start(configuration: Configuration) -> EventLoopFuture<Void> {
+        let future: EventLoopFuture<Void>
+
+        // if a password is specified, use it to authenticate before further operations happen
+        if let password = configuration.password {
+            if let username = configuration.username {
+                future = self.authorize(username: username, password: password)
+            } else {
+                future = self.authorize(with: password)
+            }
+        } else {
+            future = self.eventLoop.makeSucceededVoidFuture()
+        }
+
+        // if a database index is specified, use it to switch the selected database before further operations happen
+        if let database = configuration.initialDatabase {
+            return future.flatMap { self.select(database: database) }
+        }
+
+        return future
     }
 
     internal enum ConnectionState {
@@ -223,19 +232,31 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        self.eventLoop.flatSubmit {
-            return self.send(command: command, with: arguments, context: nil)
-        }
+        return self.send(command: command, with: arguments, logger: nil)
     }
 
     internal func send(
         command: String,
         with arguments: [RESPValue],
-        context: Context?
+        logger: Logger?
+    ) -> EventLoopFuture<RESPValue> {
+        if self.eventLoop.inEventLoop {
+            return self.send0(command: command, with: arguments, logger: logger)
+        }
+
+        return self.eventLoop.flatSubmit {
+            self.send0(command: command, with: arguments, logger: logger)
+        }
+    }
+
+    private func send0(
+        command: String,
+        with arguments: [RESPValue],
+        logger: Logger?
     ) -> EventLoopFuture<RESPValue> {
         self.eventLoop.preconditionInEventLoop()
 
-        let logger = self.prepareLoggerForUse(context)
+        let logger = self.prepareLoggerForUse(logger)
 
         guard self.isConnected else {
             let error = RedisClientError.connectionClosed
@@ -375,7 +396,7 @@ extension RedisConnection {
 
 extension RedisConnection {
     public func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self, context: self.prepareLoggerForUse(logger))
+        return UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
     }
 
     private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
@@ -411,9 +432,9 @@ extension RedisConnection {
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, context)
+        return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, logger)
     }
 
     internal func psubscribe(
@@ -421,9 +442,9 @@ extension RedisConnection {
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, context)
+        return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, logger)
     }
 
     private func _subscribe(
@@ -503,12 +524,12 @@ extension RedisConnection {
         return self._unsubscribe(.patterns(patterns), nil)
     }
 
-    internal func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.channels(channels), context)
+    internal func unsubscribe(from channels: [RedisChannelName], logger: Logger?) -> EventLoopFuture<Void> {
+        return self._unsubscribe(.channels(channels), logger)
     }
 
-    internal func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.patterns(patterns), context)
+    internal func punsubscribe(from patterns: [String], logger: Logger?) -> EventLoopFuture<Void> {
+        return self._unsubscribe(.patterns(patterns), logger)
     }
 
     private func _unsubscribe(_ target: RedisSubscriptionTarget, _ logger: Logger?) -> EventLoopFuture<Void> {

@@ -88,6 +88,19 @@ extension RedisClient {
             .map { _ in return () }
     }
 
+    /// Requests the client to authenticate with Redis to allow other commands to be executed.
+    /// - Parameters:
+    ///     - username: The username to authenticate with.
+    ///     - password: The password to authenticate with.
+    ///  Warning: This function should only be used if you are running against Redis 6 or higher.
+    public func authorize(
+        username: String,
+        password: String
+    ) -> EventLoopFuture<Void> {
+        let args = [RESPValue(from: username), RESPValue(from: password)]
+        return self.send(command: "AUTH", with: args).map { _ in return () }
+    }
+
     /// Removes the specified keys. A key is ignored if it does not exist.
     ///
     /// [https://redis.io/commands/del](https://redis.io/commands/del)

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020-2023 RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -71,25 +71,25 @@ extension Logger {
 ///
 /// An execution context includes things like a `Logging.Logger` instance for command activity logs.
 internal protocol RedisClientWithUserContext: RedisClient {
-    func send(command: String, with arguments: [RESPValue], context: Context?) -> EventLoopFuture<RESPValue>
+    func send(command: String, with arguments: [RESPValue], logger: Logger?) -> EventLoopFuture<RESPValue>
 
     func subscribe(
         to channels: [RedisChannelName],
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void>
-    func unsubscribe(from channels: [RedisChannelName], context: Context?) -> EventLoopFuture<Void>
+    func unsubscribe(from channels: [RedisChannelName], logger: Logger?) -> EventLoopFuture<Void>
 
     func psubscribe(
         to patterns: [String],
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
-        context: Context?
+        logger: Logger?
     ) -> EventLoopFuture<Void>
-    func punsubscribe(from patterns: [String], context: Context?) -> EventLoopFuture<Void>
+    func punsubscribe(from patterns: [String], logger: Logger?) -> EventLoopFuture<Void>
 }
 
 /// An internal implementation wrapper of a given `RedisClientWithUserContext` that enables users to pass a given `Logging.Logger`
@@ -98,33 +98,33 @@ internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: Redi
     internal var eventLoop: EventLoop { self.client.eventLoop }
     
     private let client: Client
-    internal let context: Context
+    internal let logger: Logger
     
-    internal init(client: Client, context: Context) {
+    internal init(client: Client, logger: Logger) {
         self.client = client
-        self.context = context
+        self.logger = logger
     }
     
     // Create a new instance of the custom logging implementation reusing the same client.
     
     internal func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self.client, context: logger)
+        return UserContextRedisClient(client: self.client, logger: logger)
     }
     
     // Forward the commands to the underlying client
     
     internal func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
         return self.eventLoop.flatSubmit {
-            return self.client.send(command: command, with: arguments, context: self.context)
+            return self.client.send(command: command, with: arguments, logger: self.logger)
         }
     }
     
     internal func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit { self.client.unsubscribe(from: channels, context: self.context) }
+        return self.eventLoop.flatSubmit { self.client.unsubscribe(from: channels, logger: self.logger) }
     }
     
     internal func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
-        return self.eventLoop.flatSubmit { self.client.punsubscribe(from: patterns, context: self.context) }
+        return self.eventLoop.flatSubmit { self.client.punsubscribe(from: patterns, logger: self.logger) }
     }
 
     internal func subscribe(
@@ -139,7 +139,7 @@ internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: Redi
                 messageReceiver: receiver,
                 onSubscribe: subscribeHandler,
                 onUnsubscribe: unsubscribeHandler,
-                context: self.context
+                logger: self.logger
             )
         }
     }
@@ -156,7 +156,7 @@ internal struct UserContextRedisClient<Client: RedisClientWithUserContext>: Redi
                 messageReceiver: receiver,
                 onSubscribe: subscribeHandler,
                 onUnsubscribe: unsubscribeHandler,
-                context: self.context
+                logger: self.logger
             )
         }
     }
