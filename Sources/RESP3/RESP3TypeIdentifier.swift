@@ -53,4 +53,3 @@ extension UInt8 {
     private static let leftRoundBracket = UInt8(ascii: "(")
     private static let rightAngledBracket = UInt8(ascii: ">")
 }
-

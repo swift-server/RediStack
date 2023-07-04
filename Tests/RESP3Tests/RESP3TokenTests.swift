@@ -18,7 +18,6 @@ import NIOTestUtils
 import XCTest
 
 final class RESP3TokenTests: XCTestCase {
-
     func testRESPNullToken() {
         let input = ByteBuffer(string: "_\r\n")
         let respNull = RESP3Token(validated: input)
@@ -33,7 +32,7 @@ final class RESP3TokenTests: XCTestCase {
         XCTAssertEqual(respNull.value, .null)
     }
 
-    func testRESPBoolTrue() {
+    func testRESPBool() {
         let inputTrue = ByteBuffer(string: "#t\r\n")
         let inputFalse = ByteBuffer(string: "#f\r\n")
         let respTrue = RESP3Token(validated: inputTrue)
@@ -53,38 +52,194 @@ final class RESP3TokenTests: XCTestCase {
         XCTAssertEqual(respFalse.value, .boolean(false))
     }
 
-    func testBlobString() {
-        let input = ByteBuffer(string: "$12\r\naaaabbbbcccc\r\n")
-        let respString = RESP3Token(validated: input)
+    func testRESPNumber() {
+        let input123123 = ByteBuffer(string: ":123123\r\n")
+        let input42 = ByteBuffer(string: ":42\r\n")
+        let input0 = ByteBuffer(string: ":0\r\n")
+        let inputMax = ByteBuffer(string: ":\(Int64.max)\r\n")
+        let inputMin = ByteBuffer(string: ":\(Int64.min)\r\n")
+        let resp123123 = RESP3Token(validated: input123123)
+        let resp42 = RESP3Token(validated: input42)
+        let resp0 = RESP3Token(validated: input0)
+        let respMax = RESP3Token(validated: inputMax)
+        let respMin = RESP3Token(validated: inputMin)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
                 inputOutputPairs: [
-                    (input, [respString]),
+                    (input123123, [resp123123]),
+                    (input42, [resp42]),
+                    (input0, [resp0]),
+                    (inputMax, [respMax]),
+                    (inputMin, [respMin]),
+                ],
+                decoderFactory: { RESP3TokenDecoder() }
+            )
+        )
+
+        XCTAssertEqual(resp123123.value, .number(123_123))
+        XCTAssertEqual(resp42.value, .number(42))
+        XCTAssertEqual(resp0.value, .number(0))
+        XCTAssertEqual(respMax.value, .number(.max))
+        XCTAssertEqual(respMin.value, .number(.min))
+    }
+
+    func testRESPNumberInvalid() {
+        let invalid = [
+            ":\(Int.max)1\r\n",
+            ":\(Int.min)1\r\n",
+        ]
+
+        for value in invalid {
+            XCTAssertThrowsError(
+                try ByteToMessageDecoderVerifier.verifyDecoder(
+                    inputOutputPairs: [
+                        (.init(string: value), [RESP3Token(validated: .init())]),
+                    ],
+                    decoderFactory: { RESP3TokenDecoder() }
+                )
+            ) {
+                XCTAssertEqual($0 as? RESP3Error, .dataMalformed)
+            }
+        }
+    }
+
+    func testRESPDouble() {
+        let input123 = ByteBuffer(string: ",1.23\r\n")
+        let input42 = ByteBuffer(string: ",42\r\n")
+        let input0 = ByteBuffer(string: ",0\r\n")
+        let inputInf = ByteBuffer(string: ",inf\r\n")
+        let inputNegInf = ByteBuffer(string: ",-inf\r\n")
+        let inputNan = ByteBuffer(string: ",nan\r\n")
+        let inputPi = ByteBuffer(string: ",\(Double.pi)\r\n")
+        let inputExponent = ByteBuffer(string: ",1.4E12\r\n")
+        let inputLowerExponent = ByteBuffer(string: ",1.4e-12\r\n")
+        let resp123 = RESP3Token(validated: input123)
+        let resp42 = RESP3Token(validated: input42)
+        let resp0 = RESP3Token(validated: input0)
+        let respInf = RESP3Token(validated: inputInf)
+        let respNegInf = RESP3Token(validated: inputNegInf)
+        let respNan = RESP3Token(validated: inputNan)
+        let respPi = RESP3Token(validated: inputPi)
+        let respExponent = RESP3Token(validated: inputExponent)
+        let respLowerExponent = RESP3Token(validated: inputLowerExponent)
+
+        XCTAssertNoThrow(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                inputOutputPairs: [
+                    (input123, [resp123]),
+                    (input42, [resp42]),
+                    (input0, [resp0]),
+                    (inputInf, [respInf]),
+                    (inputNegInf, [respNegInf]),
+                    (inputNan, [respNan]),
+                    (inputPi, [respPi]),
+                    (inputExponent, [respExponent]),
+                    (inputLowerExponent, [respLowerExponent]),
+                ],
+                decoderFactory: { RESP3TokenDecoder() }
+            )
+        )
+
+        XCTAssertEqual(resp123.value, .double(1.23))
+        XCTAssertEqual(resp42.value, .double(42))
+        XCTAssertEqual(resp0.value, .double(0))
+        XCTAssertEqual(respInf.value, .double(.infinity))
+        XCTAssertEqual(respNegInf.value, .double(-.infinity))
+        guard case .double(let value) = respNan.value else { return XCTFail("Expected a double") }
+        XCTAssert(value.isNaN)
+        XCTAssertEqual(respPi.value, .double(.pi))
+    }
+
+    func testRESPDoubleInvalid() throws {
+        let invalid = [
+            ",.1\r\n",
+        ]
+
+        XCTExpectFailure()
+        for value in invalid {
+            XCTAssertThrowsError(
+                try ByteToMessageDecoderVerifier.verifyDecoder(
+                    inputOutputPairs: [
+                        (.init(string: value), [RESP3Token(validated: .init())]),
+                    ],
+                    decoderFactory: { RESP3TokenDecoder() }
+                )
+            ) {
+                XCTAssertEqual($0 as? RESP3Error, .dataMalformed, "unexpected error: \($0)")
+            }
+        }
+    }
+
+    func testRESPBigNumber() {
+        let valid = [
+            "123",
+        ]
+
+        for value in valid {
+            let tokenString = "(\(value)\r\n"
+            let token = ByteBuffer(string: tokenString)
+            XCTAssertNoThrow(
+                try ByteToMessageDecoderVerifier.verifyDecoder(
+                    inputOutputPairs: [
+                        (token, [RESP3Token(validated: token)]),
+                    ],
+                    decoderFactory: { RESP3TokenDecoder() }
+                ),
+                "Unexpected error for input: \(String(reflecting: tokenString))"
+            )
+
+            XCTAssertEqual(RESP3Token(validated: token).value, .bigNumber(.init(string: value)))
+        }
+    }
+
+    func testRESPBigNumberInvalid() {
+        let invalid = [
+            "(--123\r\n",
+            "(12-12\r\n",
+            "(-\r\n",
+            "(\r\n",
+        ]
+
+        for value in invalid {
+            XCTAssertThrowsError(
+                try ByteToMessageDecoderVerifier.verifyDecoder(
+                    inputOutputPairs: [
+                        (.init(string: value), [RESP3Token(validated: .init())]),
+                    ],
+                    decoderFactory: { RESP3TokenDecoder() }
+                )
+            ) {
+                XCTAssertEqual($0 as? RESP3Error, .dataMalformed, "unexpected error: \($0)")
+            }
+        }
+    }
+
+    func testBlobString() {
+        let inputString = ByteBuffer(string: "$12\r\naaaabbbbcccc\r\n")
+        let respString = RESP3Token(validated: inputString)
+
+        let inputError = ByteBuffer(string: "!21\r\nSYNTAX invalid syntax\r\n")
+        let respError = RESP3Token(validated: inputError)
+
+        let inputVerbatim = ByteBuffer(string: "=16\r\ntxt:aaaabbbbcccc\r\n")
+        let respVerbatim = RESP3Token(validated: inputVerbatim)
+
+        XCTAssertNoThrow(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                inputOutputPairs: [
+                    (inputString, [respString]),
+                    (inputError, [respError]),
+                    (inputString, [respString]),
                 ],
                 decoderFactory: { RESP3TokenDecoder() }
             )
         )
 
         XCTAssertEqual(respString.value, .blobString(ByteBuffer(string: "aaaabbbbcccc")))
+        XCTAssertEqual(respError.value, .blobError(ByteBuffer(string: "SYNTAX invalid syntax")))
+        XCTAssertEqual(respVerbatim.value, .verbatimString(ByteBuffer(string: "txt:aaaabbbbcccc")))
     }
-
-    func testVerbatimString() {
-        let input = ByteBuffer(string: "=16\r\ntxt:aaaabbbbcccc\r\n")
-        let respString = RESP3Token(validated: input)
-
-        XCTAssertNoThrow(
-            try ByteToMessageDecoderVerifier.verifyDecoder(
-                inputOutputPairs: [
-                    (input, [respString]),
-                ],
-                decoderFactory: { RESP3TokenDecoder() }
-            )
-        )
-
-//        XCTAssertEqual(respString.value, .blobString(ByteBuffer(string: "aaaabbbbcccc")))
-    }
-
 
     func testSimpleString() {
         let inputString = ByteBuffer(string: "+aaaabbbbcccc\r\n")
@@ -183,13 +338,11 @@ final class RESP3TokenTests: XCTestCase {
         XCTAssertEqual(respSimpleStringMap1.testDict, [.simpleString(.init(string: "aaaa")): .simpleString(.init(string: "bbbb"))])
         XCTAssertEqual(respSimpleStringAttributes1.testDict, [.simpleString(.init(string: "aaaa")): .boolean(false)])
     }
-
 }
 
 extension RESP3Token {
-
     var testArray: [RESP3Token.Value]? {
-        switch self.value {
+        switch value {
         case .array(let array), .push(let array), .set(let array):
             return [RESP3Token.Value](array.map { $0.value })
         default:
@@ -198,7 +351,7 @@ extension RESP3Token {
     }
 
     var testDict: [RESP3Token.Value: RESP3Token.Value]? {
-        switch self.value {
+        switch value {
         case .map(let values), .attribute(let values):
             var result = [RESP3Token.Value: RESP3Token.Value]()
             result.reserveCapacity(values.count)

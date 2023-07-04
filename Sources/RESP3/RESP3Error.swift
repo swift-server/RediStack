@@ -12,7 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-enum RESP3Error: Error {
+enum RESP3Error: Error, Equatable {
     case unexpectedEndOfData
     case missingCRLF
     case dataMalformed
