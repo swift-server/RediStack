@@ -218,7 +218,7 @@ struct RESP3Token: Hashable, Sendable {
             return nil
         }
 
-        guard let validated else { return nil }
+        guard let validated = validated else { return nil }
         self.base = validated
     }
 
