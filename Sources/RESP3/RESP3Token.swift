@@ -14,7 +14,7 @@
 
 import NIOCore
 
-struct NewRESP3Token: Hashable, Sendable {
+struct RESP3Token: Hashable, Sendable {
 
     struct BlobError: Error, Hashable {
 
@@ -30,7 +30,7 @@ struct NewRESP3Token: Hashable, Sendable {
     }
 
     struct Array: Sequence, Sendable, Hashable {
-        typealias Element = NewRESP3Token
+        typealias Element = RESP3Token
 
         let count: Int
         let buffer: ByteBuffer
@@ -40,18 +40,18 @@ struct NewRESP3Token: Hashable, Sendable {
         }
         
         struct Iterator: IteratorProtocol {
-            typealias Element = NewRESP3Token
+            typealias Element = RESP3Token
 
             var buffer: ByteBuffer
             
-            mutating func next() -> NewRESP3Token? {
-                return try! NewRESP3Token(consuming: &self.buffer)
+            mutating func next() -> RESP3Token? {
+                return try! RESP3Token(consuming: &self.buffer)
             }
         }
     }
 
     struct Map: Sequence, Sendable, Hashable {
-        typealias Element = (key: NewRESP3Token, value: NewRESP3Token)
+        typealias Element = (key: RESP3Token, value: RESP3Token)
 
         let count: Int
         let underlying: Array
@@ -66,11 +66,11 @@ struct NewRESP3Token: Hashable, Sendable {
         }
 
         struct Iterator: IteratorProtocol {
-            typealias Element = (key: NewRESP3Token, value: NewRESP3Token)
+            typealias Element = (key: RESP3Token, value: RESP3Token)
 
             var underlying: Array.Iterator
 
-            mutating func next() -> (key: NewRESP3Token, value: NewRESP3Token)? {
+            mutating func next() -> (key: RESP3Token, value: RESP3Token)? {
                 guard let key = self.underlying.next() else {
                     return nil
                 }
@@ -105,86 +105,106 @@ struct NewRESP3Token: Hashable, Sendable {
     var value: Value {
         var local = self.base
 
-        switch local.readInteger(as: UInt8.self)! {
-        case .underscore:
+        switch try! local.readRESP3TypeIdentifier()! {
+        case .null:
             return .null
 
-        case .pound:
+        case .boolean:
             return .boolean(local.readInteger(as: UInt8.self)! == .t)
 
-        case .dollar:
+        case .blobString:
             var lengthSlice = try! local.readCRLFTerminatedSlice2()!
             let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes)!
             let length = Int(lengthString)!
             return .blobString(local.readSlice(length: length)!)
 
-        case .plus:
+        case .simpleString:
             let slice = try! local.readCRLFTerminatedSlice2()!
             return .simpleString(slice)
 
-        case .hyphen:
+        case .simpleError:
             let slice = try! local.readCRLFTerminatedSlice2()!
             return .simpleError(slice)
 
-        case .asterisk:
+        case .array:
             var countSlice = try! local.readCRLFTerminatedSlice2()!
             let countString = countSlice.readString(length: countSlice.readableBytes)!
             let count = Int(countString)!
             return .array(.init(count: count, buffer: local))
 
-        case .rightAngledBracket:
+        case .push:
             var countSlice = try! local.readCRLFTerminatedSlice2()!
             let countString = countSlice.readString(length: countSlice.readableBytes)!
             let count = Int(countString)!
             return .push(.init(count: count, buffer: local))
 
-        case .tilde:
+        case .set:
             var countSlice = try! local.readCRLFTerminatedSlice2()!
             let countString = countSlice.readString(length: countSlice.readableBytes)!
             let count = Int(countString)!
             return .set(.init(count: count, buffer: local))
 
-        case .pipe:
+        case .attribute:
             var countSlice = try! local.readCRLFTerminatedSlice2()!
             let countString = countSlice.readString(length: countSlice.readableBytes)!
             let count = Int(countString)!
             return .attribute(.init(count: count, buffer: local))
 
-        case .percent:
+        case .map:
             var countSlice = try! local.readCRLFTerminatedSlice2()!
             let countString = countSlice.readString(length: countSlice.readableBytes)!
             let count = Int(countString)!
             return .map(.init(count: count, buffer: local))
 
-        default:
-            fatalError()
+        case .integer:
+            fatalError("TODO: Implement")
+        case .double:
+            fatalError("TODO: Implement")
+        case .blobError:
+            fatalError("TODO: Implement")
+        case .verbatimString:
+            fatalError("TODO: Implement")
+        case .bigNumber:
+            fatalError("TODO: Implement")
         }
     }
 
     init?(consuming buffer: inout ByteBuffer) throws {
         let validated: ByteBuffer?
 
-        switch buffer.getInteger(at: buffer.readerIndex, as: UInt8.self) {
-        case .some(.underscore):
+        switch try buffer.getRESP3TypeIdentifier(at: buffer.readerIndex) {
+        case .some(.null):
             validated = try buffer.readRESPNullSlice()
 
-        case .some(.pound):
+        case .some(.boolean):
             validated = try buffer.readRESPBooleanSlice()
 
-        case .some(.dollar), .some(.equals):
+        case .some(.blobString),
+             .some(.verbatimString):
             validated = try buffer.readRESPBlobStringSlice()
 
-        case .some(.plus), .some(.hyphen):
+        case .some(.simpleString),
+             .some(.simpleError):
             validated = try buffer.readRESPSimpleStringSlice()
 
-        case .some(.asterisk), .some(.rightAngledBracket), .some(.tilde), .some(.pipe), .some(.percent):
+        case .some(.array),
+             .some(.push),
+             .some(.set),
+             .some(.map),
+             .some(.attribute):
             validated = try buffer.readRESPAggregateSlice()
-
-        case .some(let value):
-            throw RESP3Error.invalidType(value)
 
         case .none:
             return nil
+
+        case .some(.integer):
+            fatalError("TODO: Implement")
+        case .some(.double):
+            fatalError("TODO: Implement")
+        case .some(.blobError):
+            fatalError("TODO: Implement")
+        case .some(.bigNumber):
+            fatalError("TODO: Implement")
         }
 
         guard let validated = validated else { return nil }
@@ -197,27 +217,32 @@ struct NewRESP3Token: Hashable, Sendable {
 }
 
 extension ByteBuffer {
-    fileprivate mutating func readCRLF() throws {
-        guard let (first, second) = self.readMultipleIntegers(as: (UInt8, UInt8).self) else {
-            throw RESP3Error.missingData
+    fileprivate mutating func getRESP3TypeIdentifier(at index: Int) throws -> RESP3TypeIdentifier? {
+        guard let int = self.getInteger(at: index, as: UInt8.self) else {
+            return nil
         }
 
-        if first == .carriageReturn && second == .newline {
-            return
+        return try RESP3TypeIdentifier(wire: int)
+    }
+
+    fileprivate mutating func readRESP3TypeIdentifier() throws -> RESP3TypeIdentifier? {
+        guard let int = self.readInteger(as: UInt8.self) else {
+            return nil
         }
 
-        throw RESP3Error.missingCRLF
+        return try RESP3TypeIdentifier(wire: int)
     }
 
     fileprivate mutating func readRESPNullSlice() throws -> ByteBuffer? {
         let markerIndex = self.readerIndex
         let copy = self
-        guard let (marker, cr, lf) = self.readMultipleIntegers(as: (UInt8, UInt8, UInt8).self) else {
+        guard let (marker, crlf) = self.readMultipleIntegers(as: (UInt8, UInt16).self) else {
             return nil
         }
-        precondition(marker == .underscore)
+        let resp3ID = try RESP3TypeIdentifier(wire: marker)
+        precondition(resp3ID == .null)
 
-        if cr == .carriageReturn && lf == .newline {
+        if crlf == .crlf {
             return copy.getSlice(at: markerIndex, length: 3)!
         }
 
@@ -226,28 +251,22 @@ extension ByteBuffer {
 
     fileprivate mutating func readRESPBooleanSlice() throws -> ByteBuffer? {
         var copy = self
-        guard let (marker, value, cr, lf) = self.readMultipleIntegers(as: (UInt8, UInt8, UInt8, UInt8).self) else {
+        guard let resp = self.readInteger(as: UInt32.self) else {
             return nil
         }
-        precondition(marker == .pound)
-
-        switch value {
-        case .f, .t:
-            break
+        switch resp {
+        case .respTrue:
+            return copy.readSlice(length: 4)!
+        case .respFalse:
+            return copy.readSlice(length: 4)!
         default:
             throw RESP3Error.dataMalformed
         }
-
-        if cr == .carriageReturn && lf == .newline {
-            return copy.readSlice(length: 4)!
-        }
-
-        throw RESP3Error.missingCRLF
     }
 
     fileprivate mutating func readRESPBlobStringSlice() throws -> ByteBuffer? {
-        let marker = self.getInteger(at: self.readerIndex, as: UInt8.self)!
-        precondition(marker == .dollar || marker == .equals)
+        let marker = try self.getRESP3TypeIdentifier(at: self.readerIndex)!
+        precondition(marker == .blobString || marker == .verbatimString)
         guard var lengthSlice = try self.getCRLFTerminatedSlice(at: self.readerIndex + 1) else {
             return nil
         }
@@ -269,7 +288,7 @@ extension ByteBuffer {
         }
 
         // validate that the fourth character is colon, if we have a verbatim string
-        if marker == .equals {
+        if marker == .verbatimString {
             let colonIndex = 1 + lengthLineLength + 3
             guard slice.readableBytes > colonIndex && slice.readableBytesView[colonIndex] == .colon else {
                 throw RESP3Error.dataMalformed
@@ -280,8 +299,8 @@ extension ByteBuffer {
     }
 
     fileprivate mutating func readRESPSimpleStringSlice() throws -> ByteBuffer? {
-        let marker = self.getInteger(at: self.readerIndex, as: UInt8.self)!
-        precondition(marker == UInt8.plus || marker == UInt8.hyphen)
+        let marker = try self.getRESP3TypeIdentifier(at: self.readerIndex)!
+        precondition(marker == .simpleString || marker == .simpleError)
         guard let crIndex = try self.firstCRLFIndex(after: self.readerIndex + 1) else {
             return nil
         }
@@ -290,12 +309,12 @@ extension ByteBuffer {
     }
 
     fileprivate mutating func readRESPAggregateSlice() throws -> ByteBuffer? {
-        let marker = self.getInteger(at: self.readerIndex, as: UInt8.self)!
+        let marker = try self.getRESP3TypeIdentifier(at: self.readerIndex)!
         let multiplier: Int
         switch marker {
-        case .asterisk, .rightAngledBracket, .tilde:
+        case .array, .push, .set:
             multiplier = 1
-        case .pipe, .percent:
+        case .map, .attribute:
             multiplier = 2
         default:
             fatalError()
@@ -318,7 +337,7 @@ extension ByteBuffer {
         let elementCount = arrayLength * multiplier
 
         for _ in 0..<elementCount {
-            guard let new = try NewRESP3Token(consuming: &localCopy) else {
+            guard let new = try RESP3Token(consuming: &localCopy) else {
                 return nil
             }
             bodyLength += new.base.readableBytes
@@ -372,15 +391,45 @@ extension UInt16 {
     }()
 }
 
+extension UInt32 {
+    fileprivate static let respTrue: UInt32 = {
+        var value: UInt32 = 0
+        value += UInt32(UInt8.pound) << 24
+        value += UInt32(UInt8.t) << 16
+        value += UInt32(UInt8.carriageReturn) << 8
+        value += UInt32(UInt8.newline)
+        return value
+    }()
+
+    fileprivate static let respFalse: UInt32 = {
+        var value: UInt32 = 0
+        value += UInt32(UInt8.pound) << 24
+        value += UInt32(UInt8.f) << 16
+        value += UInt32(UInt8.carriageReturn) << 8
+        value += UInt32(UInt8.newline)
+        return value
+    }()
+}
+
 struct RESP3TokenDecoder: NIOSingleStepByteToMessageDecoder {
     
-    typealias InboundOut = NewRESP3Token
+    typealias InboundOut = RESP3Token
 
-    func decode(buffer: inout ByteBuffer) throws -> NewRESP3Token? {
-        try NewRESP3Token(consuming: &buffer)
+    func decode(buffer: inout ByteBuffer) throws -> RESP3Token? {
+        try RESP3Token(consuming: &buffer)
     }
 
-    func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> NewRESP3Token? {
+    func decodeLast(buffer: inout ByteBuffer, seenEOF: Bool) throws -> RESP3Token? {
         try self.decode(buffer: &buffer)
+    }
+}
+
+extension RESP3TypeIdentifier {
+    fileprivate init(wire: UInt8) throws {
+        guard let other = RESP3TypeIdentifier(rawValue: wire) else {
+            throw RESP3Error.dataMalformed
+        }
+
+        self = other
     }
 }

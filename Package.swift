@@ -50,6 +50,12 @@ let package = Package(
                 "RediStack"
             ]
         ),
+        .target(
+            name: "RESP3",
+            dependencies: [
+                .product(name: "NIOCore", package: "swift-nio"),
+            ]
+        ),
         .testTarget(
             name: "RediStackTests",
             dependencies: [
@@ -70,8 +76,10 @@ let package = Package(
         .testTarget(
             name: "RESP3Tests",
             dependencies: [
-                "RediStack",
-                .product(name: "NIO", package: "swift-nio")
+                "RESP3",
+                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOEmbedded", package: "swift-nio"),
+                .product(name: "NIOTestUtils", package: "swift-nio"),
             ]
         ),
         .testTarget(

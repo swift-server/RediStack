@@ -14,14 +14,14 @@
 
 import NIOCore
 import NIOTestUtils
-@testable import RediStack
+@testable import RESP3
 import XCTest
 
 final class RESP3TokenTests: XCTestCase {
 
     func testRESPNullToken() {
-        let input = ByteBuffer(bytes: [.underscore, .carriageReturn, .newline])
-        let respNull = NewRESP3Token(validated: input)
+        let input = ByteBuffer(string: "_\r\n")
+        let respNull = RESP3Token(validated: input)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -36,8 +36,8 @@ final class RESP3TokenTests: XCTestCase {
     func testRESPBoolTrue() {
         let inputTrue = ByteBuffer(string: "#t\r\n")
         let inputFalse = ByteBuffer(string: "#f\r\n")
-        let respTrue = NewRESP3Token(validated: inputTrue)
-        let respFalse = NewRESP3Token(validated: inputFalse)
+        let respTrue = RESP3Token(validated: inputTrue)
+        let respFalse = RESP3Token(validated: inputFalse)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -55,7 +55,7 @@ final class RESP3TokenTests: XCTestCase {
 
     func testBlobString() {
         let input = ByteBuffer(string: "$12\r\naaaabbbbcccc\r\n")
-        let respString = NewRESP3Token(validated: input)
+        let respString = RESP3Token(validated: input)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -71,7 +71,7 @@ final class RESP3TokenTests: XCTestCase {
 
     func testVerbatimString() {
         let input = ByteBuffer(string: "=16\r\ntxt:aaaabbbbcccc\r\n")
-        let respString = NewRESP3Token(validated: input)
+        let respString = RESP3Token(validated: input)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -88,9 +88,9 @@ final class RESP3TokenTests: XCTestCase {
 
     func testSimpleString() {
         let inputString = ByteBuffer(string: "+aaaabbbbcccc\r\n")
-        let respString = NewRESP3Token(validated: inputString)
+        let respString = RESP3Token(validated: inputString)
         let inputError = ByteBuffer(string: "-eeeeffffgggg\r\n")
-        let respError = NewRESP3Token(validated: inputError)
+        let respError = RESP3Token(validated: inputError)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -108,22 +108,22 @@ final class RESP3TokenTests: XCTestCase {
 
     func testArray() {
         let emptyArrayInput = ByteBuffer(string: "*0\r\n")
-        let respEmptyArray = NewRESP3Token(validated: emptyArrayInput)
+        let respEmptyArray = RESP3Token(validated: emptyArrayInput)
 
         let simpleStringArray1Input = ByteBuffer(string: "*1\r\n+aaaabbbbcccc\r\n")
-        let respSimpleStringArray1 = NewRESP3Token(validated: simpleStringArray1Input)
+        let respSimpleStringArray1 = RESP3Token(validated: simpleStringArray1Input)
 
         let simpleStringArray2Input = ByteBuffer(string: "*2\r\n+aaaa\r\n+bbbb\r\n")
-        let respSimpleStringArray2 = NewRESP3Token(validated: simpleStringArray2Input)
+        let respSimpleStringArray2 = RESP3Token(validated: simpleStringArray2Input)
 
         let simpleStringArray3Input = ByteBuffer(string: "*3\r\n*0\r\n+a\r\n-b\r\n")
-        let respSimpleStringArray3 = NewRESP3Token(validated: simpleStringArray3Input)
+        let respSimpleStringArray3 = RESP3Token(validated: simpleStringArray3Input)
 
         let simpleStringPush3Input = ByteBuffer(string: ">3\r\n*0\r\n+a\r\n-b\r\n")
-        let respSimpleStringPush3 = NewRESP3Token(validated: simpleStringPush3Input)
+        let respSimpleStringPush3 = RESP3Token(validated: simpleStringPush3Input)
 
         let simpleStringSet3Input = ByteBuffer(string: "~3\r\n*0\r\n+a\r\n#t\r\n")
-        let respSimpleStringSet3 = NewRESP3Token(validated: simpleStringSet3Input)
+        let respSimpleStringSet3 = RESP3Token(validated: simpleStringSet3Input)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -156,13 +156,13 @@ final class RESP3TokenTests: XCTestCase {
 
     func testMap() {
         let emptyMapInput = ByteBuffer(string: "%0\r\n")
-        let respEmptyMap = NewRESP3Token(validated: emptyMapInput)
+        let respEmptyMap = RESP3Token(validated: emptyMapInput)
 
         let simpleStringMap1Input = ByteBuffer(string: "%1\r\n+aaaa\r\n+bbbb\r\n")
-        let respSimpleStringMap1 = NewRESP3Token(validated: simpleStringMap1Input)
+        let respSimpleStringMap1 = RESP3Token(validated: simpleStringMap1Input)
 
         let simpleStringAttributes1Input = ByteBuffer(string: "|1\r\n+aaaa\r\n#f\r\n")
-        let respSimpleStringAttributes1 = NewRESP3Token(validated: simpleStringAttributes1Input)
+        let respSimpleStringAttributes1 = RESP3Token(validated: simpleStringAttributes1Input)
 
         XCTAssertNoThrow(
             try ByteToMessageDecoderVerifier.verifyDecoder(
@@ -186,21 +186,21 @@ final class RESP3TokenTests: XCTestCase {
 
 }
 
-extension NewRESP3Token {
+extension RESP3Token {
 
-    var testArray: [NewRESP3Token.Value]? {
+    var testArray: [RESP3Token.Value]? {
         switch self.value {
         case .array(let array), .push(let array), .set(let array):
-            return [NewRESP3Token.Value](array.map { $0.value })
+            return [RESP3Token.Value](array.map { $0.value })
         default:
             return nil
         }
     }
 
-    var testDict: [NewRESP3Token.Value: NewRESP3Token.Value]? {
+    var testDict: [RESP3Token.Value: RESP3Token.Value]? {
         switch self.value {
         case .map(let values), .attribute(let values):
-            var result = [NewRESP3Token.Value: NewRESP3Token.Value]()
+            var result = [RESP3Token.Value: RESP3Token.Value]()
             result.reserveCapacity(values.count)
             for (key, value) in values {
                 result[key.value] = value.value
