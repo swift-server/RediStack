@@ -89,23 +89,9 @@ extension UInt8 {
     static let carriageReturn = UInt8(ascii: "\r")
     static let dollar = UInt8(ascii: "$")
     static let asterisk = UInt8(ascii: "*")
-    static let percent = UInt8(ascii: "%")
     static let plus = UInt8(ascii: "+")
     static let hyphen = UInt8(ascii: "-")
-    static let tilde = UInt8(ascii: "~")
-    static let pipe = UInt8(ascii: "|")
     static let colon = UInt8(ascii: ":")
-    static let underscore = UInt8(ascii: "_")
-    static let comma = UInt8(ascii: ",")
-    static let pound = UInt8(ascii: "#")
-    static let t = UInt8(ascii: "t")
-    static let f = UInt8(ascii: "f")
-    static let zero = UInt8(ascii: "0")
-    static let nine = UInt8(ascii: "9")
-    static let exclamationMark = UInt8(ascii: "!")
-    static let equals = UInt8(ascii: "=")
-    static let leftRoundBracket = UInt8(ascii: "(")
-    static let rightAngledBracket = UInt8(ascii: ">")
 }
 
 extension RESPTranslator {
