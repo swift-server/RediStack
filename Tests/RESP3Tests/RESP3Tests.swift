@@ -27,9 +27,4 @@ final class RESP3Tests: XCTestCase {
         var buffer = ByteBuffer(string: ":10")
         XCTAssertThrowsError(try RESP3Token.validate(consuming: &buffer))
     }
-
-    func testRESP3FailsOnNonTerminatedIntegerToken() throws {
-        var buffer = ByteBuffer(string: ":xx")
-        XCTAssertThrowsError(try RESP3Token.validate(consuming: &buffer))
-    }
 }

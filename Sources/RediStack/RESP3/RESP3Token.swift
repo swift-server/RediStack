@@ -1,6 +1,7 @@
 import NIO
 
 enum RESP3Error: Error {
+    case missingData
     case unexpectedEndOfData
     case missingCRLF
     case dataMalformed
@@ -331,3 +332,4 @@ extension ByteBuffer {
         }
     }
 }
+
