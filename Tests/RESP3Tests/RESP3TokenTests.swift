@@ -338,7 +338,7 @@ final class RESP3TokenTests: XCTestCase {
             XCTAssertThrowsError(try RESP3Token(consuming: &tooDeeplyNestedBuffer)) {
                 guard let error = $0 as? RESP3ParsingError else { return XCTFail("Unexpected error: \($0)") }
                 XCTAssertEqual(error.buffer, tooDeeplyNestedBuffer)
-                XCTAssertEqual(error.code, .tooDepplyNestedAggregatedTypes)
+                XCTAssertEqual(error.code, .tooDeeplyNestedAggregatedTypes)
             }
 
             XCTAssertEqual(try RESP3Token(consuming: &notDepplyEnoughToThrowBuffer), notDepplyEnoughToThrowExpected)

@@ -26,7 +26,7 @@ struct RESP3ParsingError: Error {
         private enum Base {
             case invalidLeadingByte
             case invalidData
-            case tooDepplyNestedAggregatedTypes
+            case tooDeeplyNestedAggregatedTypes
             case missingColonInVerbatimString
             case canNotParseInteger
             case canNotParseDouble
@@ -41,7 +41,7 @@ struct RESP3ParsingError: Error {
 
         static let invalidLeadingByte = Self.init(.invalidLeadingByte)
         static let invalidData = Self.init(.invalidData)
-        static let tooDepplyNestedAggregatedTypes = Self.init(.tooDepplyNestedAggregatedTypes)
+        static let tooDeeplyNestedAggregatedTypes = Self.init(.tooDeeplyNestedAggregatedTypes)
         static let missingColonInVerbatimString = Self.init(.missingColonInVerbatimString)
         static let canNotParseInteger = Self.init(.canNotParseInteger)
         static let canNotParseDouble = Self.init(.canNotParseDouble)
@@ -53,8 +53,8 @@ struct RESP3ParsingError: Error {
                 return "invalidLeadingByte"
             case .invalidData:
                 return "invalidData"
-            case .tooDepplyNestedAggregatedTypes:
-                return "tooDepplyNestedAggregatedTypes"
+            case .tooDeeplyNestedAggregatedTypes:
+                return "tooDeeplyNestedAggregatedTypes"
             case .missingColonInVerbatimString:
                 return "missingColonInVerbatimString"
             case .canNotParseInteger:
