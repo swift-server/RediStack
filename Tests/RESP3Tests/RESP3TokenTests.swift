@@ -91,15 +91,18 @@ final class RESP3TokenTests: XCTestCase {
         ]
 
         for value in invalid {
+            let buffer = ByteBuffer(string: value)
             XCTAssertThrowsError(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (.init(string: value), [RESP3Token(validated: .init())]),
+                        (buffer, [RESP3Token(validated: .init())]),
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
             ) {
-                XCTAssertEqual($0 as? RESP3Error, .dataMalformed)
+                guard let error = $0 as? RESP3ParsingError else { return XCTFail("Unexpected error: \($0)") }
+                XCTAssertEqual(error.buffer, buffer)
+                XCTAssertEqual(error.code, .canNotParseInteger)
             }
         }
     }
@@ -204,15 +207,18 @@ final class RESP3TokenTests: XCTestCase {
         ]
 
         for value in invalid {
+            let buffer = ByteBuffer(string: value)
             XCTAssertThrowsError(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (.init(string: value), [RESP3Token(validated: .init())]),
+                        (buffer, [RESP3Token(validated: .init())]),
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
             ) {
-                XCTAssertEqual($0 as? RESP3Error, .dataMalformed, "unexpected error: \($0)")
+                guard let error = $0 as? RESP3ParsingError else { return XCTFail("Unexpected error: \($0)") }
+                XCTAssertEqual(error.buffer, buffer)
+                XCTAssertEqual(error.code, .canNotParseBigNumber)
             }
         }
     }
@@ -330,7 +336,9 @@ final class RESP3TokenTests: XCTestCase {
 
             #if true
             XCTAssertThrowsError(try RESP3Token(consuming: &tooDeeplyNestedBuffer)) {
-                XCTAssertEqual($0 as? RESP3Error, .tooDepplyNestedAggregatedTypes)
+                guard let error = $0 as? RESP3ParsingError else { return XCTFail("Unexpected error: \($0)") }
+                XCTAssertEqual(error.buffer, tooDeeplyNestedBuffer)
+                XCTAssertEqual(error.code, .tooDepplyNestedAggregatedTypes)
             }
 
             XCTAssertEqual(try RESP3Token(consuming: &notDepplyEnoughToThrowBuffer), notDepplyEnoughToThrowExpected)
