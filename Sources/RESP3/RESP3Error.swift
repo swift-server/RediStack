@@ -17,4 +17,5 @@ enum RESP3Error: Error, Equatable {
     case missingCRLF
     case dataMalformed
     case invalidType(UInt8)
+    case tooDepplyNestedAggregatedTypes
 }

@@ -180,6 +180,10 @@ struct RESP3Token: Hashable, Sendable {
     }
 
     init?(consuming buffer: inout ByteBuffer) throws {
+        try self.init(consuming: &buffer, depth: 0)
+    }
+
+    fileprivate init?(consuming buffer: inout ByteBuffer, depth: Int) throws {
         let validated: ByteBuffer?
 
         switch try buffer.getRESP3TypeIdentifier(at: buffer.readerIndex) {
@@ -203,7 +207,7 @@ struct RESP3Token: Hashable, Sendable {
              .some(.set),
              .some(.map),
              .some(.attribute):
-            validated = try buffer.readRESPAggregateSlice()
+            validated = try buffer.readRESPAggregateSlice(depth: depth)
 
         case .some(.integer):
             validated = try buffer.readRESPIntegerSlice()
@@ -319,8 +323,12 @@ extension ByteBuffer {
         return self.readSlice(length: crIndex + 2 - self.readerIndex)
     }
 
-    fileprivate mutating func readRESPAggregateSlice() throws -> ByteBuffer? {
+    fileprivate mutating func readRESPAggregateSlice(depth: Int) throws -> ByteBuffer? {
         let marker = try self.getRESP3TypeIdentifier(at: self.readerIndex)!
+        guard depth < 1000 else {
+            throw RESP3Error.tooDepplyNestedAggregatedTypes
+        }
+
         let multiplier: Int
         switch marker {
         case .array, .push, .set:
@@ -348,7 +356,7 @@ extension ByteBuffer {
         let elementCount = arrayLength * multiplier
 
         for _ in 0..<elementCount {
-            guard let new = try RESP3Token(consuming: &localCopy) else {
+            guard let new = try RESP3Token(consuming: &localCopy, depth: depth + 1) else {
                 return nil
             }
             bodyLength += new.base.readableBytes

@@ -311,6 +311,43 @@ final class RESP3TokenTests: XCTestCase {
         XCTAssertEqual(respSimpleStringSet3.testArray, [.array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")), .boolean(true)])
     }
 
+    func testDeeplyNestedRESPCantStackOverflow() {
+        let pattern = [
+            ("*1\r\n", "*0\r\n"),
+            (">1\r\n", ">0\r\n"),
+            ("~1\r\n", "~0\r\n"),
+            ("%1\r\n#t\r\n", "%0\r\n"),
+            ("|1\r\n#t\r\n", "|0\r\n")
+        ]
+
+        for (nested, final) in pattern {
+            let tooDeeplyNested = String(repeating: nested, count: 1000) + final
+            var tooDeeplyNestedBuffer = ByteBuffer(string: tooDeeplyNested)
+
+            let notDepplyEnoughToThrow = String(repeating: nested, count: 999) + final
+            var notDepplyEnoughToThrowBuffer = ByteBuffer(string: notDepplyEnoughToThrow)
+            let notDepplyEnoughToThrowExpected = RESP3Token(validated: notDepplyEnoughToThrowBuffer)
+
+            #if true
+            XCTAssertThrowsError(try RESP3Token(consuming: &tooDeeplyNestedBuffer)) {
+                XCTAssertEqual($0 as? RESP3Error, .tooDepplyNestedAggregatedTypes)
+            }
+
+            XCTAssertEqual(try RESP3Token(consuming: &notDepplyEnoughToThrowBuffer), notDepplyEnoughToThrowExpected)
+            #else
+            // this is very slow right now. Once we have faster decoding we should use this instead.
+            XCTAssertNoThrow(
+                try ByteToMessageDecoderVerifier.verifyDecoder(
+                    inputOutputPairs: [
+                        (buffer, [expected]),
+                    ],
+                    decoderFactory: { RESP3TokenDecoder() }
+                )
+            )
+            #endif
+        }
+    }
+
     func testMap() {
         let emptyMapInput = ByteBuffer(string: "%0\r\n")
         let respEmptyMap = RESP3Token(validated: emptyMapInput)
