@@ -14,19 +14,19 @@
 
 import NIOCore
 
-struct RESP3Token: Hashable, Sendable {
-    struct Array: Sequence, Sendable, Hashable {
-        typealias Element = RESP3Token
+public struct RESP3Token: Hashable, Sendable {
+    public struct Array: Sequence, Sendable, Hashable {
+        public typealias Element = RESP3Token
 
-        let count: Int
+        public let count: Int
         let buffer: ByteBuffer
 
-        func makeIterator() -> Iterator {
+        public func makeIterator() -> Iterator {
             Iterator(buffer: self.buffer)
         }
 
-        struct Iterator: IteratorProtocol {
-            typealias Element = RESP3Token
+        public struct Iterator: IteratorProtocol {
+            public typealias Element = RESP3Token
 
             private var buffer: ByteBuffer
 
@@ -34,16 +34,16 @@ struct RESP3Token: Hashable, Sendable {
                 self.buffer = buffer
             }
 
-            mutating func next() -> RESP3Token? {
+            public mutating func next() -> RESP3Token? {
                 return try! RESP3Token(consuming: &self.buffer)
             }
         }
     }
 
-    struct Map: Sequence, Sendable, Hashable {
-        typealias Element = (key: RESP3Token, value: RESP3Token)
+    public struct Map: Sequence, Sendable, Hashable {
+        public typealias Element = (key: RESP3Token, value: RESP3Token)
 
-        let count: Int
+        public let count: Int
         let underlying: Array
 
         init(count: Int, buffer: ByteBuffer) {
@@ -51,12 +51,12 @@ struct RESP3Token: Hashable, Sendable {
             self.underlying = Array(count: count * 2, buffer: buffer)
         }
 
-        func makeIterator() -> Iterator {
+        public func makeIterator() -> Iterator {
             Iterator(underlying: self.underlying.makeIterator())
         }
 
-        struct Iterator: IteratorProtocol {
-            typealias Element = (key: RESP3Token, value: RESP3Token)
+        public struct Iterator: IteratorProtocol {
+            public typealias Element = (key: RESP3Token, value: RESP3Token)
 
             private var underlying: Array.Iterator
 
@@ -64,7 +64,7 @@ struct RESP3Token: Hashable, Sendable {
                 self.underlying = underlying
             }
 
-            mutating func next() -> (key: RESP3Token, value: RESP3Token)? {
+            public mutating func next() -> (key: RESP3Token, value: RESP3Token)? {
                 guard let key = self.underlying.next() else {
                     return nil
                 }
@@ -75,7 +75,7 @@ struct RESP3Token: Hashable, Sendable {
         }
     }
 
-    enum Value: Hashable {
+    public enum Value: Hashable {
         case simpleString(ByteBuffer)
         case simpleError(ByteBuffer)
         case blobString(ByteBuffer)
@@ -95,7 +95,7 @@ struct RESP3Token: Hashable, Sendable {
 
     let base: ByteBuffer
 
-    var value: Value {
+    public var value: Value {
         var local = self.base
 
         switch local.readValidatedRESP3TypeIdentifier() {
@@ -179,7 +179,7 @@ struct RESP3Token: Hashable, Sendable {
         }
     }
 
-    init?(consuming buffer: inout ByteBuffer) throws {
+    public init?(consuming buffer: inout ByteBuffer) throws {
         try self.init(consuming: &buffer, depth: 0)
     }
 
@@ -515,14 +515,14 @@ extension UInt32 {
     }()
 }
 
-struct RESP3TokenDecoder: NIOSingleStepByteToMessageDecoder {
-    typealias InboundOut = RESP3Token
+public struct RESP3TokenDecoder: NIOSingleStepByteToMessageDecoder {
+    public typealias InboundOut = RESP3Token
 
-    func decode(buffer: inout ByteBuffer) throws -> RESP3Token? {
+    public mutating func decode(buffer: inout ByteBuffer) throws -> RESP3Token? {
         try RESP3Token(consuming: &buffer)
     }
 
-    func decodeLast(buffer: inout ByteBuffer, seenEOF _: Bool) throws -> RESP3Token? {
+    public mutating func decodeLast(buffer: inout ByteBuffer, seenEOF _: Bool) throws -> RESP3Token? {
         try self.decode(buffer: &buffer)
     }
 }
