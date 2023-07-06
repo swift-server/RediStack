@@ -515,16 +515,3 @@ extension UInt32 {
     }()
 }
 
-public struct RESP3TokenDecoder: NIOSingleStepByteToMessageDecoder {
-    public typealias InboundOut = RESP3Token
-
-    public init() {}
-
-    public mutating func decode(buffer: inout ByteBuffer) throws -> RESP3Token? {
-        try RESP3Token(consuming: &buffer)
-    }
-
-    public mutating func decodeLast(buffer: inout ByteBuffer, seenEOF _: Bool) throws -> RESP3Token? {
-        try self.decode(buffer: &buffer)
-    }
-}
