@@ -20,7 +20,8 @@ let package = Package(
     products: [
         .library(name: "RediStack", targets: ["RediStack"]),
         .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"]),
-        .library(name: "RedisTypes", targets: ["RedisTypes"])
+        .library(name: "RedisTypes", targets: ["RedisTypes"]),
+        .executable(name: "RediStackPerformanceTester", targets: ["RediStackPerformanceTester"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
@@ -44,6 +45,13 @@ let package = Package(
             ]
         ),
         .target(name: "RedisTypes", dependencies: ["RediStack"]),
+        .executableTarget(
+            name: "RediStackPerformanceTester",
+            dependencies: [
+                "RediStack",
+                "RESP3",
+            ]
+        ),
         .target(
             name: "RediStackTestUtils",
             dependencies: [
