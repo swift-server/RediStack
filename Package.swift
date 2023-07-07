@@ -21,7 +21,6 @@ let package = Package(
         .library(name: "RediStack", targets: ["RediStack"]),
         .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"]),
         .library(name: "RedisTypes", targets: ["RedisTypes"]),
-        .executable(name: "RediStackPerformanceTester", targets: ["RediStackPerformanceTester"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
