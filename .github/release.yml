@@ -1,0 +1,18 @@
+changelog:
+  categories:
+    - title: SemVer Major
+      labels:
+        - semver/major
+    - title: SemVer Minor
+      labels:
+        - semver/minor
+    - title: SemVer Patch
+      labels:
+        - semver/patch
+    - title: Other Changes
+      labels:
+        - semver/none
+    - title: 🚨🚨🚨 Missing Labels - Add labels to the prs listed here and generate the release notes again
+      labels:
+        - "*"
+
