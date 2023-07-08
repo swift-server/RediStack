@@ -12,7 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Atomics
 import NIOCore
+import NIOConcurrencyHelpers
 import NIOPosix
 import Logging
 import struct Foundation.URL
@@ -20,11 +22,21 @@ import protocol Foundation.LocalizedError
 
 extension RedisConnection {
     /// A configuration object for creating a single connection to Redis.
-    public struct Configuration {
+    public struct Configuration: Sendable {
+        private static let _defaultPortAtomic = ManagedAtomic(6379)
+
         /// The default port that Redis uses.
         ///
         /// See [https://redis.io/topics/quickstart](https://redis.io/topics/quickstart)
-        public static var defaultPort = 6379
+        public static var defaultPort: Int {
+            get {
+                self._defaultPortAtomic.load(ordering: .acquiring)
+            }
+            @available(*, deprecated, message: "Setting the default Redis port will be removed in the next major release")
+            set {
+                self._defaultPortAtomic.store(newValue, ordering: .releasing)
+            }
+        }
 
         internal static let defaultLogger = Logger.redisBaseConnectionLogger
 
