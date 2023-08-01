@@ -26,7 +26,7 @@ import Logging
 /// Note that `RedisConnectionPool` is entirely thread-safe, even though all of its connections belong to a
 /// single `EventLoop`: if callers call the API from a different `EventLoop` (or from no `EventLoop` at all)
 /// `RedisConnectionPool` will ensure that the call is dispatched to the correct loop.
-public class RedisConnectionPool {
+public final class RedisConnectionPool {
     /// A unique identifer to represent this connection.
     public let id = UUID()
     /// The count of connections that are active and available for use.
