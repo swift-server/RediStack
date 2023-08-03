@@ -143,7 +143,8 @@ internal final class ConnectionPool {
     }
 
     /// Deactivates this connection pool. Once this is called, no further connections can be obtained
-    /// from the pool. Leased connections are not deactivated and can continue to be used.
+    /// from the pool. Leased connections are not deactivated and can continue to be used. All waiters
+    /// are failed with a pool is closed error.
     func close(promise: EventLoopPromise<Void>? = nil, logger: Logger) {
         if self.loop.inEventLoop {
             self.closePool(promise: promise, logger: logger)
@@ -228,7 +229,7 @@ extension ConnectionPool {
         switch self.state {
         case .closing:
             // We don't want this anymore, drop it.
-            _ = connection.close()
+            self.closeConnectionForShutdown(connection)
         case .closed:
             // This is programmer error, we shouldn't have entered this state.
             logger.critical("new connection created on a closed pool", metadata: [
@@ -250,10 +251,21 @@ extension ConnectionPool {
             RedisLogging.MetadataKeys.error: "\(error)"
         ])
 
-        guard case .active = self.state else {
-            // No point continuing connection creation if we're not active.
-            logger.trace("not creating new connections due to inactivity")
+        switch self.state {
+        case .active:
+            break // continue further down
+
+        case .closing(let remaining, let promise):
+            if remaining == 1 {
+                self.state = .closed
+                promise?.succeed()
+            } else {
+                self.state = .closing(remaining: remaining - 1, promise)
+            }
             return
+
+        case .closed:
+            preconditionFailure("Invalid state: \(self.state)")
         }
 
         // Ok, we're still active. Before we do anything, we want to check whether anyone is still waiting
@@ -315,39 +327,42 @@ extension ConnectionPool {
     private func closePool(promise: EventLoopPromise<Void>?, logger: Logger) {
         self.loop.preconditionInEventLoop()
 
-        // Pool closure must be monotonic.
-        guard case .active = self.state else {
-            logger.info("received duplicate request to close connection pool")
-            promise?.succeed(())
+        switch self.state {
+        case .active:
+            self.state = .closing(remaining: self.activeConnectionCount, promise)
+
+        case .closing(let count, let existingPromise):
+            if let existingPromise = existingPromise {
+                existingPromise.futureResult.cascade(to: promise)
+            } else {
+                self.state = .closing(remaining: count, promise)
+            }
+            return
+
+        case .closed:
+            promise?.succeed()
             return
         }
-
-        self.state = .closing
-
-        // To close the pool we need to drop all active connections.
-        let connections = self.availableConnections
-        self.availableConnections = []
-        let closeFutures = connections.map { $0.close() }
 
         // We also cancel all pending leases.
         while let pendingLease = self.connectionWaiters.popFirst() {
             pendingLease.fail(RedisConnectionPoolError.poolClosed)
         }
 
-        guard self.activeConnectionCount == 0 else {
-            logger.debug("not closing pool, waiting for all connections to be returned", metadata: [
-                RedisLogging.MetadataKeys.poolConnectionCount: "\(self.activeConnectionCount)"
-            ])
-            promise?.fail(RedisConnectionPoolError.poolHasActiveConnections)
+        if self.activeConnectionCount == 0 {
+            // That was all the connections, so this is now closed.
+            logger.trace("pool is now closed")
+            self.state = .closed
+            promise?.succeed()
             return
         }
 
-        // That was all the connections, so this is now closed.
-        logger.trace("pool is now closed")
-        self.state = .closed
-        EventLoopFuture<Void>
-            .andAllSucceed(closeFutures, on: self.loop)
-            .cascade(to: promise)
+        // To close the pool we need to drop all active connections.
+        let connections = self.availableConnections
+        self.availableConnections = []
+        for connection in connections {
+            self.closeConnectionForShutdown(connection)
+        }
     }
 
     /// This is the on-thread implementation for leasing connections out to users. Here we work out how to get a new
@@ -401,13 +416,24 @@ extension ConnectionPool {
     private func _returnLeasedConnection(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
         self.leasedConnectionCount -= 1
-        self._returnConnection(connection, logger: logger)
+
+        switch self.state {
+        case .active:
+            self._returnConnection(connection, logger: logger)
+
+        case .closing:
+            return self.closeConnectionForShutdown(connection)
+
+        case .closed:
+            preconditionFailure("Invalid state: \(self.state)")
+        }
     }
 
     /// This is the on-thread implementation for returning connections to the pool. Here we work out what to do with a newly-acquired
     /// connection.
     private func _returnConnection(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
+        precondition(self.state.isActive)
 
         guard connection.isConnected else {
             // This connection isn't active anymore. We'll dump it and potentially kick off a reconnection.
@@ -448,6 +474,27 @@ extension ConnectionPool {
             self.state = .closed
         }
     }
+
+    private func closeConnectionForShutdown(_ connection: RedisConnection) {
+        connection.close().whenComplete { _ in
+            self.loop.preconditionInEventLoop()
+
+            switch self.state {
+            case .closing(let remaining, let promise):
+                if remaining == 1 {
+                    self.state = .closed
+                    promise?.succeed()
+                } else {
+                    self.state = .closing(remaining: remaining - 1, promise)
+                }
+
+            case .closed, .active:
+                // The state must not change if we are closing a connection, while we are
+                // closing the pool.
+                preconditionFailure("Invalid state: \(self.state)")
+            }
+        }
+    }
 }
 
 extension ConnectionPool {
@@ -457,10 +504,19 @@ extension ConnectionPool {
 
         /// The user has requested the connection pool to close, but there are still active connections leased to users
         /// and in the pool.
-        case closing
+        case closing(remaining: Int, EventLoopPromise<Void>?)
 
         /// The connection pool is closed: no connections are outstanding
         case closed
+
+        var isActive: Bool {
+            switch self {
+            case .active:
+                return true
+            case .closing, .closed:
+                return false
+            }
+        }
     }
 }
 
