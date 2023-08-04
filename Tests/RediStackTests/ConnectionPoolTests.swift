@@ -402,6 +402,95 @@ final class ConnectionPoolTests: XCTestCase {
         connectionPromise?.fail(ConnectionPoolTestError.connectionFailedForSomeReason)
     }
 
+    func testShutdownPoolThatHasConnectionThatFailsInCreation() {
+        var connectionPromise: EventLoopPromise<RedisConnection>? = nil
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+            XCTAssertTrue(loop === self.server.loop)
+            connectionPromise = self.server.loop.makePromise()
+            return connectionPromise!.futureResult
+        }
+        pool.activate()
+        XCTAssertNoThrow(try self.server.runWhileActive())
+        XCTAssertEqual(self.server.channels.count, 0)
+        XCTAssertNotNil(connectionPromise)
+
+        var failedLastConnection = false
+        let closePromise = self.server.loop.makePromise(of: Void.self)
+
+        pool.close(promise: closePromise)
+        closePromise.futureResult.whenComplete { _ in
+            XCTAssertTrue(failedLastConnection)
+        }
+
+        failedLastConnection = true
+        connectionPromise?.fail(ConnectionPoolTestError.connectionFailedForSomeReason)
+        XCTAssertNoThrow(try closePromise.futureResult.wait())
+    }
+
+    func testShutdownPoolThatHasConnectionThatSucceedsInCreation() {
+        var connectionPromise: EventLoopPromise<RedisConnection>? = nil
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+            XCTAssertTrue(loop === self.server.loop)
+            connectionPromise = self.server.loop.makePromise()
+            return connectionPromise!.futureResult
+        }
+        pool.activate()
+        XCTAssertNoThrow(try self.server.runWhileActive())
+        XCTAssertEqual(self.server.channels.count, 0)
+        XCTAssertNotNil(connectionPromise)
+
+        var lastConnectionCreated = false
+        let closePromise = self.server.loop.makePromise(of: Void.self)
+
+        pool.close(promise: closePromise)
+        closePromise.futureResult.whenComplete { _ in
+            XCTAssertTrue(lastConnectionCreated)
+        }
+
+        let singleConnection = self.createAConnection()
+        lastConnectionCreated = true
+        connectionPromise?.succeed(singleConnection)
+        self.server.loop.run()
+        XCTAssertNoThrow(try singleConnection.channel.closeFuture.wait(), "New connection is closed right away.")
+        XCTAssertNoThrow(try closePromise.futureResult.wait())
+    }
+
+    func testShutdownPoolThatHasLeasedConnection() {
+        var connectionPromise: EventLoopPromise<RedisConnection>? = nil
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+            XCTAssertTrue(loop === self.server.loop)
+            connectionPromise = self.server.loop.makePromise()
+            return connectionPromise!.futureResult
+        }
+        pool.activate()
+        XCTAssertNoThrow(try self.server.runWhileActive())
+        XCTAssertEqual(self.server.channels.count, 0)
+        XCTAssertNotNil(connectionPromise)
+
+        var leasedConnectionReturned = false
+        let closePromise = self.server.loop.makePromise(of: Void.self)
+
+        let singleConnection = self.createAConnection()
+        connectionPromise?.succeed(singleConnection)
+
+        var leasedConnection: RedisConnection?
+        XCTAssertNoThrow(leasedConnection = try pool.leaseConnection(deadline: .distantFuture).wait())
+        XCTAssert(singleConnection === leasedConnection)
+
+        pool.close(promise: closePromise)
+        closePromise.futureResult.whenComplete { _ in
+            XCTAssertTrue(leasedConnectionReturned)
+        }
+
+        leasedConnectionReturned = true
+        pool.returnConnection(singleConnection)
+
+        self.server.loop.run()
+        XCTAssertNoThrow(try singleConnection.channel.closeFuture.wait(), "New connection is closed right away.")
+        XCTAssertNoThrow(try closePromise.futureResult.wait())
+    }
+
+
     func testNonLeakyBucketWillKeepConnectingIfThereIsSpaceAndWaiters() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
         let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: false) { loop in

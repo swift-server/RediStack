@@ -104,7 +104,6 @@ extension RedisConnectionPool {
     /// Closes all connections in the pool and deactivates the pool from creating new connections.
     ///
     /// This method is safe to call multiple times.
-    /// - Important: If the pool has connections in active use, the close process will not complete.
     /// - Parameters:
     ///     - promise: A notification promise to resolve once the close process has completed.
     ///     - logger: An optional logger to use for any log statements generated while closing the pool.
