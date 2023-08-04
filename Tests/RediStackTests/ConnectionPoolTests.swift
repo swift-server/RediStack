@@ -12,7 +12,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-import Atomics
 @testable import RediStack
 @testable import RediStackTestUtils
 import XCTest
@@ -455,6 +454,42 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertNoThrow(try singleConnection.channel.closeFuture.wait(), "New connection is closed right away.")
         XCTAssertNoThrow(try closePromise.futureResult.wait())
     }
+
+    func testShutdownPoolThatHasLeasedConnection() {
+        var connectionPromise: EventLoopPromise<RedisConnection>? = nil
+        let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 1, leaky: false) { loop in
+            XCTAssertTrue(loop === self.server.loop)
+            connectionPromise = self.server.loop.makePromise()
+            return connectionPromise!.futureResult
+        }
+        pool.activate()
+        XCTAssertNoThrow(try self.server.runWhileActive())
+        XCTAssertEqual(self.server.channels.count, 0)
+        XCTAssertNotNil(connectionPromise)
+
+        var leasedConnectionReturned = false
+        let closePromise = self.server.loop.makePromise(of: Void.self)
+
+        let singleConnection = self.createAConnection()
+        connectionPromise?.succeed(singleConnection)
+
+        var leasedConnection: RedisConnection?
+        XCTAssertNoThrow(leasedConnection = try pool.leaseConnection(deadline: .distantFuture).wait())
+        XCTAssert(singleConnection === leasedConnection)
+
+        pool.close(promise: closePromise)
+        closePromise.futureResult.whenComplete { _ in
+            XCTAssertTrue(leasedConnectionReturned)
+        }
+
+        leasedConnectionReturned = true
+        pool.returnConnection(singleConnection)
+
+        self.server.loop.run()
+        XCTAssertNoThrow(try singleConnection.channel.closeFuture.wait(), "New connection is closed right away.")
+        XCTAssertNoThrow(try closePromise.futureResult.wait())
+    }
+
 
     func testNonLeakyBucketWillKeepConnectingIfThereIsSpaceAndWaiters() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil

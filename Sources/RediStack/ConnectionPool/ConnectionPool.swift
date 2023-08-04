@@ -441,37 +441,20 @@ extension ConnectionPool {
             return
         }
 
-        switch self.state {
-        case .active:
-            // If anyone is waiting for a connection, let's give them this one. Otherwise, if there's room
-            // in the pool, we'll put it there. Otherwise, we'll close it.
-            if let waiter = self.connectionWaiters.popFirst() {
-                self.leaseConnection(connection, to: waiter)
-            } else if self.canAddConnectionToPool {
-                self.availableConnections.append(connection)
-            } else if let evictable = self.availableConnections.popFirst() {
-                // We have at least one pooled connection. The returned is more recently active, so kick out the pooled
-                // connection in favour of this one and close the recently evicted one.
-                self.availableConnections.append(connection)
-                _ = evictable.close()
-            } else {
-                // We don't need it, close it.
-                _ = connection.close()
-            }
-        case .closed:
-            // In general we shouldn't see leased connections return in .closed, as we should only be able to
-            // transition to .closed when all the leases are back. We tolerate this in production builds by just closing the
-            // connection, but in debug builds we assert to be sure.
-            logger.warning("connection returned to closed pool", metadata: [
-                RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
-            ])
-            assertionFailure("Returned connection to closed pool")
-            fallthrough
-        case .closing:
-            // We don't need this connection, close it.
+        // If anyone is waiting for a connection, let's give them this one. Otherwise, if there's room
+        // in the pool, we'll put it there. Otherwise, we'll close it.
+        if let waiter = self.connectionWaiters.popFirst() {
+            self.leaseConnection(connection, to: waiter)
+        } else if self.canAddConnectionToPool {
+            self.availableConnections.append(connection)
+        } else if let evictable = self.availableConnections.popFirst() {
+            // We have at least one pooled connection. The returned is more recently active, so kick out the pooled
+            // connection in favour of this one and close the recently evicted one.
+            self.availableConnections.append(connection)
+            _ = evictable.close()
+        } else {
+            // We don't need it, close it.
             _ = connection.close()
-            guard self.leasedConnectionCount == 0 else { return }
-            self.state = .closed
         }
     }
 
