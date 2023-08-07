@@ -381,7 +381,7 @@ extension ConnectionPool {
         // that yet, so double-check. Leave the dead ones there: we'll get them later.
         while let connection = self.availableConnections.popLast() {
             if connection.isConnected {
-                logger.debug("found available connection", metadata: [
+                logger.trace("found available connection", metadata: [
                     RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
                 ])
                 self.leaseConnection(connection, to: waiter)
