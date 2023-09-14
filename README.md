@@ -29,13 +29,14 @@ dependencies: [
 
 ## Getting Started
 
-**RediStack** is quick to use - all you need is an [`EventLoop`](https://apple.github.io/swift-nio/docs/current/NIO/Protocols/EventLoop.html) from **SwiftNIO**.
+**RediStack** is quick to use - all you need is an [`EventLoop`](https://swiftpackageindex.com/apple/swift-nio/main/documentation/niocore/eventloop) from **SwiftNIO**.
 
 ```swift
 import NIOCore
+import NIOPosix
 import RediStack
 
-let eventLoop: EventLoop = ...
+let eventLoop: EventLoop = NIOSingletons.posixEventLoopGroup.any()
 let connection = RedisConnection.make(
     configuration: try .init(hostname: "127.0.0.1"),
     boundEventLoop: eventLoop
