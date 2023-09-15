@@ -26,7 +26,7 @@ components that this product depends on.
 
 -------------------------------------------------------------------------------
 
-This product was heavily influenced by implementations from the Vapor and NozeIO frameworks.
+This product was heavily influenced by Vapor and NozeIO.
 
     * NozeIO
       * LICENSE (Apache License 2.0)
@@ -41,71 +41,36 @@ This product was heavily influenced by implementations from the Vapor and NozeIO
 
 ---
 
-This product contains the entire library from Apple's SwiftLog API.
+This product contains a a derivation of Georges Menie's crc16 algorithm that was adopted
+to Redis coding style by Salvatore Sanfilippo.
 
-* LICENSE (Apache License 2.0):
-    * https://github.com/apple/swift-log/blob/master/LICENSE.txt
-* HOMEPAGE:
-    * https://github.com/apple/swift-log
-
----
-
-This product contains the entire library from Apple's SwiftMetrics API.
-
-* LICENSE (Apache License 2.0):
-    * https://github.com/apple/swift-metrics/blob/master/LICENSE.txt
-* HOMEPAGE:
-    * https://github.com/apple/swift-metrics
-
----
-
-This product contains the entire library and derivations of various scripts from Apple's SwiftNIO.
-
-  * LICENSE (Apache License 2.0):
-    * https://github.com/apple/swift-nio/blob/master/LICENSE.txt
+  * LICENSE:
+    /*
+     * Copyright 2001-2010 Georges Menie (www.menie.org)
+     * Copyright 2010 Salvatore Sanfilippo (adapted to Redis coding style)
+     * All rights reserved.
+     * Redistribution and use in source and binary forms, with or without
+     * modification, are permitted provided that the following conditions are met:
+     *
+     *     * Redistributions of source code must retain the above copyright
+     *       notice, this list of conditions and the following disclaimer.
+     *     * Redistributions in binary form must reproduce the above copyright
+     *       notice, this list of conditions and the following disclaimer in the
+     *       documentation and/or other materials provided with the distribution.
+     *     * Neither the name of the University of California, Berkeley nor the
+     *       names of its contributors may be used to endorse or promote products
+     *       derived from this software without specific prior written permission.
+     *
+     * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND ANY
+     * EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+     * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+     * DISCLAIMED. IN NO EVENT SHALL THE REGENTS AND CONTRIBUTORS BE LIABLE FOR ANY
+     * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+     * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+     * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+     * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+     * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+     * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+     */
   * HOMEPAGE:
-    * https://github.com/apple/swift-nio
-
----
-
-This product contains a derivation of the Tony Stone's 'process_test_files.rb'.
-
-  * LICENSE (Apache License 2.0):
-    * https://www.apache.org/licenses/LICENSE-2.0
-  * HOMEPAGE:
-    * https://codegists.com/snippet/ruby/generate_xctest_linux_runnerrb_tonystone_ruby
-
----
-
-This product contains NodeJS's http-parser.
-
-  * LICENSE (MIT):
-    * https://github.com/nodejs/http-parser/blob/master/LICENSE-MIT
-  * HOMEPAGE:
-    * https://github.com/nodejs/http-parser
-
----
-
-This product contains "cpp_magic.h" from Thomas Nixon & Jonathan Heathcote's uSHET
-
-  * LICENSE (MIT):
-    * https://github.com/18sg/uSHET/blob/master/LICENSE
-  * HOMEPAGE:
-    * https://github.com/18sg/uSHET
-
----
-
-This product contains "sha1.c" and "sha1.h" from FreeBSD (Copyright (C) 1995, 1996, 1997, and 1998 WIDE Project)
-
-  * LICENSE (BSD-3):
-    * https://opensource.org/licenses/BSD-3-Clause
-  * HOMEPAGE:
-    * https://github.com/freebsd/freebsd/tree/master/sys/crypto
-
----
-This product contains "ifaddrs-android.c" and "ifaddrs-android.h" from dxr.mozilla.org. Webrtc is the owner, but we use edited version from mozilla repo (Copyright (c) 2011, The WebRTC project authors. All rights reserved)
-
-  * LICENSE (BSD):
-    * https://webrtc.googlesource.com/src/+/master/LICENSE
-  * HOMEPAGE:
-    * https://webrtc.googlesource.com/
+    * https://redis.io/docs/reference/cluster-spec/#appendix-a-crc16-reference-implementation-in-ansi-c
