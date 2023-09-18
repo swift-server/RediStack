@@ -34,7 +34,7 @@ public protocol RedisClusterNodeDescriptionProtocol: Sendable, Equatable {
 }
 
 extension RedisClusterNodeDescriptionProtocol {
-    func isSame(_ other: some RedisClusterNodeDescriptionProtocol) -> Bool {
+    func isSame<Other: RedisClusterNodeDescriptionProtocol>(_ other: Other) -> Bool {
         return self.ip == other.ip
             && self.port == other.port
             && self.endpoint == other.endpoint
