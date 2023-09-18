@@ -216,7 +216,7 @@ let crc16tab: [UInt16] = [
 func crc16<Bytes: Sequence>(_ bytes: Bytes) -> UInt16 where Bytes.Element == UInt8 {
     var crc: UInt16 = 0
     for byte in bytes {
-        crc = (crc << 8) ^ crc16tab[(Int(crc >> 8) ^ Int(byte)) & 0x00FF]
+        crc = (crc &<< 8) ^ crc16tab[(Int(crc &>> 8) ^ Int(byte)) & 0x00FF]
     }
     return crc
 }
