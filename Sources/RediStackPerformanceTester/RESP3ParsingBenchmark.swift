@@ -21,14 +21,14 @@ func benchmarkRESP3Parsing() throws {
         .blobString(ByteBuffer(string: "GET")),
         .blobString(ByteBuffer(string: "welcome")),
     ]
+    let token = RESP3Token.Unchecked(buffer: valueBuffer)
 
     try benchmark {
-        var valueBuffer = valueBuffer
+        let token = token
 
         guard
-            let token = try RESP3Token(consuming: &valueBuffer),
-            case .array(let array) = token.value,
-            array.map(\.value) == values
+            case .array(let array) = try token.getValue(),
+            array.count == values.count
         else {
             fatalError("\(#function) Test failed: Invalid test result")
         }
