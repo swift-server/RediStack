@@ -259,6 +259,10 @@ public struct RESP3Token: Hashable, Sendable {
         try self.init(consuming: &buffer, depth: 0)
     }
 
+    public init(validated buffer: ByteBuffer) {
+        self.wrapped = .init(buffer: buffer)
+    }
+
     fileprivate init?(consuming buffer: inout ByteBuffer, depth: Int) throws {
         let validated: ByteBuffer?
 
