@@ -15,7 +15,7 @@
 @testable import RediStack
 import XCTest
 
-class RedisErrorTests: XCTestCase {
+final class RedisErrorTests: XCTestCase {
     func testLoggableDescriptionLocalized() {
         let error = RedisError(reason: "test")
         XCTAssertEqual(error.loggableDescription, "(Redis) test")
