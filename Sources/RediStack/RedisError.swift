@@ -55,3 +55,16 @@ extension RedisError: RESPValueConvertible {
         return .error(self)
     }
 }
+
+extension Error {
+    /// Provides a description of the error which is suitable for logging
+    /// This uses localizedDescription if it is implemented, otherwise falls back to default string representation
+    /// This avoids hiding details for errors coming from other libraries (e.g. from swift-nio) which don't
+    /// conform to LocalizedError
+    var loggableDescription: String {
+        if self is LocalizedError {
+            return self.localizedDescription
+        }
+        return "\(self)"
+    }
+}
