@@ -1,3 +1,17 @@
+//===----------------------------------------------------------------------===//
+//
+// This source file is part of the RediStack open source project
+//
+// Copyright (c) YEARS RediStack project authors
+// Licensed under Apache License v2.0
+//
+// See LICENSE.txt for license information
+// See CONTRIBUTORS.txt for the list of RediStack project authors
+//
+// SPDX-License-Identifier: Apache-2.0
+//
+//===----------------------------------------------------------------------===//
+
 @testable import RediStack
 import XCTest
 
@@ -6,6 +20,7 @@ class RedisErrorTests: XCTestCase {
         let error = RedisError(reason: "test")
         XCTAssertEqual(error.loggableDescription, "(Redis) test")
     }
+
     func testLoggableDescriptionNotLocalized() {
         struct MyError: Error, CustomStringConvertible {
             var field: String
