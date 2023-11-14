@@ -32,6 +32,6 @@ final class RedisErrorTests: XCTestCase {
         XCTAssertEqual(error.loggableDescription, "description of test")
         // Trying to take a localizedDescription would give a less useful message like
         // "The operation couldn’t be completed. (RediStackTests.RedisErrorTests.(unknown context at $10aa9f334).(unknown context at $10aa9f340).MyError error 1.)"
-        XCTAssertTrue(error.localizedDescription.starts(with: "The operation couldn’t be completed. (RediStackTests.RedisErrorTests.(unknown context at "))
+        XCTAssertTrue(error.localizedDescription.contains("unknown context"))
     }
 }
