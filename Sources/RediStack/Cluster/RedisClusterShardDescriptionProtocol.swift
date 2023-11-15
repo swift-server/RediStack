@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 /// A description of a single shard that is part of a redis cluster
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 public protocol RedisClusterShardDescriptionProtocol: Identifiable, Sendable {
     associatedtype NodeDescription: RedisClusterNodeDescriptionProtocol
 
