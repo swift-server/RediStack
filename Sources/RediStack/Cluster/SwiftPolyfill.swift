@@ -14,16 +14,19 @@
 
 /// We use this protocol internally to abstract over TaskGroups. On Linux we can always use a `DiscardingTaskGroup`,
 /// but to support Swift 5.8 on macOS we need to fallback to the original TaskGroup.
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 protocol DiscardingTaskGroupProtocol {
     mutating func addTask(priority: TaskPriority?, operation: @escaping @Sendable () async -> Void)
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension DiscardingTaskGroupProtocol {
     mutating func addTask(_ operation: @escaping @Sendable () async -> Void) {
         self.addTask(priority: nil, operation: operation)
     }
 }
 
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension TaskGroup: DiscardingTaskGroupProtocol where ChildTaskResult == Void {}
 
 #if swift(>=5.9) || (swift(>=5.8) && os(Linux))
