@@ -265,7 +265,7 @@ extension RedisConnection {
 
         guard self.isConnected else {
             let error = RedisClientError.connectionClosed
-            logger.warning("\(error.localizedDescription)")
+            logger.warning("\(error.loggableDescription)")
             return self.channel.eventLoop.makeFailedFuture(error)
         }
         logger.trace("received command request")
@@ -293,7 +293,7 @@ extension RedisConnection {
             switch result {
             case let .failure(error):
                 logger.error("command failed", metadata: [
-                    RedisLogging.MetadataKeys.error: "\(error.localizedDescription)"
+                    RedisLogging.MetadataKeys.error: "\(error.loggableDescription)"
                 ])
 
             case let .success(value):
@@ -448,7 +448,7 @@ extension RedisConnection {
                             logger.debug(
                                 "failed to add subscriptions that triggered pubsub mode. removing handler",
                                 metadata: [
-                                    RedisLogging.MetadataKeys.error: "\(error.localizedDescription)"
+                                    RedisLogging.MetadataKeys.error: "\(error.loggableDescription)"
                                 ]
                             )
                             // if there was an error, no subscriptions were made
