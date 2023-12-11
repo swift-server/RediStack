@@ -36,6 +36,7 @@ extension DiscardingTaskGroup: DiscardingTaskGroupProtocol {}
 
 #if swift(<5.9)
 // This should be removed once we support Swift 5.9+ only
+@available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
 extension AsyncStream {
     static func makeStream(
         of elementType: Element.Type = Element.self,
