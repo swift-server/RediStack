@@ -40,17 +40,11 @@ let package = Package(
                 .product(name: "NIOSSL", package: "swift-nio-ssl"),
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Metrics", package: "swift-metrics")
+                .product(name: "Metrics", package: "swift-metrics"),
+                .target(name: "RESP3"),
             ]
         ),
         .target(name: "RedisTypes", dependencies: ["RediStack"]),
-        .executableTarget(
-            name: "RediStackPerformanceTester",
-            dependencies: [
-                "RediStack",
-                "RESP3",
-            ]
-        ),
         .target(
             name: "RediStackTestUtils",
             dependencies: [

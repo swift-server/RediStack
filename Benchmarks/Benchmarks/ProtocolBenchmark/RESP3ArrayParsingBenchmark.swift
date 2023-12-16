@@ -13,24 +13,18 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import RESP3
+@_spi(RESP3) import RediStack
 
-func benchmarkRESP3Parsing() throws {
-    let valueBuffer = ByteBuffer(string: "*2\r\n$3\r\nGET\r\n$7\r\nwelcome\r\n")
-    let values: [RESP3Token.Value] = [
-        .blobString(ByteBuffer(string: "GET")),
-        .blobString(ByteBuffer(string: "welcome")),
-    ]
+func runRESP3ArrayParsing(
+    valueBuffer: ByteBuffer,
+    valueCount: Int
+) throws {
     let token = RESP3Token.Unchecked(buffer: valueBuffer)
 
-    try benchmark {
-        let token = token
-
-        guard
-            case .array(let array) = try token.getValue(),
-            array.count == values.count
-        else {
-            fatalError("\(#function) Test failed: Invalid test result")
-        }
+    guard
+        case .array(let array) = try token.getValue(),
+        array.count == valueCount
+    else {
+        fatalError("\(#function) Test failed: Invalid test result")
     }
 }
