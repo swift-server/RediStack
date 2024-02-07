@@ -15,6 +15,162 @@
 import NIOCore
 
 public struct RESP3Token: Hashable, Sendable {
+    public struct Unchecked: Hashable, Sendable {
+        let base: ByteBuffer
+
+        public init(buffer: ByteBuffer) {
+            self.base = buffer
+        }
+
+        public func getValue() throws -> Value {
+            var local = self.base
+
+            switch local.readValidatedRESP3TypeIdentifier() {
+            case .null:
+                return .null
+
+            case .boolean:
+                switch local.readInteger(as: UInt8.self) {
+                case UInt8.t:
+                    return .boolean(true)
+                case UInt8.f:
+                    return .boolean(false)
+                default:
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+            case .blobString:
+                guard
+                    var lengthSlice = try local.readCRLFTerminatedSlice2(),
+                    let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes),
+                    let length = Int(lengthString),
+                    let string = local.readSlice(length: length)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .blobString(string)
+
+            case .blobError:
+                guard
+                    var lengthSlice = try local.readCRLFTerminatedSlice2(),
+                    let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes),
+                    let length = Int(lengthString),
+                    let slice = local.readSlice(length: length)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .blobError(slice)
+
+            case .simpleString:
+                guard let slice = try local.readCRLFTerminatedSlice2() else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .simpleString(slice)
+
+            case .simpleError:
+                guard let slice = try local.readCRLFTerminatedSlice2() else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .simpleError(slice)
+
+            case .array:
+                guard
+                    var countSlice = try local.readCRLFTerminatedSlice2(),
+                    let countString = countSlice.readString(length: countSlice.readableBytes),
+                    let count = Int(countString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .array(.init(count: count, buffer: local))
+
+            case .push:
+                guard
+                    var countSlice = try local.readCRLFTerminatedSlice2(),
+                    let countString = countSlice.readString(length: countSlice.readableBytes),
+                    let count = Int(countString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .push(.init(count: count, buffer: local))
+
+            case .set:
+                guard
+                    var countSlice = try local.readCRLFTerminatedSlice2(),
+                    let countString = countSlice.readString(length: countSlice.readableBytes),
+                    let count = Int(countString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .set(.init(count: count, buffer: local))
+
+            case .attribute:
+                guard
+                    var countSlice = try local.readCRLFTerminatedSlice2(),
+                    let countString = countSlice.readString(length: countSlice.readableBytes),
+                    let count = Int(countString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .attribute(.init(count: count, buffer: local))
+
+            case .map:
+                guard
+                    var countSlice = try local.readCRLFTerminatedSlice2(),
+                    let countString = countSlice.readString(length: countSlice.readableBytes),
+                    let count = Int(countString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .map(.init(count: count, buffer: local))
+
+            case .integer:
+                var numberSlice = try local.readCRLFTerminatedSlice2()!
+                let numberString = numberSlice.readString(length: numberSlice.readableBytes)!
+                let number = Int64(numberString)!
+                return .number(number)
+
+            case .double:
+                guard
+                    var numberSlice = try local.readCRLFTerminatedSlice2(),
+                    let numberString = numberSlice.readString(length: numberSlice.readableBytes),
+                    let number = Double(numberString)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .double(number)
+
+            case .verbatimString:
+                guard
+                    var lengthSlice = try! local.readCRLFTerminatedSlice2(),
+                    let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes),
+                    let length = Int(lengthString),
+                    let slice = local.readSlice(length: length)
+                else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .verbatimString(slice)
+
+            case .bigNumber:
+                guard let lengthSlice = try local.readCRLFTerminatedSlice2() else {
+                    throw RESP3ParsingError(code: .invalidData, buffer: base)
+                }
+
+                return .bigNumber(lengthSlice)
+            }
+        }
+    }
+
     public struct Array: Sequence, Sendable, Hashable {
         public typealias Element = RESP3Token
 
@@ -93,94 +249,18 @@ public struct RESP3Token: Hashable, Sendable {
         case push(Array)
     }
 
-    let base: ByteBuffer
+    let wrapped: Unchecked
 
     public var value: Value {
-        var local = self.base
-
-        switch local.readValidatedRESP3TypeIdentifier() {
-        case .null:
-            return .null
-
-        case .boolean:
-            return .boolean(local.readInteger(as: UInt8.self)! == .t)
-
-        case .blobString:
-            var lengthSlice = try! local.readCRLFTerminatedSlice2()!
-            let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes)!
-            let length = Int(lengthString)!
-            return .blobString(local.readSlice(length: length)!)
-
-        case .blobError:
-            var lengthSlice = try! local.readCRLFTerminatedSlice2()!
-            let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes)!
-            let length = Int(lengthString)!
-            return .blobError(local.readSlice(length: length)!)
-
-        case .simpleString:
-            let slice = try! local.readCRLFTerminatedSlice2()!
-            return .simpleString(slice)
-
-        case .simpleError:
-            let slice = try! local.readCRLFTerminatedSlice2()!
-            return .simpleError(slice)
-
-        case .array:
-            var countSlice = try! local.readCRLFTerminatedSlice2()!
-            let countString = countSlice.readString(length: countSlice.readableBytes)!
-            let count = Int(countString)!
-            return .array(.init(count: count, buffer: local))
-
-        case .push:
-            var countSlice = try! local.readCRLFTerminatedSlice2()!
-            let countString = countSlice.readString(length: countSlice.readableBytes)!
-            let count = Int(countString)!
-            return .push(.init(count: count, buffer: local))
-
-        case .set:
-            var countSlice = try! local.readCRLFTerminatedSlice2()!
-            let countString = countSlice.readString(length: countSlice.readableBytes)!
-            let count = Int(countString)!
-            return .set(.init(count: count, buffer: local))
-
-        case .attribute:
-            var countSlice = try! local.readCRLFTerminatedSlice2()!
-            let countString = countSlice.readString(length: countSlice.readableBytes)!
-            let count = Int(countString)!
-            return .attribute(.init(count: count, buffer: local))
-
-        case .map:
-            var countSlice = try! local.readCRLFTerminatedSlice2()!
-            let countString = countSlice.readString(length: countSlice.readableBytes)!
-            let count = Int(countString)!
-            return .map(.init(count: count, buffer: local))
-
-        case .integer:
-            var numberSlice = try! local.readCRLFTerminatedSlice2()!
-            let numberString = numberSlice.readString(length: numberSlice.readableBytes)!
-            let number = Int64(numberString)!
-            return .number(number)
-
-        case .double:
-            var numberSlice = try! local.readCRLFTerminatedSlice2()!
-            let numberString = numberSlice.readString(length: numberSlice.readableBytes)!
-            let number = Double(numberString)!
-            return .double(number)
-
-        case .verbatimString:
-            var lengthSlice = try! local.readCRLFTerminatedSlice2()!
-            let lengthString = lengthSlice.readString(length: lengthSlice.readableBytes)!
-            let length = Int(lengthString)!
-            return .verbatimString(local.readSlice(length: length)!)
-
-        case .bigNumber:
-            let lengthSlice = try! local.readCRLFTerminatedSlice2()!
-            return .bigNumber(lengthSlice)
-        }
+        try! wrapped.getValue()
     }
 
     public init?(consuming buffer: inout ByteBuffer) throws {
         try self.init(consuming: &buffer, depth: 0)
+    }
+
+    public init(validated buffer: ByteBuffer) {
+        self.wrapped = .init(buffer: buffer)
     }
 
     fileprivate init?(consuming buffer: inout ByteBuffer, depth: Int) throws {
@@ -222,12 +302,8 @@ public struct RESP3Token: Hashable, Sendable {
             return nil
         }
 
-        guard let validated = validated else { return nil }
-        self.base = validated
-    }
-
-    init(validated: ByteBuffer) {
-        self.base = validated
+        guard let validated else { return nil }
+        self.wrapped = Unchecked(buffer: validated)
     }
 }
 
@@ -361,7 +437,7 @@ extension ByteBuffer {
                 guard let new = try RESP3Token(consuming: &localCopy, depth: depth + 1) else {
                     return nil
                 }
-                bodyLength += new.base.readableBytes
+                bodyLength += new.wrapped.base.readableBytes
             }
             return bodyLength
         }

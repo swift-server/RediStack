@@ -20,7 +20,7 @@ let package = Package(
     products: [
         .library(name: "RediStack", targets: ["RediStack"]),
         .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"]),
-        .library(name: "RedisTypes", targets: ["RedisTypes"])
+        .library(name: "RedisTypes", targets: ["RedisTypes"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
@@ -40,7 +40,8 @@ let package = Package(
                 .product(name: "NIOSSL", package: "swift-nio-ssl"),
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Metrics", package: "swift-metrics")
+                .product(name: "Metrics", package: "swift-metrics"),
+                .target(name: "RESP3"),
             ]
         ),
         .target(name: "RedisTypes", dependencies: ["RediStack"]),
