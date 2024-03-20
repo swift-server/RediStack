@@ -83,6 +83,8 @@ extension RedisConnectionPool {
     /// A configuration object for connection pools.
     /// - Warning: This type has **reference** semantics due to `ConnectionFactoryConfiguration`.
     public struct Configuration {
+        /// The default connection retry timeout
+        public static let defaultConnectionRetryTimeout: TimeAmount = .seconds(60)
         /// The set of Redis servers to which this pool is initially willing to connect.
         public let initialConnectionAddresses: [SocketAddress]
         /// The minimum number of connections to preserve in the pool.
@@ -124,7 +126,7 @@ extension RedisConnectionPool {
             minimumConnectionCount: Int = 1,
             connectionBackoffFactor: Float32 = 2,
             initialConnectionBackoffDelay: TimeAmount = .milliseconds(100),
-            connectionRetryTimeout: TimeAmount? = .seconds(60),
+            connectionRetryTimeout: TimeAmount? = defaultConnectionRetryTimeout,
             onUnexpectedConnectionClose: ((RedisConnection) -> Void)? = nil,
             poolDefaultLogger: Logger? = nil
         ) {
@@ -134,7 +136,7 @@ extension RedisConnectionPool {
             self.minimumConnectionCount = minimumConnectionCount
             self.connectionRetryConfiguration = (
                 (initialConnectionBackoffDelay, connectionBackoffFactor),
-                connectionRetryTimeout ?? .milliseconds(10) // always default to a baseline 10ms
+                connectionRetryTimeout ?? defaultConnectionRetryTimeout
             )
             self.onUnexpectedConnectionClose = onUnexpectedConnectionClose
             self.poolDefaultLogger = poolDefaultLogger ?? .redisBaseConnectionPoolLogger
