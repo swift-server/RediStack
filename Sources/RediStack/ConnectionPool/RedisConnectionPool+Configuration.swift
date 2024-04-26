@@ -136,7 +136,7 @@ extension RedisConnectionPool {
             self.minimumConnectionCount = minimumConnectionCount
             self.connectionRetryConfiguration = (
                 (initialConnectionBackoffDelay, connectionBackoffFactor),
-                connectionRetryTimeout ?? defaultConnectionRetryTimeout
+                connectionRetryTimeout ?? Self.defaultConnectionRetryTimeout
             )
             self.onUnexpectedConnectionClose = onUnexpectedConnectionClose
             self.poolDefaultLogger = poolDefaultLogger ?? .redisBaseConnectionPoolLogger
