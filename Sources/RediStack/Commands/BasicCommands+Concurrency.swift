@@ -167,19 +167,4 @@ extension RedisClient {
     ) async throws -> (Int, [String]) {
         try await scan(startingFrom: position, matching: match, count: count).get()
     }
-
-    @usableFromInline
-    internal func _scan<T>(
-        command: String,
-        resultType: T.Type = T.self,
-        _ key: RedisKey?,
-        _ pos: Int,
-        _ match: String?,
-        _ count: Int?
-    ) async throws -> (Int, T)
-        where
-        T: RESPValueConvertible
-    {
-        try await _scan(command: command, resultType: resultType, key, pos, match, count).get()
-    }
 }

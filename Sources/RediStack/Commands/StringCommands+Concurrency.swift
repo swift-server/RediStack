@@ -16,6 +16,7 @@ import NIOCore
 
 // MARK: Get
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Get the value of a key.
     ///
@@ -23,8 +24,6 @@ extension RedisClient {
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: The value stored at the key provided. If the key does not exist, the value will be `.null`.
     public func get(_ key: RedisKey) -> EventLoopFuture<RESPValue> {
-        let args = [RESPValue(from: key)]
-        return self.send(command: "GET", with: args)
     }
 
     /// Get the value of a key, converting it to the desired type.
@@ -39,8 +38,6 @@ extension RedisClient {
         _ key: RedisKey,
         as type: StoredType.Type
     ) -> EventLoopFuture<StoredType?> {
-        return self.get(key)
-            .map { return StoredType(fromRESP: $0) }
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -49,11 +46,6 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     public func mget(_ keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
-        guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
-
-        let args = keys.map(RESPValue.init)
-        return send(command: "MGET", with: args)
-            .tryConverting()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -65,8 +57,6 @@ extension RedisClient {
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.mget(keys)
-            .map { return $0.map(Value.init(fromRESP:)) }
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -75,7 +65,6 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
-        return self.mget(keys)
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -87,112 +76,12 @@ extension RedisClient {
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.mget(keys, as: type)
     }
 }
 
 // MARK: Set
 
-/// A condition which must hold true in order for a key to be set.
-///
-/// See [https://redis.io/commands/set](https://redis.io/commands/set)
-public struct RedisSetCommandCondition: Hashable {
-    private enum Condition: String, Hashable {
-        case keyExists = "XX"
-        case keyDoesNotExist = "NX"
-    }
-
-    private let condition: Condition?
-    private init(_ condition: Condition?) {
-        self.condition = condition
-    }
-
-    /// The `RESPValue` representation of the condition.
-    @usableFromInline
-    internal var commandArgument: RESPValue? {
-        return self.condition.map { RESPValue(from: $0.rawValue) }
-    }
-}
-
-extension RedisSetCommandCondition {
-    /// No condition is required to be met in order to set the key's value.
-    public static let none = RedisSetCommandCondition(.none)
-
-    /// Only set the key if it already exists.
-    ///
-    /// Redis documentation refers to this as the option "XX".
-    public static let keyExists = RedisSetCommandCondition(.keyExists)
-
-    /// Only set the key if it does not already exist.
-    ///
-    /// Redis documentation refers to this as the option "NX".
-    public static let keyDoesNotExist = RedisSetCommandCondition(.keyDoesNotExist)
-}
-
-/// The expiration to apply when setting a key.
-///
-/// See [https://redis.io/commands/set](https://redis.io/commands/set)
-public struct RedisSetCommandExpiration: Hashable {
-    private enum Expiration: Hashable {
-        case keepExisting
-        case seconds(Int)
-        case milliseconds(Int)
-    }
-
-    private let expiration: Expiration
-    private init(_ expiration: Expiration) {
-        self.expiration = expiration
-    }
-
-    /// An array of `RESPValue`s representing this expiration.
-    @usableFromInline
-    internal func asCommandArguments() -> [RESPValue] {
-        switch self.expiration {
-        case .keepExisting:
-            return [RESPValue(from: "KEEPTTL")]
-        case .seconds(let amount):
-            return [RESPValue(from: "EX"), amount.convertedToRESPValue()]
-        case .milliseconds(let amount):
-            return [RESPValue(from: "PX"), amount.convertedToRESPValue()]
-        }
-    }
-}
-
-extension RedisSetCommandExpiration {
-    /// Retain the existing expiration associated with the key, if one exists.
-    ///
-    /// Redis documentation refers to this as "KEEPTTL".
-    /// - Important: This is option is only available in Redis 6.0+. An error will be returned if this value is sent in lower versions of Redis.
-    public static let keepExisting = RedisSetCommandExpiration(.keepExisting)
-
-    /// Expire the key after the given number of seconds.
-    ///
-    /// Redis documentation refers to this as the option "EX".
-    /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
-    public static func seconds(_ amount: Int) -> RedisSetCommandExpiration {
-        return RedisSetCommandExpiration(.seconds(max(amount, 1)))
-    }
-
-    /// Expire the key after the given number of milliseconds.
-    ///
-    /// Redis documentation refers to this as the option "PX".
-    /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
-    public static func milliseconds(_ amount: Int) -> RedisSetCommandExpiration {
-        return RedisSetCommandExpiration(.milliseconds(max(amount, 1)))
-    }
-}
-
-/// The result of a `SET` command.
-public enum RedisSetCommandResult: Hashable {
-    /// The command completed successfully.
-    case ok
-
-    /// The command was not performed because a condition was not met.
-    ///
-    /// See `RedisSetCommandCondition`.
-    case conditionNotMet
-}
-
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Append a value to the end of an existing entry.
     /// - Note: If the key does not exist, it is created and set as an empty string, so `APPEND` will be similar to `SET` in this special case.
@@ -204,12 +93,6 @@ extension RedisClient {
     /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
     public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> EventLoopFuture<Int> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            value.convertedToRESPValue()
-        ]
-        return send(command: "APPEND", with: args)
-            .tryConverting()
     }
 
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -225,12 +108,6 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Void> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            value.convertedToRESPValue()
-        ]
-        return send(command: "SET", with: args)
-            .map { _ in () }
     }
 
     /// Sets the key to the provided value with options to control how it is set.
@@ -255,21 +132,6 @@ extension RedisClient {
         onCondition condition: RedisSetCommandCondition,
         expiration: RedisSetCommandExpiration? = nil
     ) -> EventLoopFuture<RedisSetCommandResult> {
-        var args: [RESPValue] = [
-            .init(from: key),
-            value.convertedToRESPValue()
-        ]
-
-        if let conditionArgument = condition.commandArgument {
-            args.append(conditionArgument)
-        }
-
-        if let expiration = expiration {
-            args.append(contentsOf: expiration.asCommandArguments())
-        }
-
-        return self.send(command: "SET", with: args)
-            .map { return $0.isNull ? .conditionNotMet : .ok }
     }
 
     /// Sets the key to the provided value if the key does not exist.
@@ -284,13 +146,6 @@ extension RedisClient {
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
     public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Bool> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            value.convertedToRESPValue()
-        ]
-        return self.send(command: "SETNX", with: args)
-            .tryConverting(to: Int.self)
-            .map { $0 == 1 }
     }
 
     /// Sets a key to the provided value and an expiration timeout in seconds.
@@ -311,13 +166,6 @@ extension RedisClient {
         to value: Value,
         expirationInSeconds expiration: Int
     ) -> EventLoopFuture<Void> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            .init(from: max(1, expiration)),
-            value.convertedToRESPValue()
-        ]
-        return self.send(command: "SETEX", with: args)
-            .map { _ in () }
     }
 
     /// Sets a key to the provided value and an expiration timeout in milliseconds.
@@ -338,13 +186,6 @@ extension RedisClient {
         to value: Value,
         expirationInMilliseconds expiration: Int
     ) -> EventLoopFuture<Void> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            .init(from: max(1, expiration)),
-            value.convertedToRESPValue()
-        ]
-        return self.send(command: "PSETEX", with: args)
-            .map { _ in () }
     }
 
     /// Sets each key to their respective new value, overwriting existing values.
@@ -355,8 +196,6 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Void> {
-        return _mset(command: "MSET", operations)
-            .map { _ in () }
     }
 
     /// Sets each key to their respective new value, only if all keys do not currently exist.
@@ -367,32 +206,12 @@ extension RedisClient {
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
     public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
-        return _mset(command: "MSETNX", operations)
-            .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
-    }
-
-    @usableFromInline
-    func _mset<Value: RESPValueConvertible>(
-        command: String,
-        _ operations: [RedisKey: Value]
-    ) -> EventLoopFuture<RESPValue> {
-        assert(operations.count > 0, "At least 1 key-value pair should be provided.")
-
-        let args: [RESPValue] = operations.reduce(
-            into: .init(initialCapacity: operations.count * 2),
-            { (array, element) in
-                array.append(.init(from: element.key))
-                array.append(element.value.convertedToRESPValue())
-            }
-        )
-
-        return send(command: command, with: args)
     }
 }
 
 // MARK: Increment
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Increments the stored value by 1.
     ///
@@ -400,9 +219,6 @@ extension RedisClient {
     /// - Parameter key: The key whose value should be incremented.
     /// - Returns: The new value after the operation.
     public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
-        let args = [RESPValue(from: key)]
-        return send(command: "INCR", with: args)
-            .tryConverting()
     }
 
     /// Increments the stored value by the amount desired .
@@ -417,12 +233,6 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) -> EventLoopFuture<Value> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            .init(bulk: count)
-        ]
-        return send(command: "INCRBY", with: args)
-            .tryConverting()
     }
 
     /// Increments the stored value by the amount desired.
@@ -437,17 +247,12 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) -> EventLoopFuture<Value> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            count.convertedToRESPValue()
-        ]
-        return send(command: "INCRBYFLOAT", with: args)
-            .tryConverting()
     }
 }
 
 // MARK: Decrement
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Decrements the stored value by 1.
     ///
@@ -456,9 +261,6 @@ extension RedisClient {
     /// - Returns: The new value after the operation.
     @inlinable
     public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
-        let args = [RESPValue(from: key)]
-        return send(command: "DECR", with: args)
-            .tryConverting()
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -473,11 +275,5 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) -> EventLoopFuture<Value> {
-        let args: [RESPValue] = [
-            .init(from: key),
-            .init(bulk: count)
-        ]
-        return send(command: "DECRBY", with: args)
-            .tryConverting()
     }
 }
