@@ -26,6 +26,7 @@ extension RedisClient {
     ///     - key: The key of the hash to delete from.
     /// - Returns: The number of fields that were deleted.
     public func hdel(_ fields: [String], from key: RedisKey) async throws -> Int {
+        try await hdel(fields, from: key).get()
     }
 
     /// Removes the specified fields from a hash.
@@ -36,6 +37,7 @@ extension RedisClient {
     ///     - key: The key of the hash to delete from.
     /// - Returns: The number of fields that were deleted.
     public func hdel(_ fields: String..., from key: RedisKey) async throws -> Int {
+        try await hdel(fields, from: key).get()
     }
 
     /// Checks if a hash contains the field specified.
@@ -46,6 +48,7 @@ extension RedisClient {
     ///     - key: The key of the hash to look within.
     /// - Returns: `true` if the hash contains the field, `false` if either the key or field do not exist.
     public func hexists(_ field: String, in key: RedisKey) async throws -> Bool {
+        try await hexists(field, in: key).get()
     }
 
     /// Gets the number of fields contained in a hash.
@@ -54,6 +57,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash to get field count of.
     /// - Returns: The number of fields in the hash, or `0` if the key doesn't exist.
     public func hlen(of key: RedisKey) async throws -> Int {
+        try await hlen(of: key).get()
     }
 
     /// Gets the string length of a hash field's value.
@@ -64,6 +68,7 @@ extension RedisClient {
     ///     - key: The key of the hash.
     /// - Returns: The string length of the hash field's value, or `0` if the field or hash do not exist.
     public func hstrlen(of field: String, in key: RedisKey) async throws -> Int {
+        try await hstrlen(of: field, in: key).get()
     }
 
     /// Gets all field names in a hash.
@@ -72,6 +77,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash.
     /// - Returns: A list of field names stored within the hash.
     public func hkeys(in key: RedisKey) async throws -> [String] {
+        try await hkeys(in: key).get()
     }
 
     /// Gets all values stored in a hash.
@@ -80,6 +86,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash.
     /// - Returns: A list of all values stored in a hash.
     public func hvals(in key: RedisKey) async throws -> [RESPValue] {
+        try await hvals(in: key).get()
     }
 
     /// Gets all values stored in a hash.
@@ -91,6 +98,7 @@ extension RedisClient {
     /// - Returns: A list of all values stored in a hash.
     @inlinable
     public func hvals<Value: RESPValueConvertible>(in key: RedisKey, as type: Value.Type) async throws -> [Value?] {
+        try await hvals(in: key, as: type).get()
     }
 
     /// Incrementally iterates over all fields in a hash.
@@ -111,6 +119,7 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) async throws -> (Int, [String: Value?]) {
+        try await hscan(key, startingFrom: position, matching: match, count: count, valueType: valueType).get()
     }
 
     /// Incrementally iterates over all fields in a hash.
@@ -128,6 +137,7 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) async throws -> (Int, [String: RESPValue]) {
+        try await hscan(key, startingFrom: position, matching: match, count: count).get()
     }
 }
 
@@ -150,6 +160,7 @@ extension RedisClient {
         to value: Value,
         in key: RedisKey
     ) async throws -> Bool {
+        try await hset(field, to: value, in: key).get()
     }
 
     /// Sets a hash field to the value specified only if the field does not currently exist.
@@ -167,6 +178,7 @@ extension RedisClient {
         to value: Value,
         in key: RedisKey
     ) async throws -> Bool {
+        try await hsetnx(field, to: value, in: key).get()
     }
 
     /// Sets the fields in a hash to the respective values provided.
@@ -181,6 +193,7 @@ extension RedisClient {
         _ fields: [String: Value],
         in key: RedisKey
     ) async throws {
+        try await hmset(fields, in: key).get()
     }
 }
 
@@ -196,6 +209,7 @@ extension RedisClient {
     ///     - key: The key of the hash being accessed.
     /// - Returns: The value of the hash field. If the key or field does not exist, it will be `.null`.
     public func hget(_ field: String, from key: RedisKey) async throws -> RESPValue {
+        try await hget(field, from: key).get()
     }
 
     /// Gets a hash field's value as the desired type.
@@ -212,6 +226,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) async throws -> Value? {
+        try await hget(field, from: key, as: type).get()
     }
 
     /// Gets the values of a hash for the fields specified.
@@ -222,6 +237,7 @@ extension RedisClient {
     ///     - key: The key of the hash being accessed.
     /// - Returns: A list of values in the same order as the `fields` argument. Non-existent fields return `.null` values.
     public func hmget(_ fields: [String], from key: RedisKey) async throws -> [RESPValue] {
+        try await hmget(fields, from: key).get()
     }
 
     /// Gets the values of a hash for the fields specified as a specific type.
@@ -238,6 +254,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) async throws -> [Value?] {
+        try await hmget(fields, from: key, as: type).get()
     }
 
     /// Gets the values of a hash for the fields specified.
@@ -248,6 +265,7 @@ extension RedisClient {
     ///     - key: The key of the hash being accessed.
     /// - Returns: A list of values in the same order as the `fields` argument. Non-existent fields return `.null` values.
     public func hmget(_ fields: String..., from key: RedisKey) async throws -> [RESPValue] {
+        try await hmget(fields, from: key).get()
     }
 
     /// Gets the values of a hash for the fields specified.
@@ -264,6 +282,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) async throws -> [Value?] {
+        try await hmget(fields, from: key, as: type).get()
     }
 
     /// Returns all the fields and values stored in a hash.
@@ -272,6 +291,7 @@ extension RedisClient {
     /// - Parameter key: The key of the hash to pull from.
     /// - Returns: A key-value pair list of fields and their values.
     public func hgetall(from key: RedisKey) async throws -> [String: RESPValue] {
+        try await hgetall(from: key).get()
     }
 
     /// Returns all the fields and values stored in a hash.
@@ -286,6 +306,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) async throws -> [String: Value?] {
+        try await hgetall(from: key, as: type).get()
     }
 }
 
@@ -307,6 +328,7 @@ extension RedisClient {
         field: String,
         in key: RedisKey
     ) async throws -> Value {
+        try await hincrby(amount, field: field, in: key).get()
     }
 
     /// Increments a hash field's value and returns the new value.
@@ -323,5 +345,6 @@ extension RedisClient {
         field: String,
         in key: RedisKey
     ) async throws -> Value {
+        try await hincrbyfloat(amount, field: field, in: key).get()
     }
 }
