@@ -31,6 +31,7 @@ extension RedisClient {
         _ message: Message,
         to channel: RedisChannelName
     ) async throws -> Int {
+        try await publish(message, to: channel).get()
     }
 }
 
@@ -45,6 +46,7 @@ extension RedisClient {
     /// - Parameter match: An optional pattern of channel names to filter for.
     /// - Returns: A list of all active channel names.
     public func activeChannels(matching match: String? = nil) async throws -> [RedisChannelName] {
+        try await activeChannels(matching: match).get()
     }
 
     /// Resolves the total count of active subscriptions to channels that were made using patterns.
@@ -52,6 +54,7 @@ extension RedisClient {
     /// See [PUBSUB NUMPAT](https://redis.io/commands/pubsub#codepubsub-numpatcode)
     /// - Returns: The total count of subscriptions made through patterns.
     public func patternSubscriberCount() async throws -> Int {
+        try await patternSubscriberCount().get()
     }
 
     /// Resolves a count of (non-pattern) subscribers for each given channel.
@@ -60,5 +63,6 @@ extension RedisClient {
     /// - Parameter channels: A list of channel names to collect the subscriber counts for.
     /// - Returns: A mapping of channel names and their (non-pattern) subscriber count.
     public func subscriberCount(forChannels channels: [RedisChannelName]) async throws -> [RedisChannelName: Int] {
+        try await subscriberCount(forChannels: channels).get()
     }
 }
