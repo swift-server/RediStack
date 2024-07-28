@@ -23,7 +23,7 @@ extension RedisClient {
     /// [https://redis.io/commands/get](https://redis.io/commands/get)
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: The value stored at the key provided. If the key does not exist, the value will be `.null`.
-    public func get(_ key: RedisKey) -> EventLoopFuture<RESPValue> {
+    public func get(_ key: RedisKey) async throws -> RESPValue {
     }
 
     /// Get the value of a key, converting it to the desired type.
@@ -37,7 +37,7 @@ extension RedisClient {
     public func get<StoredType: RESPValueConvertible>(
         _ key: RedisKey,
         as type: StoredType.Type
-    ) -> EventLoopFuture<StoredType?> {
+    ) async throws -> StoredType? {
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -45,7 +45,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
-    public func mget(_ keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
+    public func mget(_ keys: [RedisKey]) async throws -> [RESPValue] {
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -56,7 +56,7 @@ extension RedisClient {
     ///     - type: The type to convert the values to.
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) -> EventLoopFuture<[Value?]> {
+    public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) async throws -> [Value?] {
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -64,7 +64,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/mget](https://redis.io/commands/mget)
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
-    public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
+    public func mget(_ keys: RedisKey...) async throws -> [RESPValue] {
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -75,7 +75,7 @@ extension RedisClient {
     ///     - type: The type to convert the values to.
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) -> EventLoopFuture<[Value?]> {
+    public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) async throws -> [Value?] {
     }
 }
 
@@ -92,7 +92,7 @@ extension RedisClient {
     ///     - key: The key to use to uniquely identify this value.
     /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
-    public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> EventLoopFuture<Int> {
+    public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) async throws -> Int {
     }
 
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -107,7 +107,7 @@ extension RedisClient {
     ///     - value: The value to set the key to.
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Void> {
+    public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) async throws {
     }
 
     /// Sets the key to the provided value with options to control how it is set.
@@ -131,7 +131,7 @@ extension RedisClient {
         to value: Value,
         onCondition condition: RedisSetCommandCondition,
         expiration: RedisSetCommandExpiration? = nil
-    ) -> EventLoopFuture<RedisSetCommandResult> {
+    ) async throws -> RedisSetCommandResult {
     }
 
     /// Sets the key to the provided value if the key does not exist.
@@ -145,7 +145,7 @@ extension RedisClient {
     ///     - value: The value to set the key to.
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
-    public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Bool> {
+    public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) async throws -> Bool {
     }
 
     /// Sets a key to the provided value and an expiration timeout in seconds.
@@ -165,7 +165,7 @@ extension RedisClient {
         _ key: RedisKey,
         to value: Value,
         expirationInSeconds expiration: Int
-    ) -> EventLoopFuture<Void> {
+    ) async throws {
     }
 
     /// Sets a key to the provided value and an expiration timeout in milliseconds.
@@ -185,7 +185,7 @@ extension RedisClient {
         _ key: RedisKey,
         to value: Value,
         expirationInMilliseconds expiration: Int
-    ) -> EventLoopFuture<Void> {
+    ) async throws {
     }
 
     /// Sets each key to their respective new value, overwriting existing values.
@@ -195,7 +195,7 @@ extension RedisClient {
     /// - Parameter operations: The key-value list of SET operations to execute.
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
-    public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Void> {
+    public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) async throws {
     }
 
     /// Sets each key to their respective new value, only if all keys do not currently exist.
@@ -205,7 +205,7 @@ extension RedisClient {
     /// - Parameter operations: The key-value list of SET operations to execute.
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
-    public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
+    public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) async throws -> Bool {
     }
 }
 
@@ -218,7 +218,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/incr](https://redis.io/commands/incr)
     /// - Parameter key: The key whose value should be incremented.
     /// - Returns: The new value after the operation.
-    public func increment(_ key: RedisKey) -> EventLoopFuture<Int> {
+    public func increment(_ key: RedisKey) async throws -> Int {
     }
 
     /// Increments the stored value by the amount desired .
@@ -232,7 +232,7 @@ extension RedisClient {
     public func increment<Value: FixedWidthInteger & RESPValueConvertible>(
         _ key: RedisKey,
         by count: Value
-    ) -> EventLoopFuture<Value> {
+    ) async throws -> Value {
     }
 
     /// Increments the stored value by the amount desired.
@@ -246,7 +246,7 @@ extension RedisClient {
     public func increment<Value: BinaryFloatingPoint & RESPValueConvertible>(
         _ key: RedisKey,
         by count: Value
-    ) -> EventLoopFuture<Value> {
+    ) async throws -> Value {
     }
 }
 
@@ -260,7 +260,7 @@ extension RedisClient {
     /// - Parameter key: The key whose value should be decremented.
     /// - Returns: The new value after the operation.
     @inlinable
-    public func decrement(_ key: RedisKey) -> EventLoopFuture<Int> {
+    public func decrement(_ key: RedisKey) async throws -> Int {
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -274,6 +274,6 @@ extension RedisClient {
     public func decrement<Value: FixedWidthInteger & RESPValueConvertible>(
         _ key: RedisKey,
         by count: Value
-    ) -> EventLoopFuture<Value> {
+    ) async throws -> Value {
     }
 }

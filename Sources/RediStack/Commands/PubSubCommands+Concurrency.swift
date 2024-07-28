@@ -30,7 +30,7 @@ extension RedisClient {
     public func publish<Message: RESPValueConvertible>(
         _ message: Message,
         to channel: RedisChannelName
-    ) -> EventLoopFuture<Int> {
+    ) async throws -> Int {
     }
 }
 
@@ -44,21 +44,21 @@ extension RedisClient {
     /// - Note: If no `match` pattern is provided, all active channels will be returned.
     /// - Parameter match: An optional pattern of channel names to filter for.
     /// - Returns: A list of all active channel names.
-    public func activeChannels(matching match: String? = nil) -> EventLoopFuture<[RedisChannelName]> {
+    public func activeChannels(matching match: String? = nil) async throws -> [RedisChannelName] {
     }
-    
+
     /// Resolves the total count of active subscriptions to channels that were made using patterns.
     ///
     /// See [PUBSUB NUMPAT](https://redis.io/commands/pubsub#codepubsub-numpatcode)
     /// - Returns: The total count of subscriptions made through patterns.
-    public func patternSubscriberCount() -> EventLoopFuture<Int> {
+    public func patternSubscriberCount() async throws -> Int {
     }
-    
+
     /// Resolves a count of (non-pattern) subscribers for each given channel.
     ///
     /// See [PUBSUB NUMSUB](https://redis.io/commands/pubsub#codepubsub-numsub-channel-1--channel-ncode)
     /// - Parameter channels: A list of channel names to collect the subscriber counts for.
     /// - Returns: A mapping of channel names and their (non-pattern) subscriber count.
-    public func subscriberCount(forChannels channels: [RedisChannelName]) -> EventLoopFuture<[RedisChannelName: Int]> {
+    public func subscriberCount(forChannels channels: [RedisChannelName]) async throws -> [RedisChannelName: Int] {
     }
 }
