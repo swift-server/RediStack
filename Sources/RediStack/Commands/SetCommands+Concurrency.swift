@@ -27,6 +27,7 @@ extension RedisClient {
     /// - Parameter key: The key of the set.
     /// - Returns: A list of elements found within the set.
     public func smembers(of key: RedisKey) async throws -> [RESPValue] {
+        try await smembers(of: key).get()
     }
 
     /// Gets all of the elements contained in a set.
@@ -41,6 +42,7 @@ extension RedisClient {
     /// - Returns: A list of elements found within the set. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func smembers<Value: RESPValueConvertible>(of key: RedisKey, as type: Value.Type) async throws -> [Value?] {
+        try await smembers(of: key, as: type).get()
     }
 
     /// Checks if the element is included in a set.
@@ -52,6 +54,7 @@ extension RedisClient {
     /// - Returns: `true` if the element is in the set.
     @inlinable
     public func sismember<Value: RESPValueConvertible>(_ element: Value, of key: RedisKey) async throws -> Bool {
+        try await sismember(element, of: key).get()
     }
 
     /// Gets the total count of elements within a set.
@@ -60,6 +63,7 @@ extension RedisClient {
     /// - Parameter key: The key of the set.
     /// - Returns: The total count of elements in the set.
     public func scard(of key: RedisKey) async throws -> Int {
+        try await scard(of: key).get()
     }
 
     /// Adds elements to a set.
@@ -71,6 +75,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were added to the set.
     @inlinable
     public func sadd<Value: RESPValueConvertible>(_ elements: [Value], to key: RedisKey) async throws -> Int {
+        try await sadd(elements, to: key).get()
     }
 
     /// Adds elements to a set.
@@ -82,6 +87,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were added to the set.
     @inlinable
     public func sadd<Value: RESPValueConvertible>(_ elements: Value..., to key: RedisKey) async throws -> Int {
+        try await sadd(elements, to: key).get()
     }
 
     /// Removes elements from a set.
@@ -93,6 +99,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were removed from the set.
     @inlinable
     public func srem<Value: RESPValueConvertible>(_ elements: [Value], from key: RedisKey) async throws -> Int {
+        try await srem(elements, from: key).get()
     }
 
     /// Removes elements from a set.
@@ -104,6 +111,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were removed from the set.
     @inlinable
     public func srem<Value: RESPValueConvertible>(_ elements: Value..., from key: RedisKey) async throws -> Int {
+        try await srem(elements, from: key).get()
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -114,6 +122,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: The element that was popped from the set.
     public func spop(from key: RedisKey, max count: Int = 1) async throws -> [RESPValue] {
+        try await spop(from: key, max: count).get()
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -130,6 +139,7 @@ extension RedisClient {
         as type: Value.Type,
         max count: Int = 1
     ) async throws -> [Value?] {
+        try await spop(from: key, as: type, max: count).get()
     }
 
     /// Randomly selects one or more elements in a set.
@@ -144,6 +154,7 @@ extension RedisClient {
     ///     - count: The max number of elements to select from the set.
     /// - Returns: The elements randomly selected from the set.
     public func srandmember(from key: RedisKey, max count: Int = 1) async throws -> [RESPValue] {
+        try await srandmember(from: key, max: count).get()
     }
 
     /// Randomly selects one or more elements in a set.
@@ -160,6 +171,7 @@ extension RedisClient {
         as type: Value.Type,
         max count: Int = 1
     ) async throws -> [Value?] {
+        try await srandmember(from: key, as: type, max: count).get()
     }
 
     /// Moves an element from one set to another.
@@ -176,6 +188,7 @@ extension RedisClient {
         from sourceKey: RedisKey,
         to destKey: RedisKey
     ) async throws -> Bool {
+        try await smove(element, from: sourceKey, to: destKey).get()
     }
 
     /// Incrementally iterates over all values in a set.
@@ -193,6 +206,7 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) async throws -> (Int, [RESPValue]) {
+        try await sscan(key, startingFrom: position, matching: match, count: count).get()
     }
 
     /// Incrementally iterates over all values in a set.
@@ -213,6 +227,7 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) async throws -> (Int, [Value?]) {
+        try await sscan(key, startingFrom: position, matching: match, count: count, valueType: valueType).get()
     }
 }
 
@@ -226,6 +241,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the difference of.
     /// - Returns: A list of elements resulting from the difference.
     public func sdiff(of keys: [RedisKey]) async throws -> [RESPValue] {
+        try await sdiff(of: keys).get()
     }
 
     /// Calculates the difference between two or more sets.
@@ -237,6 +253,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the difference. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sdiff<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) async throws -> [Value?] {
+        try await sdiff(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the difference between two or more sets.
@@ -245,6 +262,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the difference of.
     /// - Returns: A list of elements resulting from the difference.
     public func sdiff(of keys: RedisKey...) async throws -> [RESPValue] {
+        try await sdiff(of: keys).get()
     }
 
     /// Calculates the difference between two or more sets.
@@ -256,6 +274,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the difference. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sdiff<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) async throws -> [Value?] {
+        try await sdiff(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the difference between two or more sets and stores the result.
@@ -267,6 +286,7 @@ extension RedisClient {
     ///     - sources: The list of source sets to calculate the difference of.
     /// - Returns: The number of elements in the difference result.
     public func sdiffstore(as destination: RedisKey, sources keys: [RedisKey]) async throws -> Int {
+        try await sdiffstore(as: destination, sources: keys).get()
     }
 }
 
@@ -280,6 +300,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the intersection of.
     /// - Returns: A list of elements resulting from the intersection.
     public func sinter(of keys: [RedisKey]) async throws -> [RESPValue] {
+        try await sinter(of: keys).get()
     }
 
     /// Calculates the intersection of two or more sets.
@@ -291,6 +312,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the intersection. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sinter<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) async throws -> [Value?] {
+        try await sinter(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the intersection of two or more sets.
@@ -299,6 +321,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the intersection of.
     /// - Returns: A list of elements resulting from the intersection.
     public func sinter(of keys: RedisKey...) async throws -> [RESPValue] {
+        try await sinter(of: keys).get()
     }
 
     /// Calculates the intersection of two or more sets.
@@ -310,6 +333,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the intersection. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sinter<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) async throws -> [Value?] {
+        try await sinter(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the intersetion of two or more sets and stores the result.
@@ -321,6 +345,7 @@ extension RedisClient {
     ///     - sources: A list of source sets to calculate the intersection of.
     /// - Returns: The number of elements in the intersection result.
     public func sinterstore(as destination: RedisKey, sources keys: [RedisKey]) async throws -> Int {
+        try await sinterstore(as: destination, sources: keys).get()
     }
 }
 
@@ -334,6 +359,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the union of.
     /// - Returns: A list of elements resulting from the union.
     public func sunion(of keys: [RedisKey]) async throws -> [RESPValue] {
+        try await sunion(of: keys).get()
     }
 
     /// Calculates the union of two or more sets.
@@ -345,6 +371,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the union. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sunion<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) async throws -> [Value?] {
+        try await sunion(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the union of two or more sets.
@@ -353,6 +380,7 @@ extension RedisClient {
     /// - Parameter keys: The source sets to calculate the union of.
     /// - Returns: A list of elements resulting from the union.
     public func sunion(of keys: RedisKey...) async throws -> [RESPValue] {
+        try await sunion(of: keys).get()
     }
 
     /// Calculates the union of two or more sets.
@@ -364,6 +392,7 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the union. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func sunion<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) async throws -> [Value?] {
+        try await sunion(of: keys, valueType: valueType).get()
     }
 
     /// Calculates the union of two or more sets and stores the result.
@@ -375,5 +404,6 @@ extension RedisClient {
     ///     - sources: A list of source sets to calculate the union of.
     /// - Returns: The number of elements in the union result.
     public func sunionstore(as destination: RedisKey, sources keys: [RedisKey]) async throws -> Int {
+        try await sunionstore(as: destination, sources: keys).get()
     }
 }
