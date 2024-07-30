@@ -24,6 +24,7 @@ extension RedisClient {
     /// - Parameter key: The key to fetch the value from.
     /// - Returns: The value stored at the key provided. If the key does not exist, the value will be `.null`.
     public func get(_ key: RedisKey) async throws -> RESPValue {
+        try await get(key).get()
     }
 
     /// Get the value of a key, converting it to the desired type.
@@ -38,6 +39,7 @@ extension RedisClient {
         _ key: RedisKey,
         as type: StoredType.Type
     ) async throws -> StoredType? {
+        try await get(key, as: type).get()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -46,6 +48,7 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     public func mget(_ keys: [RedisKey]) async throws -> [RESPValue] {
+        try await mget(keys).get()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -57,6 +60,7 @@ extension RedisClient {
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) async throws -> [Value?] {
+        try await mget(keys, as: type).get()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -65,6 +69,7 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     public func mget(_ keys: RedisKey...) async throws -> [RESPValue] {
+        try await mget(keys).get()
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -76,6 +81,7 @@ extension RedisClient {
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
     public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) async throws -> [Value?] {
+        try await mget(keys, as: type).get()
     }
 }
 
@@ -93,6 +99,7 @@ extension RedisClient {
     /// - Returns: The length of the key's value after appending the additional value.
     @inlinable
     public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) async throws -> Int {
+        try await append(value, to: key).get()
     }
 
     /// Sets the value stored in the key provided, overwriting the previous value.
@@ -108,6 +115,7 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) async throws {
+        try await set(key, to: value).get()
     }
 
     /// Sets the key to the provided value with options to control how it is set.
@@ -132,6 +140,7 @@ extension RedisClient {
         onCondition condition: RedisSetCommandCondition,
         expiration: RedisSetCommandExpiration? = nil
     ) async throws -> RedisSetCommandResult {
+        try await set(key, to: value, onCondition: condition, expiration: expiration).get()
     }
 
     /// Sets the key to the provided value if the key does not exist.
@@ -146,6 +155,7 @@ extension RedisClient {
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
     public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) async throws -> Bool {
+        try await setnx(key, to: value).get()
     }
 
     /// Sets a key to the provided value and an expiration timeout in seconds.
@@ -166,6 +176,7 @@ extension RedisClient {
         to value: Value,
         expirationInSeconds expiration: Int
     ) async throws {
+        try await setex(key, to: value, expirationInSeconds: expiration).get()
     }
 
     /// Sets a key to the provided value and an expiration timeout in milliseconds.
@@ -186,6 +197,7 @@ extension RedisClient {
         to value: Value,
         expirationInMilliseconds expiration: Int
     ) async throws {
+        try await psetex(key, to: value, expirationInMilliseconds: expiration).get()
     }
 
     /// Sets each key to their respective new value, overwriting existing values.
@@ -196,6 +208,7 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) async throws {
+        try await mset(operations).get()
     }
 
     /// Sets each key to their respective new value, only if all keys do not currently exist.
@@ -206,6 +219,7 @@ extension RedisClient {
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
     public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) async throws -> Bool {
+        try await msetnx(operations).get()
     }
 }
 
@@ -219,6 +233,7 @@ extension RedisClient {
     /// - Parameter key: The key whose value should be incremented.
     /// - Returns: The new value after the operation.
     public func increment(_ key: RedisKey) async throws -> Int {
+        try await increment(key).get()
     }
 
     /// Increments the stored value by the amount desired .
@@ -233,6 +248,7 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) async throws -> Value {
+        try await increment(key, by: count).get()
     }
 
     /// Increments the stored value by the amount desired.
@@ -247,6 +263,7 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) async throws -> Value {
+        try await increment(key, by: count).get()
     }
 }
 
@@ -261,6 +278,7 @@ extension RedisClient {
     /// - Returns: The new value after the operation.
     @inlinable
     public func decrement(_ key: RedisKey) async throws -> Int {
+        try await decrement(key).get()
     }
 
     /// Decrements the stored valye by the amount desired.
@@ -275,5 +293,6 @@ extension RedisClient {
         _ key: RedisKey,
         by count: Value
     ) async throws -> Value {
+        try await decrement(key, by: count).get()
     }
 }
