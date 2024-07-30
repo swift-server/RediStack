@@ -112,7 +112,6 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key to use to uniquely identify this value.
     ///     - value: The value to set the key to.
-    /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) async throws {
         try await set(key, to: value).get()
@@ -130,7 +129,7 @@ extension RedisClient {
     ///     - value: The value to set the key to.
     ///     - condition: The condition under which the key should be set.
     ///     - expiration: The expiration to use when setting the key. No expiration is set if `nil`.
-    /// - Returns: A `NIO.EventLoopFuture` indicating the result of the operation;
+    /// - Returns: The result of the operation;
     ///     `.ok` if the operation was successful and `.conditionNotMet` if the specified `condition` was not met.
     ///
     ///     If the condition `.none` was used, then the result value will always be `.ok`.
@@ -169,7 +168,6 @@ extension RedisClient {
     ///     - key: The key to use to uniquely identify this value.
     ///     - value: The value to set the key to.
     ///     - expiration: The number of seconds after which to expire the key.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func setex<Value: RESPValueConvertible>(
         _ key: RedisKey,
@@ -190,7 +188,6 @@ extension RedisClient {
     ///     - key: The key to use to uniquely identify this value.
     ///     - value: The value to set the key to.
     ///     - expiration: The number of milliseconds after which to expire the key.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func psetex<Value: RESPValueConvertible>(
         _ key: RedisKey,
@@ -205,7 +202,6 @@ extension RedisClient {
     ///
     /// See [https://redis.io/commands/mset](https://redis.io/commands/mset)
     /// - Parameter operations: The key-value list of SET operations to execute.
-    /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) async throws {
         try await mset(operations).get()

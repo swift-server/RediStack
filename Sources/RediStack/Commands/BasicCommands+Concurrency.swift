@@ -39,7 +39,6 @@ extension RedisClient {
     ///
     /// [https://redis.io/commands/select](https://redis.io/commands/select)
     /// - Parameter index: The 0-based index of the database that will receive later commands.
-    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func select(database index: Int) async throws {
         try await select(database: index).get()
     }
@@ -59,7 +58,6 @@ extension RedisClient {
     ///
     /// [https://redis.io/commands/auth](https://redis.io/commands/auth)
     /// - Parameter password: The password to authenticate with.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves if the password was accepted, otherwise it fails.
     public func authorize(with password: String) async throws {
         try await authorize(with: password).get()
     }
@@ -72,7 +70,7 @@ extension RedisClient {
     public func authorize(
         username: String,
         password: String
-    ) async throws -> Void {
+    ) async throws {
         try await authorize(username: username, password: password).get()
     }
 

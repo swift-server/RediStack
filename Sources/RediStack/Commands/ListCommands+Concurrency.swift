@@ -62,7 +62,6 @@ extension RedisClient {
     ///     - index: The 0-based index of the element to set.
     ///     - value: The new value the element should be.
     ///     - key: The key of the list to update.
-    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
     public func lset<Value: RESPValueConvertible>(
         index: Int,

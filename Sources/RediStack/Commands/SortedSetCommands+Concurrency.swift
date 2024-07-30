@@ -32,6 +32,7 @@ extension RedisClient {
         inserting insertBehavior: RedisZaddInsertBehavior = .allElements,
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) async throws -> Int {
+        try await zadd(elements, to: key, inserting: insertBehavior, returning: returnBehavior).get()
     }
 
     /// Adds elements to a sorted set, assigning their score to the values provided.
@@ -50,6 +51,7 @@ extension RedisClient {
         inserting insertBehavior: RedisZaddInsertBehavior = .allElements,
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) async throws -> Int {
+        try await zadd(elements, to: key, inserting: insertBehavior, returning: returnBehavior).get()
     }
 
     /// Adds an element to a sorted set, assigning their score to the value provided.
@@ -68,11 +70,13 @@ extension RedisClient {
         inserting insertBehavior: RedisZaddInsertBehavior = .allElements,
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) async throws -> Bool {
+        try await zadd(element, to: key, inserting: insertBehavior, returning: returnBehavior).get()
     }
 }
 
 // MARK: General
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Gets the number of elements in a sorted set.
     ///
@@ -80,6 +84,7 @@ extension RedisClient {
     /// - Parameter key: The key of the sorted set.
     /// - Returns: The number of elements in the sorted set.
     public func zcard(of key: RedisKey) async throws -> Int {
+        try await zcard(of: key).get()
     }
 
     /// Gets the score of the specified element in a stored set.
@@ -91,6 +96,7 @@ extension RedisClient {
     /// - Returns: The score of the element provided, or `nil` if the element is not found in the set or the set does not exist.
     @inlinable
     public func zscore<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) async throws -> Double? {
+        try await zscore(of: element, in: key).get()
     }
 
     /// Incrementally iterates over all elements in a sorted set.
@@ -108,6 +114,7 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) async throws -> (Int, [(RESPValue, Double)]) {
+        try await zscan(key, startingFrom: position, matching: match, count: count).get()
     }
 
     /// Incrementally iterates over all elements in a sorted set.
@@ -129,11 +136,13 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) async throws -> (Int, [(Value, Double)?]) {
+        try await zscan(key, startingFrom: position, matching: match, count: count, valueType: valueType).get()
     }
 }
 
 // MARK: Rank
 
+@available(macOS 10.15, iOS 13, tvOS 13, watchOS 6, *)
 extension RedisClient {
     /// Returns the rank (index) of the specified element in a sorted set.
     /// - Note: This treats the ordered set as ordered from low to high.
@@ -146,6 +155,7 @@ extension RedisClient {
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
     public func zrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) async throws -> Int? {
+        try await zrank(of: element, in: key).get()
     }
 
     /// Returns the rank (index) of the specified element in a sorted set.
@@ -159,6 +169,7 @@ extension RedisClient {
     /// - Returns: The index of the element, or `nil` if the key was not found.
     @inlinable
     public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) async throws -> Int? {
+        try await zrevrank(of: element, in: key).get()
     }
 }
 
@@ -187,6 +198,7 @@ extension RedisClient {
         of key: RedisKey,
         withScoresBetween range: (min: RedisZScoreBound, max: RedisZScoreBound)
     ) async throws -> Int {
+        try await zcount(of: key, withScoresBetween: range).get()
     }
 
     /// Returns the count of elements in a SortedSet with a score within the inclusive range specified.
@@ -202,6 +214,7 @@ extension RedisClient {
     ///     - range: The inclusive range of scores to filter elements to count.
     /// - Returns: The count of elements in the SortedSet with a score within the range specified.
     public func zcount(of key: RedisKey, withScores range: ClosedRange<Double>) async throws -> Int {
+        try await zcount(of: key, withScores: range).get()
     }
 
     /// Returns the count of elements in a SortedSet with a minimum score up to, but not including, a max score.
@@ -217,6 +230,7 @@ extension RedisClient {
     ///     - range: A range with an inclusive lower and exclusive upper bound of scores to filter elements to count.
     /// - Returns: The count of elements in the SortedSet with a score within the range specified.
     public func zcount(of key: RedisKey, withScores range: Range<Double>) async throws -> Int {
+        try await zcount(of: key, withScores: range).get()
     }
 
     /// Returns the count of elements in a SortedSet whose score is greater than a minimum score value.
@@ -229,6 +243,7 @@ extension RedisClient {
     ///     - minScore: The minimum score bound an element in the SortedSet should have in order to be counted.
     /// - Returns: The count of elements in the SortedSet above the `minScore` threshold.
     public func zcount(of key: RedisKey, withMinimumScoreOf minScore: RedisZScoreBound) async throws -> Int {
+        try await zcount(of: key, withMinimumScoreOf: minScore).get()
     }
 
     /// Returns the count of elements in a SortedSet whose score is less than a maximum score value.
@@ -242,6 +257,7 @@ extension RedisClient {
     ///     - exclusive: Should the `maxScore` provided be exclusive? If `true`, scores matching the `maxScore` will **not** be counted.
     /// - Returns: The count of elements in the SortedSet below the `maxScore` threshold.
     public func zcount(of key: RedisKey, withMaximumScoreOf maxScore: RedisZScoreBound) async throws -> Int {
+        try await zcount(of: key, withMaximumScoreOf: maxScore).get()
     }
 }
 
@@ -269,6 +285,7 @@ extension RedisClient {
         of key: RedisKey,
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>)
     ) async throws -> Int {
+        try await zlexcount(of: key, withValuesBetween: range).get()
     }
 
     /// Returns the count of elements in a SortedSet whose lexiographical value is greater than a minimum value.
@@ -293,6 +310,7 @@ extension RedisClient {
         of key: RedisKey,
         withMinimumValueOf minValue: RedisZLexBound<Value>
     ) async throws -> Int {
+        try await zlexcount(of: key, withMinimumValueOf: minValue).get()
     }
 
     /// Returns the count of elements in a SortedSet whose lexiographical value is less than a maximum value.
@@ -317,6 +335,7 @@ extension RedisClient {
         of key: RedisKey,
         withMaximumValueOf maxValue: RedisZLexBound<Value>
     ) async throws -> Int {
+        try await zlexcount(of: key, withMaximumValueOf: maxValue).get()
     }
 }
 
@@ -332,6 +351,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmin(from key: RedisKey, max count: Int) async throws -> [(RESPValue, Double)] {
+        try await zpopmin(from: key, max: count).get()
     }
 
     /// Removes the element from a sorted set with the lowest score.
@@ -340,6 +360,7 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmin(from key: RedisKey) async throws -> (RESPValue, Double)? {
+        try await zpopmin(from: key).get()
     }
 
     /// Removes elements from a sorted set with the highest scores.
@@ -350,6 +371,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmax(from key: RedisKey, max count: Int) async throws -> [(RESPValue, Double)] {
+        try await zpopmax(from: key, max: count).get()
     }
 
     /// Removes the element from a sorted set with the highest score.
@@ -358,6 +380,7 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmax(from key: RedisKey) async throws -> (RESPValue, Double)? {
+        try await zpopmax(from: key).get()
     }
 }
 
@@ -386,6 +409,7 @@ extension RedisClient {
         from key: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) async throws -> (Double, RESPValue)? {
+        try await bzpopmin(from: key, timeout: timeout).get()
     }
 
     /// Removes the element from a sorted set with the lowest score, blocking until an element is
@@ -411,6 +435,7 @@ extension RedisClient {
         from keys: [RedisKey],
         timeout: TimeAmount = .seconds(0)
     ) async throws -> (String, Double, RESPValue)? {
+        try await bzpopmin(from: keys, timeout: timeout).get()
     }
 
     /// Removes the element from a sorted set with the highest score, blocking until an element is
@@ -434,6 +459,7 @@ extension RedisClient {
         from key: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) async throws -> (Double, RESPValue)? {
+        try await bzpopmax(from: key, timeout: timeout).get()
     }
 
     /// Removes the element from a sorted set with the highest score, blocking until an element is
@@ -459,6 +485,7 @@ extension RedisClient {
         from keys: [RedisKey],
         timeout: TimeAmount = .seconds(0)
     ) async throws -> (String, Double, RESPValue)? {
+        try await bzpopmax(from: keys, timeout: timeout).get()
     }
 }
 
@@ -480,6 +507,7 @@ extension RedisClient {
         element: Value,
         in key: RedisKey
     ) async throws -> Double {
+        try await zincrby(amount, element: element, in: key).get()
     }
 }
 
@@ -503,6 +531,7 @@ extension RedisClient {
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) async throws -> Int {
+        try await zunionstore(as: destination, sources: sources, weights: weights, aggregateMethod: aggregate).get()
     }
 
     /// Calculates the intersection of two or more sorted sets and stores the result.
@@ -521,6 +550,7 @@ extension RedisClient {
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) async throws -> Int {
+        try await zinterstore(as: destination, sources: sources, weights: weights, aggregateMethod: aggregate).get()
     }
 }
 
@@ -545,6 +575,7 @@ extension RedisClient {
         lastIndex: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, firstIndex: firstIndex, lastIndex: lastIndex, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
@@ -586,6 +617,7 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, indices: range, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all the elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
@@ -627,6 +659,7 @@ extension RedisClient {
         indices range: Range<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, indices: range, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the index specified to the end of a SortedSet.
@@ -654,6 +687,7 @@ extension RedisClient {
         fromIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, fromIndex: index, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the start of a SortedSet up to, and including, the element at the index specified.
@@ -681,6 +715,7 @@ extension RedisClient {
         throughIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, throughIndex: index, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the start of a SortedSet up to, but not including, the element at the index specified.
@@ -708,6 +743,7 @@ extension RedisClient {
         upToIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrange(from: key, upToIndex: index, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
@@ -727,6 +763,7 @@ extension RedisClient {
         lastIndex: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, firstIndex: firstIndex, lastIndex: lastIndex, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
@@ -768,6 +805,7 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, indices: range, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all the elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
@@ -809,6 +847,7 @@ extension RedisClient {
         indices range: Range<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, indices: range, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the index specified to the end of a SortedSet.
@@ -836,6 +875,7 @@ extension RedisClient {
         fromIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, fromIndex: index, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the start of a SortedSet up to, and including, the element at the index specified.
@@ -863,6 +903,7 @@ extension RedisClient {
         throughIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, throughIndex: index, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from the start of a SortedSet up to, but not including, the element at the index specified.
@@ -890,6 +931,7 @@ extension RedisClient {
         upToIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrange(from: key, upToIndex: index, includeScoresInResponse: includeScores).get()
     }
 }
 
@@ -915,6 +957,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withScoresBetween: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is within the inclusive range specified.
@@ -935,6 +978,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withScores: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
@@ -955,6 +999,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withScores: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is greater than a minimum score value.
@@ -975,6 +1020,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withMinimumScoreOf: minScore, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is less than a maximum score value.
@@ -995,6 +1041,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withMaximumScoreOf: maxScore, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is within the range specified.
@@ -1015,6 +1062,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withScoresBetween: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is within the inclusive range specified.
@@ -1035,6 +1083,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrangebyscore(from: key, withScores: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
@@ -1055,6 +1104,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrangebyscore(from: key, withScores: range, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is greater than a minimum score value.
@@ -1075,6 +1125,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrangebyscore(from: key, withMinimumScoreOf: minScore, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 
     /// Gets all elements from a SortedSet whose score is less than a maximum score value.
@@ -1095,6 +1146,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) async throws -> [RESPValue] {
+        try await zrevrangebyscore(from: key, withMaximumScoreOf: maxScore, limitBy: limit, includeScoresInResponse: includeScores).get()
     }
 }
 
@@ -1127,6 +1179,7 @@ extension RedisClient {
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>),
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrangebylex(from: key, withValuesBetween: range, limitBy: limit).get()
     }
 
     /// Gets all elements from a SortedSet whose lexiographical value is greater than a minimum value.
@@ -1153,6 +1206,7 @@ extension RedisClient {
         withMinimumValueOf minValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrangebylex(from: key, withMinimumValueOf: minValue, limitBy: limit).get()
     }
 
     /// Gets all elements from a SortedSet whose lexiographical value is less than a maximum value.
@@ -1179,6 +1233,7 @@ extension RedisClient {
         withMaximumValueOf maxValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrangebylex(from: key, withMaximumValueOf: maxValue, limitBy: limit).get()
     }
 
     /// Gets all elements from a SortedSet whose lexiographical values are between the range specified.
@@ -1206,6 +1261,7 @@ extension RedisClient {
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>),
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrevrangebylex(from: key, withValuesBetween: range, limitBy: limit).get()
     }
 
     /// Gets all elements from a SortedSet whose lexiographical value is greater than a minimum value.
@@ -1232,6 +1288,7 @@ extension RedisClient {
         withMinimumValueOf minValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrevrangebylex(from: key, withMinimumValueOf: minValue, limitBy: limit).get()
     }
 
     /// Gets all elements from a SortedSet whose lexiographical value is less than a maximum value.
@@ -1258,6 +1315,7 @@ extension RedisClient {
         withMaximumValueOf maxValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) async throws -> [RESPValue] {
+        try await zrevrangebylex(from: key, withMaximumValueOf: maxValue, limitBy: limit).get()
     }
 }
 
@@ -1274,6 +1332,7 @@ extension RedisClient {
     /// - Returns: The number of elements removed from the set.
     @inlinable
     public func zrem<Value: RESPValueConvertible>(_ elements: [Value], from key: RedisKey) async throws -> Int {
+        try await zrem(elements, from: key).get()
     }
 
     /// Removes the specified elements from a sorted set.
@@ -1285,6 +1344,7 @@ extension RedisClient {
     /// - Returns: The number of elements removed from the set.
     @inlinable
     public func zrem<Value: RESPValueConvertible>(_ elements: Value..., from key: RedisKey) async throws -> Int {
+        try await zrem(elements, from: key).get()
     }
 }
 
@@ -1312,6 +1372,7 @@ extension RedisClient {
         from key: RedisKey,
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>)
     ) async throws -> Int {
+        try await zremrangebylex(from: key, withValuesBetween: range).get()
     }
 
     /// Removes elements from a SortedSet whose lexiographical values are greater than a minimum value.
@@ -1334,6 +1395,7 @@ extension RedisClient {
         from key: RedisKey,
         withMinimumValueOf minValue: RedisZLexBound<Value>
     ) async throws -> Int {
+        try await zremrangebylex(from: key, withMinimumValueOf: minValue).get()
     }
 
     /// Removes elements from a SortedSet whose lexiographical values are less than a maximum value.
@@ -1356,6 +1418,7 @@ extension RedisClient {
         from key: RedisKey,
         withMaximumValueOf maxValue: RedisZLexBound<Value>
     ) async throws -> Int {
+        try await zremrangebylex(from: key, withMaximumValueOf: maxValue).get()
     }
 }
 
@@ -1372,6 +1435,7 @@ extension RedisClient {
     ///     - lastIndex: The index of the last element to remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, firstIndex: Int, lastIndex: Int) async throws -> Int {
+        try await zremrangebyrank(from: key, firstIndex: firstIndex, lastIndex: lastIndex).get()
     }
 
     /// Removes all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
@@ -1386,6 +1450,7 @@ extension RedisClient {
     ///     - range: The range of inclusive indices of elements to remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, indices range: ClosedRange<Int>) async throws -> Int {
+        try await zremrangebyrank(from: key, indices: range).get()
     }
 
     /// Removes all elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
@@ -1400,6 +1465,7 @@ extension RedisClient {
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, indices range: Range<Int>) async throws -> Int {
+        try await zremrangebyrank(from: key, indices: range).get()
     }
 
     /// Removes all elements from the index specified to the end of a SortedSet.
@@ -1410,6 +1476,7 @@ extension RedisClient {
     ///     - index: The index of the first element that will be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, fromIndex index: Int) async throws -> Int {
+        try await zremrangebyrank(from: key, fromIndex: index).get()
     }
 
     /// Removes all elements from the start of a SortedSet up to, and including, the element at the index specified.
@@ -1420,6 +1487,7 @@ extension RedisClient {
     ///     - index: The index of the last element that will be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, throughIndex index: Int) async throws -> Int {
+        try await zremrangebyrank(from: key, throughIndex: index).get()
     }
 
     /// Removes all elements from the start of a SortedSet up to, but not including, the element at the index specified.
@@ -1431,6 +1499,7 @@ extension RedisClient {
     ///     - index: The index of the last element to not remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, upToIndex index: Int) async throws -> Int {
+        try await zremrangebyrank(from: key, upToIndex: index).get()
     }
 }
 
@@ -1449,6 +1518,7 @@ extension RedisClient {
         from key: RedisKey,
         withScoresBetween range: (min: RedisZScoreBound, max: RedisZScoreBound)
     ) async throws -> Int {
+        try await zremrangebyscore(from: key, withScoresBetween: range).get()
     }
 
     /// Removes elements from a SortedSet whose score is within the inclusive range specified.
@@ -1459,6 +1529,7 @@ extension RedisClient {
     ///     - range: The inclusive range of scores to filter elements by.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withScores range: ClosedRange<Double>) async throws -> Int {
+        try await zremrangebyscore(from: key, withScores: range).get()
     }
 
     /// Removes elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
@@ -1469,6 +1540,7 @@ extension RedisClient {
     ///     - range: A range with an inclusive lower and exclusive upper bound of scores to filter elements by.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withScores range: Range<Double>) async throws -> Int {
+        try await zremrangebyscore(from: key, withScores: range).get()
     }
 
     /// Removes elements from a SortedSet whose score is greater than a minimum score value.
@@ -1479,6 +1551,7 @@ extension RedisClient {
     ///     - minScore: The minimum score bound an element in the SortedSet should have to be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withMinimumScoreOf minScore: RedisZScoreBound) async throws -> Int {
+        try await zremrangebyscore(from: key, withMinimumScoreOf: minScore).get()
     }
 
     /// Removes elements from a SortedSet whose score is less than a maximum score value.
@@ -1489,5 +1562,6 @@ extension RedisClient {
     ///     - minScore: The maximum score bound an element in the SortedSet should have to be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withMaximumScoreOf maxScore: RedisZScoreBound) async throws -> Int {
+        try await zremrangebyscore(from: key, withMaximumScoreOf: maxScore).get()
     }
 }

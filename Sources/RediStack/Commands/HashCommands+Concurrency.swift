@@ -187,7 +187,6 @@ extension RedisClient {
     /// - Parameters:
     ///     - fields: The key-value pair of field names and their respective values to set.
     ///     - key: The key that holds the hash.
-    /// - Returns: An `EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     @inlinable
     public func hmset<Value: RESPValueConvertible>(
         _ fields: [String: Value],
