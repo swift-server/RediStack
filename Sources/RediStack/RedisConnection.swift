@@ -250,6 +250,11 @@ extension RedisConnection {
         return self.send(commands: commands, logger: nil)
     }
 
+    public func send<T>(_ command: T) -> EventLoopFuture<T.Value> where T : RedisCommandSignature {
+        return self.send(commands: command.commands, logger: nil)
+            .flatMapThrowing(command.makeResponse)
+    }
+
     internal func send(
         command: String,
         with arguments: [RESPValue],

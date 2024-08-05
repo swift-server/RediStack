@@ -24,6 +24,11 @@ import NIOCore
 ///
 /// For the full list of available commands, see [https://redis.io/commands](https://redis.io/commands)
 public protocol RedisPipelineClient: RedisClient {
+    func send<T: RedisCommandSignature>(_ command: T) -> EventLoopFuture<T.Value>
+}
 
-    func sendPipeline(commands: [(command: String, arguments: [RESPValue])]) -> EventLoopFuture<RESPValue>
+public protocol RedisCommandSignature<Value> {
+    associatedtype Value
+    var commands: [(command: String, arguments: [RESPValue])] { get }
+    func makeResponse(from response: RESPValue) throws -> Value
 }
