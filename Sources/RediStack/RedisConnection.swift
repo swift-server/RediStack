@@ -246,10 +246,6 @@ extension RedisConnection {
     /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
-    public func sendPipeline(commands: [(command: String, arguments: [RESPValue])]) -> EventLoopFuture<RESPValue> {
-        return self.send(commands: commands, logger: nil)
-    }
-
     public func send<T>(_ command: T) -> EventLoopFuture<T.Value> where T : RedisCommandSignature {
         return self.send(commands: command.commands, logger: nil)
             .flatMapThrowing(command.makeResponse)
