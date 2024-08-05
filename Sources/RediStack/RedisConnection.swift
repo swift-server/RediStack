@@ -83,7 +83,7 @@ extension RedisConnection {
 ///     print(result) // Optional("some value")
 ///
 /// Note: `wait()` is used in the example for simplicity. Never call `wait()` on an event loop.
-public final class RedisConnection: RedisClient, RedisClientWithUserContext {
+public final class RedisConnection: RedisPipelineClient, RedisClientWithUserContext {
     /// A unique identifer to represent this connection.
     public let id = UUID()
     public var eventLoop: EventLoop { return self.channel.eventLoop }
@@ -237,7 +237,17 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: arguments, logger: nil)
+        return self.send(commands: [(command, arguments)], logger: nil)
+    }
+
+    /// Sends multiple commands  in a pipeline to Redis.
+    ///
+    /// See `RedisClient.send(commands:)`.
+    /// - Note: The timing of when commands are actually sent to Redis can be controlled with the `RedisConnection.sendCommandsImmediately` property.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
+    ///     If a `RedisError` is returned, the future will be failed instead.
+    public func sendPipeline(commands: [(command: String, arguments: [RESPValue])]) -> EventLoopFuture<RESPValue> {
+        return self.send(commands: commands, logger: nil)
     }
 
     internal func send(
@@ -245,18 +255,24 @@ extension RedisConnection {
         with arguments: [RESPValue],
         logger: Logger?
     ) -> EventLoopFuture<RESPValue> {
+        return self.send(commands: [(command, arguments)], logger: logger)
+    }
+
+    internal func send(
+        commands: [(command: String, arguments: [RESPValue])],
+        logger: Logger?
+    ) -> EventLoopFuture<RESPValue> {
         if self.eventLoop.inEventLoop {
-            return self.send0(command: command, with: arguments, logger: logger)
+            return self.send0(commands: commands, logger: logger)
         }
 
         return self.eventLoop.flatSubmit {
-            self.send0(command: command, with: arguments, logger: logger)
+            self.send0(commands: commands, logger: logger)
         }
     }
 
     private func send0(
-        command: String,
-        with arguments: [RESPValue],
+        commands: [(command: String, arguments: [RESPValue])],
         logger: Logger?
     ) -> EventLoopFuture<RESPValue> {
         self.eventLoop.preconditionInEventLoop()
@@ -268,15 +284,24 @@ extension RedisConnection {
             logger.warning("\(error.loggableDescription)")
             return self.channel.eventLoop.makeFailedFuture(error)
         }
+
+        guard !commands.isEmpty else {
+            let error = RedisClientError.assertionFailure(message: "Cannot send zero commands")
+            logger.warning("\(error.loggableDescription)")
+            return self.channel.eventLoop.makeFailedFuture(error)
+        }
         logger.trace("received command request")
 
-        logger.debug("sending command", metadata: [
-            RedisLogging.MetadataKeys.commandKeyword: "\(command)",
-            RedisLogging.MetadataKeys.commandArguments: "\(arguments)"
-        ])
+        for (command, arguments) in commands {
+            logger.debug("sending command", metadata: [
+                RedisLogging.MetadataKeys.commandKeyword: "\(command)",
+                RedisLogging.MetadataKeys.commandArguments: "\(arguments)"
+            ])
+        }
 
-        var message: [RESPValue] = [.init(bulk: command)]
-        message.append(contentsOf: arguments)
+        let message = commands.flatMap {
+            [RESPValue(bulk: $0.command)] + $0.arguments
+        }
 
         let promise = channel.eventLoop.makePromise(of: RESPValue.self)
         let command = RedisCommand(
