@@ -16,6 +16,7 @@ import Atomics
 import NIOCore
 import NIOConcurrencyHelpers
 import NIOPosix
+import NIOSSL
 import Logging
 import struct Foundation.URL
 import protocol Foundation.LocalizedError
@@ -52,13 +53,15 @@ extension RedisConnection {
         public var port: Int? { self.address.port }
         /// The user name used to authenticate connections with.
         /// - Warning: This property should only be provided if you are running against Redis 6 or higher.
-        public let username: String?
+        public var username: String?
         /// The password used to authenticate the connection.
-        public let password: String?
+        public var password: String?
         /// The initial database index that the connection should use.
-        public let initialDatabase: Int?
+        public var initialDatabase: Int?
         /// The logger prototype that will be used by the connection by default when generating logs.
-        public let defaultLogger: Logger
+        public var defaultLogger: Logger
+
+        public var tlsConfiguration: TLSConfiguration?
 
         internal let address: SocketAddress
 
@@ -186,12 +189,16 @@ extension RedisConnection {
 
             let databaseID = Int(url.lastPathComponent)
 
-            try self.init(
+            var config = try Self(
                 address: try .makeAddressResolvingHost(host, port: url.port ?? Self.defaultPort),
                 password: url.password,
                 initialDatabase: databaseID,
                 defaultLogger: defaultLogger
             )
+
+            config.tlsConfiguration = .clientDefault
+
+            self = config
         }
 
         private static func validateRedisURL(_ url: URL) throws {
@@ -200,7 +207,7 @@ extension RedisConnection {
                 !scheme.isEmpty
             else { throw ValidationError.missingURLScheme }
 
-            guard scheme == "redis" else { throw ValidationError.invalidURLScheme }
+            guard scheme == "redis" || scheme == "rediss" else { throw ValidationError.invalidURLScheme }
         }
     }
 }

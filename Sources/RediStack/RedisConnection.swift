@@ -19,6 +19,7 @@ import Logging
 import Metrics
 import NIOCore
 import NIOConcurrencyHelpers
+import NIOSSL
 import NIOPosix
 
 extension RedisConnection {
@@ -55,9 +56,34 @@ extension RedisConnection {
         boundEventLoop eventLoop: EventLoop,
         configuredTCPClient client: ClientBootstrap? = nil
     ) -> EventLoopFuture<RedisConnection> {
-        let client = client ?? .makeRedisTCPClient(group: eventLoop)
+        let bootstrap: ClientBootstrap
+        if let client {
+            bootstrap = client
+        } else if let tlsConfiguration = config.tlsConfiguration {
+            bootstrap = ClientBootstrap(group: eventLoop)
+                .channelOption(
+                    ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR),
+                    value: 1
+                )
+                .channelInitializer { channel in
+                    do {
+                        try channel.pipeline.syncOperations.addHandler(
+                            NIOSSLClientHandler(
+                                context: NIOSSLContext(configuration: tlsConfiguration),
+                                serverHostname: config.hostname
+                            )
+                        )
+                    } catch {
+                        return eventLoop.makeFailedFuture(error)
+                    }
 
-        return client
+                    return channel.pipeline.addBaseRedisHandlers()
+                }
+        } else {
+            bootstrap = .makeRedisTCPClient(group: eventLoop)
+        }
+
+        return bootstrap
             .connect(to: config.address)
             .flatMap {
                 let connection = RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger)
