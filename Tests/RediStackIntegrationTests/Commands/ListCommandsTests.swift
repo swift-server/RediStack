@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import RediStackTestUtils
 import XCTest
+
+@testable import RediStack
 
 final class ListCommandsTests: RediStackIntegrationTestCase {
     func test_llen() throws {
@@ -62,7 +63,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         XCTAssertEqual(elements.count, 5)
         XCTAssertEqual(Int(fromRESP: elements[0]), 1)
         XCTAssertEqual(Int(fromRESP: elements[4]), 5)
-        
+
         elements = try connection.lrange(from: #function, fromIndex: 1).wait()
         XCTAssertEqual(elements.count, 4)
         elements = try connection.lrange(from: #function, fromIndex: -3).wait()
@@ -178,7 +179,7 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         size = try connection.lpushx(30, into: #function).wait()
         XCTAssertEqual(size, 2)
         let element = try connection.rpop(from: #function)
-            .map { return Int(fromRESP: $0) }
+            .map { Int(fromRESP: $0) }
             .wait()
         XCTAssertEqual(element, 10)
     }
@@ -237,37 +238,37 @@ final class ListCommandsTests: RediStackIntegrationTestCase {
         size = try connection.rpushx(30, into: #function).wait()
         XCTAssertEqual(size, 2)
         let element = try connection.lpop(from: #function)
-            .map { return Int(fromRESP: $0) }
+            .map { Int(fromRESP: $0) }
             .wait()
         XCTAssertEqual(element, 10)
     }
-    
+
     func test_ltrim() throws {
         let setup = {
             _ = try self.connection.delete(#function).wait()
             _ = try self.connection.lpush([5, 4, 3, 2, 1], into: #function).wait()
         }
-        let getElements = { return try self.connection.lrange(from: #function, fromIndex: 0).wait() }
-        
+        let getElements = { try self.connection.lrange(from: #function, fromIndex: 0).wait() }
+
         try setup()
-        
+
         XCTAssertNoThrow(try connection.ltrim(#function, before: 1, after: 3).wait())
         XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: 0...1).wait())
         var elements = try getElements()
         XCTAssertEqual(elements.count, 2)
-        
+
         try setup()
-        
+
         XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: (-3)...).wait())
         elements = try getElements()
         XCTAssertEqual(elements.count, 3)
-        
+
         try setup()
-        
+
         XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: ...(-4)).wait())
         elements = try getElements()
         XCTAssertEqual(elements.count, 2)
-        
+
         try setup()
         XCTAssertNoThrow(try connection.ltrim(#function, keepingIndices: ..<(-2)).wait())
         elements = try getElements()

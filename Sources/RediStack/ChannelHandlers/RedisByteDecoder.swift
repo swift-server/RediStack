@@ -21,9 +21,9 @@ import NIOCore
 public final class RedisByteDecoder: NIOSingleStepByteToMessageDecoder {
     /// `ByteToMessageDecoder.InboundOut`
     public typealias InboundOut = RESPValue
-    
+
     private let parser: RESPTranslator
-    
+
     public init() {
         self.parser = RESPTranslator()
     }

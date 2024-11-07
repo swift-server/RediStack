@@ -1,3 +1,7 @@
+import Logging
+import NIOConcurrencyHelpers
+import NIOCore
+
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the RediStack open source project
@@ -12,9 +16,6 @@
 //
 //===----------------------------------------------------------------------===//
 import struct Foundation.UUID
-import NIOCore
-import NIOConcurrencyHelpers
-import Logging
 
 /// A `RedisConnectionPool` is an implementation of `RedisClient` backed by a pool of connections to Redis,
 /// rather than a single one.
@@ -152,12 +153,13 @@ extension RedisConnectionPool {
     /// - Parameter operation: A closure that receives exclusive access to the provided `RedisConnection` for the lifetime of the closure for specialized Redis command chains.
     /// - Returns: A `NIO.EventLoopFuture` that resolves the value of the `NIO.EventLoopFuture` in the provided closure operation.
     @inlinable
-    public func leaseConnection<T>(_ operation: @escaping (RedisConnection) -> EventLoopFuture<T>) -> EventLoopFuture<T> {
-        return self.forwardOperationToConnection(
+    public func leaseConnection<T>(_ operation: @escaping (RedisConnection) -> EventLoopFuture<T>) -> EventLoopFuture<T>
+    {
+        self.forwardOperationToConnection(
             {
                 (connection, returnConnection, context) in
 
-                return operation(connection)
+                operation(connection)
                     .always { _ in returnConnection(connection, context) }
             },
             preferredConnection: nil,
@@ -177,9 +179,12 @@ extension RedisConnectionPool {
     ///         If one is not provided, the pool will use its default logger.
     public func updateConnectionAddresses(_ newAddresses: [SocketAddress], logger: Logger? = nil) {
         self.prepareLoggerForUse(logger)
-            .info("pool updated with new target addresses", metadata: [
-                RedisLogging.MetadataKeys.newConnectionPoolTargetAddresses: "\(newAddresses)"
-            ])
+            .info(
+                "pool updated with new target addresses",
+                metadata: [
+                    RedisLogging.MetadataKeys.newConnectionPoolTargetAddresses: "\(newAddresses)"
+                ]
+            )
 
         self.loop.execute {
             self.serverConnectionAddresses.update(newAddresses)
@@ -229,7 +234,8 @@ extension RedisConnectionPool {
             return targetLoop.makeFailedFuture(error)
         }
 
-        return RedisConnection
+        return
+            RedisConnection
             .make(
                 configuration: connectionConfig,
                 boundEventLoop: targetLoop,
@@ -257,11 +263,11 @@ extension RedisConnectionPool: RedisClient {
     public var eventLoop: EventLoop { self.loop }
 
     public func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
+        UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
     }
 
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: arguments, logger: nil)
+        self.send(command: command, with: arguments, logger: nil)
     }
 
     public func subscribe(
@@ -270,7 +276,7 @@ extension RedisConnectionPool: RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(
+        self.subscribe(
             to: channels,
             messageReceiver: receiver,
             onSubscribe: subscribeHandler,
@@ -285,7 +291,7 @@ extension RedisConnectionPool: RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
     ) -> EventLoopFuture<Void> {
-        return self.psubscribe(
+        self.psubscribe(
             to: patterns,
             messageReceiver: receiver,
             onSubscribe: subscribeHandler,
@@ -295,23 +301,24 @@ extension RedisConnectionPool: RedisClient {
     }
 
     public func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: channels, logger: nil)
+        self.unsubscribe(from: channels, logger: nil)
     }
 
     public func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: patterns, logger: nil)
+        self.punsubscribe(from: patterns, logger: nil)
     }
 }
 
 // MARK: RedisClientWithUserContext conformance
 extension RedisConnectionPool: RedisClientWithUserContext {
     internal func send(command: String, with arguments: [RESPValue], logger: Logger?) -> EventLoopFuture<RESPValue> {
-        return self.forwardOperationToConnection(
+        self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
 
                 connection.sendCommandsImmediately = true
 
-                return connection
+                return
+                    connection
                     .send(command: command, with: arguments, logger: context)
                     .always { _ in returnConnection(connection, context) }
             },
@@ -327,7 +334,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(
+        self.subscribe(
             using: {
                 $0.subscribe(
                     to: channels,
@@ -343,7 +350,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
     }
 
     internal func unsubscribe(from channels: [RedisChannelName], logger: Logger?) -> EventLoopFuture<Void> {
-        return self.unsubscribe(using: { $0.unsubscribe(from: channels, logger: $1) }, context: logger)
+        self.unsubscribe(using: { $0.unsubscribe(from: channels, logger: $1) }, context: logger)
     }
 
     internal func psubscribe(
@@ -353,7 +360,7 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(
+        self.subscribe(
             using: {
                 $0.psubscribe(
                     to: patterns,
@@ -369,19 +376,20 @@ extension RedisConnectionPool: RedisClientWithUserContext {
     }
 
     internal func punsubscribe(from patterns: [String], logger: Logger?) -> EventLoopFuture<Void> {
-        return self.unsubscribe(using: { $0.punsubscribe(from: patterns, logger: $1) }, context: logger)
+        self.unsubscribe(using: { $0.punsubscribe(from: patterns, logger: $1) }, context: logger)
     }
 
     private func subscribe(
-        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) -> EventLoopFuture<Void>,
+        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) ->
+            EventLoopFuture<Void>,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         context: Logger?
     ) -> EventLoopFuture<Void> {
-        return self.forwardOperationToConnection(
+        self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
 
                 if self.pubsubConnection == nil {
-                    connection.allowSubscriptions = true // allow pubsub commands which are to come
+                    connection.allowSubscriptions = true  // allow pubsub commands which are to come
                     self.pubsubConnection = connection
                 }
 
@@ -393,9 +401,9 @@ extension RedisConnectionPool: RedisClientWithUserContext {
                         let connection = self.pubsubConnection
                     else { return }
 
-                    connection.allowSubscriptions = false // reset PubSub permissions
+                    connection.allowSubscriptions = false  // reset PubSub permissions
                     returnConnection(connection, context)
-                    self.pubsubConnection = nil // break ref cycle
+                    self.pubsubConnection = nil  // break ref cycle
                 }
 
                 return operation(connection, onUnsubscribe, context)
@@ -409,9 +417,9 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         using operation: @escaping (RedisConnection, Logger) -> EventLoopFuture<Void>,
         context: Logger?
     ) -> EventLoopFuture<Void> {
-        return self.forwardOperationToConnection(
+        self.forwardOperationToConnection(
             { (connection, returnConnection, context) in
-                return operation(connection, context)
+                operation(connection, context)
                     .always { _ in
                         // we aren't responsible for releasing the connection, subscribing is
                         // so we check if we have pubsub connection has been released, which indicates this might be
@@ -430,14 +438,15 @@ extension RedisConnectionPool: RedisClientWithUserContext {
 
     @usableFromInline
     internal func forwardOperationToConnection<T>(
-        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Logger) -> Void, Logger) -> EventLoopFuture<T>,
+        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Logger) -> Void, Logger) ->
+            EventLoopFuture<T>,
         preferredConnection: RedisConnection?,
         context: Logger?
     ) -> EventLoopFuture<T> {
         // Establish event loop context then jump to the in-loop version.
         guard self.loop.inEventLoop else {
             return self.loop.flatSubmit {
-                return self.forwardOperationToConnection(
+                self.forwardOperationToConnection(
                     operation,
                     preferredConnection: preferredConnection,
                     context: context
@@ -454,7 +463,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
         let logger = self.prepareLoggerForUse(context)
 
         guard let connection = preferredConnection else {
-            return pool
+            return
+                pool
                 .leaseConnection(
                     deadline: .now() + self.configuration.connectionRetryConfiguration.timeout,
                     logger: logger

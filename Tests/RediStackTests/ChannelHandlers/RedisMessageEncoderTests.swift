@@ -14,9 +14,10 @@
 
 import NIOCore
 import NIOEmbedded
-@testable import RediStack
 import RediStackTestUtils
 import XCTest
+
+@testable import RediStack
 
 final class RedisMessageEncoderTests: XCTestCase {
     private var encoder: RedisMessageEncoder!
@@ -83,13 +84,15 @@ final class RedisMessageEncoderTests: XCTestCase {
         try runEncodePass(with: a2) { XCTAssertEqual($0.readableBytes, 14) }
         XCTAssertNoThrow(try self.channel.writeOutbound(a2))
 
-        let bytes: [UInt8] = [ 0x0a, 0x1a, 0x1b, 0xff ]
+        let bytes: [UInt8] = [0x0a, 0x1a, 0x1b, 0xff]
         var buffer = allocator.buffer(capacity: bytes.count)
         buffer.writeBytes(bytes)
-        let a3: RESPValue = .array([.array([
-            .integer(3),
-            .bulkString(buffer)
-        ])])
+        let a3: RESPValue = .array([
+            .array([
+                .integer(3),
+                .bulkString(buffer),
+            ])
+        ])
         try runEncodePass(with: a3) { XCTAssertEqual($0.readableBytes, 22) }
         XCTAssertNoThrow(try self.channel.writeOutbound(a3))
     }

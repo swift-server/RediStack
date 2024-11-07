@@ -12,8 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-import RediStack
 import NIOCore
+import RediStack
 
 struct MockNodeDescription: RedisClusterNodeDescriptionProtocol, Hashable {
     var host: String?

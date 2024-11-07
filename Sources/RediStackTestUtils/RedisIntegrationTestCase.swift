@@ -13,8 +13,8 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-import RediStack
 import NIOPosix
+import RediStack
 import XCTest
 
 /// A helper `XCTestCase` subclass that does the standard work of creating a connection to use in test cases.
@@ -27,17 +27,17 @@ open class RedisIntegrationTestCase: XCTestCase {
     ///
     /// This is especially useful to override if you build on Linux & macOS where Redis might be installed locally vs. through Docker.
     open var redisHostname: String { RedisConnection.Configuration.defaultHostname }
-    
+
     /// The port to connect over to Redis, defaulting to `RedisConnection.defaultPort`.
     open var redisPort: Int { RedisConnection.Configuration.defaultPort }
-    
+
     /// The password to use to connect to Redis. Default is `nil` - no password authentication.
-    open var redisPassword: String? { return nil }
-    
+    open var redisPassword: String? { nil }
+
     public var connection: RedisConnection!
-    
+
     private let eventLoopGroup = MultiThreadedEventLoopGroup(numberOfThreads: 2)
-    
+
     deinit {
         do {
             try self.eventLoopGroup.syncShutdownGracefully()
@@ -45,7 +45,7 @@ open class RedisIntegrationTestCase: XCTestCase {
             print("Failed to gracefully shutdown ELG: \(error)")
         }
     }
-    
+
     /// Creates a `RediStack.RedisConnection` for the next test case, calling `fatalError` if it was not successful.
     ///
     /// See `XCTest.XCTestCase.setUp()`
@@ -56,7 +56,7 @@ open class RedisIntegrationTestCase: XCTestCase {
             fatalError("Failed to make a RedisConnection: \(error)")
         }
     }
-    
+
     /// Sends a "FLUSHALL" command to Redis to clear it of any data from the previous test, then closes the connection.
     ///
     /// If any steps fail, a `fatalError` is thrown.
@@ -69,19 +69,19 @@ open class RedisIntegrationTestCase: XCTestCase {
                     .flatMap { _ in self.connection.close() }
                     .wait()
             }
-            
+
             self.connection = nil
         } catch {
             fatalError("Failed to properly cleanup connection: \(error)")
         }
     }
-    
+
     /// Creates a new connection for use in tests.
     ///
     /// See `RedisConnection.make(configuration:boundEventLoop:)`
     /// - Returns: The new `RediStack.RedisConnection`.
     public func makeNewConnection() throws -> RedisConnection {
-        return try RedisConnection.make(
+        try RedisConnection.make(
             configuration: .init(
                 host: self.redisHostname,
                 port: self.redisPort,

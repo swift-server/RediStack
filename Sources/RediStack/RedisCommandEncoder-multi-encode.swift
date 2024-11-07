@@ -30,7 +30,11 @@ extension RedisCommandEncoder {
     }
 
     @inlinable
-    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable, T1: RESP3BlobStringEncodable, T2: RESP3BlobStringEncodable>(_ t0: T0, _ t1: T1, _ t2: T2) {
+    mutating func encodeRESPArray<
+        T0: RESP3BlobStringEncodable,
+        T1: RESP3BlobStringEncodable,
+        T2: RESP3BlobStringEncodable
+    >(_ t0: T0, _ t1: T1, _ t2: T2) {
         self.buffer.writeBytes("*3\r\n".utf8)
         t0.encodeRedisBlobString(into: &self.buffer)
         t1.encodeRedisBlobString(into: &self.buffer)
@@ -38,7 +42,12 @@ extension RedisCommandEncoder {
     }
 
     @inlinable
-    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable, T1: RESP3BlobStringEncodable, T2: RESP3BlobStringEncodable, T3: RESP3BlobStringEncodable>(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3) {
+    mutating func encodeRESPArray<
+        T0: RESP3BlobStringEncodable,
+        T1: RESP3BlobStringEncodable,
+        T2: RESP3BlobStringEncodable,
+        T3: RESP3BlobStringEncodable
+    >(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3) {
         self.buffer.writeBytes("*4\r\n".utf8)
         t0.encodeRedisBlobString(into: &self.buffer)
         t1.encodeRedisBlobString(into: &self.buffer)
@@ -47,7 +56,13 @@ extension RedisCommandEncoder {
     }
 
     @inlinable
-    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable, T1: RESP3BlobStringEncodable, T2: RESP3BlobStringEncodable, T3: RESP3BlobStringEncodable, T4: RESP3BlobStringEncodable>(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4) {
+    mutating func encodeRESPArray<
+        T0: RESP3BlobStringEncodable,
+        T1: RESP3BlobStringEncodable,
+        T2: RESP3BlobStringEncodable,
+        T3: RESP3BlobStringEncodable,
+        T4: RESP3BlobStringEncodable
+    >(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4) {
         self.buffer.writeBytes("*5\r\n".utf8)
         t0.encodeRedisBlobString(into: &self.buffer)
         t1.encodeRedisBlobString(into: &self.buffer)
@@ -57,7 +72,14 @@ extension RedisCommandEncoder {
     }
 
     @inlinable
-    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable, T1: RESP3BlobStringEncodable, T2: RESP3BlobStringEncodable, T3: RESP3BlobStringEncodable, T4: RESP3BlobStringEncodable, T5: RESP3BlobStringEncodable>(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4, _ t5: T5) {
+    mutating func encodeRESPArray<
+        T0: RESP3BlobStringEncodable,
+        T1: RESP3BlobStringEncodable,
+        T2: RESP3BlobStringEncodable,
+        T3: RESP3BlobStringEncodable,
+        T4: RESP3BlobStringEncodable,
+        T5: RESP3BlobStringEncodable
+    >(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4, _ t5: T5) {
         self.buffer.writeBytes("*6\r\n".utf8)
         t0.encodeRedisBlobString(into: &self.buffer)
         t1.encodeRedisBlobString(into: &self.buffer)
@@ -68,7 +90,15 @@ extension RedisCommandEncoder {
     }
 
     @inlinable
-    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable, T1: RESP3BlobStringEncodable, T2: RESP3BlobStringEncodable, T3: RESP3BlobStringEncodable, T4: RESP3BlobStringEncodable, T5: RESP3BlobStringEncodable, T6: RESP3BlobStringEncodable>(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4, _ t5: T5, _ t6: T6) {
+    mutating func encodeRESPArray<
+        T0: RESP3BlobStringEncodable,
+        T1: RESP3BlobStringEncodable,
+        T2: RESP3BlobStringEncodable,
+        T3: RESP3BlobStringEncodable,
+        T4: RESP3BlobStringEncodable,
+        T5: RESP3BlobStringEncodable,
+        T6: RESP3BlobStringEncodable
+    >(_ t0: T0, _ t1: T1, _ t2: T2, _ t3: T3, _ t4: T4, _ t5: T5, _ t6: T6) {
         self.buffer.writeBytes("*7\r\n".utf8)
         t0.encodeRedisBlobString(into: &self.buffer)
         t1.encodeRedisBlobString(into: &self.buffer)

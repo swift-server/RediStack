@@ -13,9 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
+import NIOPosix
 import RediStack
 import XCTest
-import NIOPosix
 
 /// A helper `XCTestCase` subclass that does the standard work of creating a connection pool to use in test cases.
 ///
@@ -32,7 +32,7 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
     open var redisPort: Int { RedisConnection.Configuration.defaultPort }
 
     /// The password to use to connect to Redis. Default is `nil` - no password authentication.
-    open var redisPassword: String? { return nil }
+    open var redisPassword: String? { nil }
 
     public var pool: RedisConnectionPool!
 
@@ -93,7 +93,8 @@ open class RedisConnectionPoolIntegrationTestCase: XCTestCase {
         connectionRetryTimeout: TimeAmount?,
         minimumConnectionCount: Int
     ) throws -> RedisConnectionPool {
-        let addresses = try initialAddresses ?? [SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)]
+        let addresses =
+            try initialAddresses ?? [SocketAddress.makeAddressResolvingHost(self.redisHostname, port: self.redisPort)]
         let pool = RedisConnectionPool(
             configuration: RedisConnectionPool.Configuration(
                 initialServerConnectionAddresses: addresses,

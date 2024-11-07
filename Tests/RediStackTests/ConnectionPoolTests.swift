@@ -12,11 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
-@testable import RediStackTestUtils
-import XCTest
 import NIOCore
 import NIOEmbedded
+import XCTest
+
+@testable import RediStack
+@testable import RediStackTestUtils
 
 enum ConnectionPoolTestError: Error {
     case connectionFailedForSomeReason
@@ -41,19 +42,24 @@ final class ConnectionPoolTests: XCTestCase {
     }
 
     func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool) -> ConnectionPool {
-        return ConnectionPool(
+        ConnectionPool(
             maximumConnectionCount: maximumConnectionCount,
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
             loop: self.server.loop,
             backgroundLogger: .redisBaseConnectionPoolLogger
         ) { loop in
-            return loop.makeSucceededFuture(self.createAConnection())
+            loop.makeSucceededFuture(self.createAConnection())
         }
     }
 
-    func createPool(maximumConnectionCount: Int, minimumConnectionCount: Int, leaky: Bool, connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>) -> ConnectionPool {
-        return ConnectionPool(
+    func createPool(
+        maximumConnectionCount: Int,
+        minimumConnectionCount: Int,
+        leaky: Bool,
+        connectionFactory: @escaping (EventLoop) -> EventLoopFuture<RedisConnection>
+    ) -> ConnectionPool {
+        ConnectionPool(
             maximumConnectionCount: maximumConnectionCount,
             minimumConnectionCount: minimumConnectionCount,
             leaky: leaky,
@@ -139,7 +145,11 @@ final class ConnectionPoolTests: XCTestCase {
         }
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 8)
-        XCTAssertTrue(self.server.channels.allMatch(ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.allMatch(
+                ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(0..<8), indicesAndChannels.map { $0.0 })
 
         // Now we're going to try to take out another 8 leases. The pool is not leaky, so these will queue.
@@ -150,7 +160,11 @@ final class ConnectionPoolTests: XCTestCase {
         }
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 8)
-        XCTAssertTrue(self.server.channels.allMatch(ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.allMatch(
+                ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(0..<8), indicesAndChannels.map { $0.0 })
 
         // Let's return 4 leases to the pool. These will be recycled in order.
@@ -162,8 +176,16 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertEqual(indicesAndChannels.count, 8)
 
         // The first 4 connections are now the last 4 returned.
-        XCTAssertTrue(self.server.channels.prefix(4).allMatch(ArraySlice(indicesAndChannels.suffix(4).compactMap { $0.1.channel as? EmbeddedChannel })))
-        XCTAssertTrue(self.server.channels.suffix(4).allMatch(ArraySlice(indicesAndChannels.prefix(4).compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.prefix(4).allMatch(
+                ArraySlice(indicesAndChannels.suffix(4).compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
+        XCTAssertTrue(
+            self.server.channels.suffix(4).allMatch(
+                ArraySlice(indicesAndChannels.prefix(4).compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(4..<12), indicesAndChannels.map { $0.0 })
 
         // Let's do that again.
@@ -175,7 +197,11 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertEqual(indicesAndChannels.count, 8)
 
         // The channels are back to being in order again.
-        XCTAssertTrue(self.server.channels.allMatch(ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.allMatch(
+                ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(8..<16), indicesAndChannels.map { $0.0 })
     }
 
@@ -198,7 +224,11 @@ final class ConnectionPoolTests: XCTestCase {
         }
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 8)
-        XCTAssertTrue(self.server.channels.allMatch(ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.allMatch(
+                ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(0..<8), indicesAndChannels.map { $0.0 })
 
         // Now we're going to try to take out another 8 leases. The pool is leaky, so these will not queue: they all get connections.
@@ -209,7 +239,11 @@ final class ConnectionPoolTests: XCTestCase {
         }
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 16)
-        XCTAssertTrue(self.server.channels.allMatch(ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })))
+        XCTAssertTrue(
+            self.server.channels.allMatch(
+                ArraySlice(indicesAndChannels.compactMap { $0.1.channel as? EmbeddedChannel })
+            )
+        )
         XCTAssertEqual(Array(0..<16), indicesAndChannels.map { $0.0 })
 
         // Let's return all the leases to the pool. 8 of them, the last 8 to be returned, get closed.
@@ -242,7 +276,7 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertEqual(self.server.channels.count, 1)
 
         // Lease this connection and close it, then return it. We're gonna queue up 2 leases.
-        var leased = Array<RedisConnection>()
+        var leased = [RedisConnection]()
         for _ in 0..<2 {
             pool.leaseConnection(deadline: .distantFuture).whenSuccess { connection in
                 leased.append(connection)
@@ -263,7 +297,9 @@ final class ConnectionPoolTests: XCTestCase {
         pool.returnConnection(leased.first!)
         XCTAssertNoThrow(try self.server.runWhileActive())
         XCTAssertEqual(self.server.channels.count, 1)
-        XCTAssertTrue(self.server.channels.allMatch(leased.dropFirst().compactMap { ($0.channel) as? EmbeddedChannel }[...]))
+        XCTAssertTrue(
+            self.server.channels.allMatch(leased.dropFirst().compactMap { ($0.channel) as? EmbeddedChannel }[...])
+        )
     }
 
     func testLeasingFromClosedPoolsFails() throws {
@@ -297,7 +333,7 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertEqual(self.server.channels.count, 1)
 
         // We're going to lease the connection.
-        var leased = Array<RedisConnection>()
+        var leased = [RedisConnection]()
         pool.leaseConnection(deadline: .distantFuture).whenSuccess { connection in
             leased.append(connection)
         }
@@ -490,7 +526,6 @@ final class ConnectionPoolTests: XCTestCase {
         XCTAssertNoThrow(try closePromise.futureResult.wait())
     }
 
-
     func testNonLeakyBucketWillKeepConnectingIfThereIsSpaceAndWaiters() throws {
         var connectionPromise: EventLoopPromise<RedisConnection>? = nil
         let pool = self.createPool(maximumConnectionCount: 1, minimumConnectionCount: 0, leaky: false) { loop in
@@ -599,7 +634,7 @@ final class ConnectionPoolTests: XCTestCase {
 
         // Lease a connection and return it, in a loop. This will not succeed immediately because we delay connection
         // establishment.
-        var results = Array<Result<RedisConnection, RedisConnectionPoolError>?>(repeating: nil, count: 10)
+        var results = [Result<RedisConnection, RedisConnectionPoolError>?](repeating: nil, count: 10)
         for i in 0..<10 {
             // Just to stress the code a bit we're going to retire these in backwards order.
             pool.leaseConnection(deadline: .uptimeNanoseconds(UInt64(10 - i))).whenComplete { result in
@@ -736,7 +771,9 @@ final class ConnectionPoolTests: XCTestCase {
 
         // We expect 4 connections still to be open, and for those to match the _last 4_ of the connections we were leased.
         XCTAssertEqual(self.server.channels.count, 4)
-        XCTAssertTrue(connections.suffix(4).compactMap { $0.channel as? EmbeddedChannel }.allMatch(self.server.channels))
+        XCTAssertTrue(
+            connections.suffix(4).compactMap { $0.channel as? EmbeddedChannel }.allMatch(self.server.channels)
+        )
     }
 }
 
@@ -802,15 +839,15 @@ extension ConnectionPoolTests {
 
 extension ConnectionPool {
     func activate() { self.activate(logger: .redisBaseConnectionPoolLogger) }
-    
+
     func leaseConnection(deadline: NIODeadline) -> EventLoopFuture<RedisConnection> {
-        return self.leaseConnection(deadline: deadline, logger: .redisBaseConnectionPoolLogger)
+        self.leaseConnection(deadline: deadline, logger: .redisBaseConnectionPoolLogger)
     }
-    
+
     func returnConnection(_ connection: RedisConnection) {
         self.returnConnection(connection, logger: .redisBaseConnectionPoolLogger)
     }
-    
+
     func close(promise: EventLoopPromise<Void>? = nil) {
         self.close(promise: promise, logger: .redisBaseConnectionPoolLogger)
     }
@@ -843,7 +880,6 @@ extension RandomAccessCollection where SubSequence == Self {
         return first
     }
 }
-
 
 extension Optional where Wrapped == Result<RedisConnection, RedisConnectionPoolError> {
     var isNil: Bool {

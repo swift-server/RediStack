@@ -17,8 +17,8 @@
 public protocol RedisClusterShardDescriptionProtocol: Identifiable, Sendable {
     associatedtype NodeDescription: RedisClusterNodeDescriptionProtocol
 
-    /// The shard's master node
-    var master: NodeDescription { get }
+    /// The shard's primary node
+    var master: NodeDescription { get }  // #ignore-unacceptable-language
 
     /// The shard's replica nodes
     var replicas: [NodeDescription] { get }

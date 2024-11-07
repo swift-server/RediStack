@@ -29,16 +29,16 @@ public struct RedisChannelName:
     Comparable, Hashable, Codable
 {
     public let rawValue: String
-    
+
     /// Initializes a type-safe representation of a Redis Pub/Sub channel name.
     /// - Parameter name: The name of the Redis Pub/Sub channel.
     public init(_ name: String) {
         self.rawValue = name
     }
-    
+
     public var description: String { self.rawValue }
     public var debugDescription: String { "\(Self.self): \(self.rawValue)" }
-    
+
     public init?(fromRESP value: RESPValue) {
         guard let string = value.string else { return nil }
         self.rawValue = string
@@ -49,13 +49,13 @@ public struct RedisChannelName:
         let container = try decoder.singleValueContainer()
         self.rawValue = try container.decode(String.self)
     }
-    
-    public static func <(lhs: RedisChannelName, rhs: RedisChannelName) -> Bool {
-        return lhs.rawValue < rhs.rawValue
+
+    public static func < (lhs: RedisChannelName, rhs: RedisChannelName) -> Bool {
+        lhs.rawValue < rhs.rawValue
     }
-    
+
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self.rawValue)
+        .init(bulk: self.rawValue)
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()

@@ -39,8 +39,8 @@ extension RedisClient {
         _ key: RedisKey,
         as type: StoredType.Type
     ) -> EventLoopFuture<StoredType?> {
-        return self.get(key)
-            .map { return StoredType(fromRESP: $0) }
+        self.get(key)
+            .map { StoredType(fromRESP: $0) }
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -64,9 +64,10 @@ extension RedisClient {
     ///     - type: The type to convert the values to.
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.mget(keys)
-            .map { return $0.map(Value.init(fromRESP:)) }
+    public func mget<Value: RESPValueConvertible>(_ keys: [RedisKey], as type: Value.Type) -> EventLoopFuture<[Value?]>
+    {
+        self.mget(keys)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -75,7 +76,7 @@ extension RedisClient {
     /// - Parameter keys: The list of keys to fetch the values from.
     /// - Returns: The values stored at the keys provided, matching the same order.
     public func mget(_ keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
-        return self.mget(keys)
+        self.mget(keys)
     }
 
     /// Gets the values of all specified keys, using `.null` to represent non-existant values.
@@ -86,8 +87,9 @@ extension RedisClient {
     ///     - type: The type to convert the values to.
     /// - Returns: The values stored at the keys provided, matching the same order. Values that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.mget(keys, as: type)
+    public func mget<Value: RESPValueConvertible>(_ keys: RedisKey..., as type: Value.Type) -> EventLoopFuture<[Value?]>
+    {
+        self.mget(keys, as: type)
     }
 }
 
@@ -110,7 +112,7 @@ public struct RedisSetCommandCondition: Hashable {
     /// The `RESPValue` representation of the condition.
     @usableFromInline
     internal var commandArgument: RESPValue? {
-        return self.condition.map { RESPValue(from: $0.rawValue) }
+        self.condition.map { RESPValue(from: $0.rawValue) }
     }
 }
 
@@ -170,7 +172,7 @@ extension RedisSetCommandExpiration {
     /// Redis documentation refers to this as the option "EX".
     /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
     public static func seconds(_ amount: Int) -> RedisSetCommandExpiration {
-        return RedisSetCommandExpiration(.seconds(max(amount, 1)))
+        RedisSetCommandExpiration(.seconds(max(amount, 1)))
     }
 
     /// Expire the key after the given number of milliseconds.
@@ -178,7 +180,7 @@ extension RedisSetCommandExpiration {
     /// Redis documentation refers to this as the option "PX".
     /// - Important: The actual amount used will be the specified value or `1`, whichever is larger.
     public static func milliseconds(_ amount: Int) -> RedisSetCommandExpiration {
-        return RedisSetCommandExpiration(.milliseconds(max(amount, 1)))
+        RedisSetCommandExpiration(.milliseconds(max(amount, 1)))
     }
 }
 
@@ -206,7 +208,7 @@ extension RedisClient {
     public func append<Value: RESPValueConvertible>(_ value: Value, to key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(from: key),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "APPEND", with: args)
             .tryConverting()
@@ -227,7 +229,7 @@ extension RedisClient {
     public func set<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Void> {
         let args: [RESPValue] = [
             .init(from: key),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "SET", with: args)
             .map { _ in () }
@@ -257,7 +259,7 @@ extension RedisClient {
     ) -> EventLoopFuture<RedisSetCommandResult> {
         var args: [RESPValue] = [
             .init(from: key),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
 
         if let conditionArgument = condition.commandArgument {
@@ -269,7 +271,7 @@ extension RedisClient {
         }
 
         return self.send(command: "SET", with: args)
-            .map { return $0.isNull ? .conditionNotMet : .ok }
+            .map { $0.isNull ? .conditionNotMet : .ok }
     }
 
     /// Sets the key to the provided value if the key does not exist.
@@ -286,7 +288,7 @@ extension RedisClient {
     public func setnx<Value: RESPValueConvertible>(_ key: RedisKey, to value: Value) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(from: key),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return self.send(command: "SETNX", with: args)
             .tryConverting(to: Int.self)
@@ -314,7 +316,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(from: max(1, expiration)),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return self.send(command: "SETEX", with: args)
             .map { _ in () }
@@ -341,7 +343,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(from: max(1, expiration)),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return self.send(command: "PSETEX", with: args)
             .map { _ in () }
@@ -355,7 +357,7 @@ extension RedisClient {
     /// - Returns: An `EventLoopFuture` that resolves if the operation was successful.
     @inlinable
     public func mset<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Void> {
-        return _mset(command: "MSET", operations)
+        _mset(command: "MSET", operations)
             .map { _ in () }
     }
 
@@ -367,9 +369,9 @@ extension RedisClient {
     /// - Returns: `true` if the operation successfully completed.
     @inlinable
     public func msetnx<Value: RESPValueConvertible>(_ operations: [RedisKey: Value]) -> EventLoopFuture<Bool> {
-        return _mset(command: "MSETNX", operations)
+        _mset(command: "MSETNX", operations)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     @usableFromInline
@@ -419,7 +421,7 @@ extension RedisClient {
     ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: count)
+            .init(bulk: count),
         ]
         return send(command: "INCRBY", with: args)
             .tryConverting()
@@ -439,7 +441,7 @@ extension RedisClient {
     ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(from: key),
-            count.convertedToRESPValue()
+            count.convertedToRESPValue(),
         ]
         return send(command: "INCRBYFLOAT", with: args)
             .tryConverting()
@@ -475,7 +477,7 @@ extension RedisClient {
     ) -> EventLoopFuture<Value> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: count)
+            .init(bulk: count),
         ]
         return send(command: "DECRBY", with: args)
             .tryConverting()

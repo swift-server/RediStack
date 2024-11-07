@@ -15,8 +15,9 @@
 import NIOCore
 import NIOEmbedded
 import NIOTestUtils
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisByteDecoderTests: XCTestCase {
     private var decoder = RedisByteDecoder()
@@ -94,36 +95,42 @@ extension RedisByteDecoderTests {
 
     func testArrays() throws {
         func runArrayTest(_ input: String) throws -> [RESPValue]? {
-            return try runTest(input)?.array
+            try runTest(input)?.array
         }
 
         XCTAssertNil(try runArrayTest("*0\r"))
         XCTAssertNil(try runArrayTest("*1\r\n+OK\r"))
         XCTAssertEqual(try runArrayTest("*0\r\n")?.count, 0)
-        XCTAssertTrue(arraysAreEqual(
-            try runArrayTest("*1\r\n$3\r\nfoo\r\n"),
-            expected: [.init(bulk: "foo")]
-        ))
-        XCTAssertTrue(arraysAreEqual(
-            try runArrayTest("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n"),
-            expected: [.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)]
-        ))
-        XCTAssertTrue(arraysAreEqual(
-            try runArrayTest("*1\r\n*2\r\n+OK\r\n:1\r\n"),
-            expected: [.array([ .simpleString("OK".byteBuffer), .integer(1) ])]
-        ))
+        XCTAssertTrue(
+            arraysAreEqual(
+                try runArrayTest("*1\r\n$3\r\nfoo\r\n"),
+                expected: [.init(bulk: "foo")]
+            )
+        )
+        XCTAssertTrue(
+            arraysAreEqual(
+                try runArrayTest("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n"),
+                expected: [.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)]
+            )
+        )
+        XCTAssertTrue(
+            arraysAreEqual(
+                try runArrayTest("*1\r\n*2\r\n+OK\r\n:1\r\n"),
+                expected: [.array([.simpleString("OK".byteBuffer), .integer(1)])]
+            )
+        )
     }
 
     private func runTest(_ input: String) throws -> RESPValue? {
-        return try runTest(input.bytes)
+        try runTest(input.bytes)
     }
 
     private func runTest(_ input: [UInt8]) throws -> RESPValue? {
-        return try runTest(input).0
+        try runTest(input).0
     }
 
     private func runTest(_ input: String) throws -> (RESPValue?, RESPValue?) {
-        return try runTest(input.bytes)
+        try runTest(input.bytes)
     }
 
     private func runTest(_ input: [UInt8]) throws -> (RESPValue?, RESPValue?) {
@@ -148,8 +155,8 @@ extension RedisByteDecoderTests {
 
         var arraysMatch = true
 
-        left.enumerated().forEach {
-            let (offset, decodedElement) = $0
+        for item in left.enumerated() {
+            let (offset, decodedElement) = item
 
             switch (decodedElement, right[offset]) {
             case (let .bulkString(decoded), let .bulkString(expected)): arraysMatch = decoded == expected
@@ -187,7 +194,7 @@ extension RedisByteDecoderTests {
             "*3\r\n+\(expectedString)\r\n$2\r\n\(expectedBulkString)\r\n:\(expectedInteger)\r\n",
             "*1\r\n*1\r\n:\(expectedInteger)\r\n",
             "*0\r\n",
-            "*-1\r\n"
+            "*-1\r\n",
         ]
     }
 
@@ -222,20 +229,24 @@ extension RedisByteDecoderTests {
         XCTAssertEqual(results[5]?.string, "")
 
         XCTAssertEqual(results[6]?.array?.count, 3)
-        XCTAssertTrue(arraysAreEqual(
-            results[6]?.array,
-            expected: [
-                .simpleString(AllData.expectedString.byteBuffer),
-                .bulkString(AllData.expectedBulkString.byteBuffer),
-                .integer(AllData.expectedInteger)
-            ]
-        ))
+        XCTAssertTrue(
+            arraysAreEqual(
+                results[6]?.array,
+                expected: [
+                    .simpleString(AllData.expectedString.byteBuffer),
+                    .bulkString(AllData.expectedBulkString.byteBuffer),
+                    .integer(AllData.expectedInteger),
+                ]
+            )
+        )
 
         XCTAssertEqual(results[7]?.array?.count, 1)
-        XCTAssertTrue(arraysAreEqual(
-            results[7]?.array,
-            expected: [.array([.integer(AllData.expectedInteger)])]
-        ))
+        XCTAssertTrue(
+            arraysAreEqual(
+                results[7]?.array,
+                expected: [.array([.integer(AllData.expectedInteger)])]
+            )
+        )
 
         XCTAssertEqual(results[8]?.array?.count, 0)
         XCTAssertEqual(results[9]?.isNull, true)
@@ -264,7 +275,7 @@ extension RedisByteDecoderTests {
         "*2\r\n:1\r\n:2\r\n",
         "*2\r\n*1\r\n:1\r\n:2\r\n",
         "-ERR test\r\n",
-        ":2\r\n"
+        ":2\r\n",
     ]
 
     func test_complete_continues() throws {
@@ -309,8 +320,10 @@ extension RedisByteDecoderTests {
         let inputExpectedOutputPairs: [(String, [RedisByteDecoder.InboundOut])] = [
             (":1000\r\n:1000\r\n", [.integer(1000), .integer(1000)]),
             (":0\r\n", [.integer(0)]),
-            ("*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n",
-             [.array([.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)])]),
+            (
+                "*3\r\n+foo\r\n$3\r\nbar\r\n:3\r\n",
+                [.array([.simpleString("foo".byteBuffer), .bulkString("bar".byteBuffer), .integer(3)])]
+            ),
             ("+👩🏼‍✈️\r\n++\r\n", [.simpleString("👩🏼‍✈️".byteBuffer), .simpleString("+".byteBuffer)]),
             ("*2\r\n:1\r\n:2\r\n", [.array([.integer(1), .integer(2)])]),
             ("*2\r\n*1\r\n:1\r\n:2\r\n", [.array([.array([.integer(1)]), .integer(2)])]),
@@ -319,12 +332,14 @@ extension RedisByteDecoderTests {
             ("$-1\r\n", [.null]),
             (":00000\r\n:\(Int.max)\r\n:\(Int.min)\r\n", [.integer(0), .integer(Int.max), .integer(Int.min)]),
         ]
-        XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
-            stringInputOutputPairs: inputExpectedOutputPairs,
-            decoderFactory: RedisByteDecoder.init
-        ))
+        XCTAssertNoThrow(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                stringInputOutputPairs: inputExpectedOutputPairs,
+                decoderFactory: RedisByteDecoder.init
+            )
+        )
     }
-    
+
     func test_validatesBasicAssumptions_withNonStringRepresentables() throws {
         var buffer = self.allocator.buffer(capacity: 128)
         var incompleteUTF8CodeUnitsAsSimpleAndBulkString: (ByteBuffer, [RESPValue]) {
@@ -368,9 +383,11 @@ extension RedisByteDecoderTests {
             incompleteUTF8CodeUnitsAsSimpleAndBulkString,
             boms,
         ]
-        XCTAssertNoThrow(try ByteToMessageDecoderVerifier.verifyDecoder(
-            inputOutputPairs: inputExpectedOutputPairs,
-            decoderFactory: RedisByteDecoder.init
-        ))
+        XCTAssertNoThrow(
+            try ByteToMessageDecoderVerifier.verifyDecoder(
+                inputOutputPairs: inputExpectedOutputPairs,
+                decoderFactory: RedisByteDecoder.init
+            )
+        )
     }
 }

@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisHashSlotTests: XCTestCase {
     func testEdgeValues() {
@@ -51,7 +52,11 @@ final class RedisHashSlotTests: XCTestCase {
     }
 
     func testHashTagComputation() {
-        XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual(RedisHashSlot.hashTag(forKey: "{user1000}.followers")))
+        XCTAssert(
+            RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual(
+                RedisHashSlot.hashTag(forKey: "{user1000}.followers")
+            )
+        )
         XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual("user1000".utf8))
         XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.followers").elementsEqual("user1000".utf8))
 

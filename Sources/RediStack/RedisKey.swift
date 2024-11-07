@@ -30,16 +30,16 @@ public struct RedisKey:
     Comparable, Hashable, Codable
 {
     public let rawValue: String
-    
+
     /// Initializes a type-safe representation of a key to a value in a Redis instance.
     /// - Parameter key: The key of a value in a Redis instance.
     public init(_ key: String) {
         self.rawValue = key
     }
-    
-    public var description: String { return self.rawValue }
-    public var debugDescription: String { return "\(String(describing: type(of: self))): \(self.rawValue)" }
-    
+
+    public var description: String { self.rawValue }
+    public var debugDescription: String { "\(String(describing: type(of: self))): \(self.rawValue)" }
+
     public init?(fromRESP value: RESPValue) {
         guard let string = value.string else { return nil }
         self.rawValue = string
@@ -50,13 +50,13 @@ public struct RedisKey:
         let container = try decoder.singleValueContainer()
         self.rawValue = try container.decode(String.self)
     }
-    
-    public static func <(lhs: RedisKey, rhs: RedisKey) -> Bool {
-        return lhs.rawValue < rhs.rawValue
+
+    public static func < (lhs: RedisKey, rhs: RedisKey) -> Bool {
+        lhs.rawValue < rhs.rawValue
     }
-    
+
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self.rawValue)
+        .init(bulk: self.rawValue)
     }
     public func encode(to encoder: Encoder) throws {
         var container = encoder.singleValueContainer()

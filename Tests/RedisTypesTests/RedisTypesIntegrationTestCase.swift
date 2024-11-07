@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import class Foundation.ProcessInfo
 import RediStackTestUtils
+
+import class Foundation.ProcessInfo
 
 class RedisTypesIntegrationTestCase: RedisIntegrationTestCase {
     override var redisHostname: String {
-        return ProcessInfo.processInfo.environment["REDIS_URL"] ?? "localhost"
+        ProcessInfo.processInfo.environment["REDIS_URL"] ?? "localhost"
     }
     override var redisPassword: String? {
-        return ProcessInfo.processInfo.environment["REDIS_PW"]
+        ProcessInfo.processInfo.environment["REDIS_PW"]
     }
 }

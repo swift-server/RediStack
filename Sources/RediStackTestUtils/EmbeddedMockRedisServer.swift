@@ -12,10 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-import RediStack
-import XCTest
 import NIOCore
 import NIOEmbedded
+import RediStack
+import XCTest
 
 internal enum MockConnectionPoolError: Error {
     case unexpectedMessage

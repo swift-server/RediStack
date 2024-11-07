@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisKeyLifetimeTests: XCTestCase {
     func test_initFromSeconds() {

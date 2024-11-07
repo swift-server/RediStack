@@ -19,7 +19,7 @@ public struct RedisError: LocalizedError {
     /// The error message from Redis, prefixed with `(Redis)` to indicate the message was from Redis itself.
     public let message: String
 
-    public var errorDescription: String? { return message }
+    public var errorDescription: String? { message }
 
     /// Creates a new instance of an error from a Redis instance.
     /// - Parameter reason: The error reason from Redis.
@@ -31,10 +31,10 @@ public struct RedisError: LocalizedError {
 // MARK: Equatable, Hashable
 
 extension RedisError: Equatable, Hashable {
-    public static func ==(lhs: RedisError, rhs: RedisError) -> Bool {
-        return lhs.message == rhs.message
+    public static func == (lhs: RedisError, rhs: RedisError) -> Bool {
+        lhs.message == rhs.message
     }
-    
+
     public func hash(into hasher: inout Hasher) {
         hasher.combine(self.message)
     }
@@ -52,7 +52,7 @@ extension RedisError: RESPValueConvertible {
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return .error(self)
+        .error(self)
     }
 }
 

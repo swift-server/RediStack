@@ -37,7 +37,7 @@ extension RedisClient {
             result.append((response[elementIndex], score))
 
             index += 2
-        } while (index < response.count)
+        } while index < response.count
 
         return result
     }
@@ -61,7 +61,7 @@ public enum RedisZaddInsertBehavior {
     case onlyNewElements
     /// Only update the score of existing elements; do not insert new elements.
     case onlyExistingElements
-    
+
     /// Redis representation of this option.
     @usableFromInline
     internal var string: String? {
@@ -86,7 +86,7 @@ public enum RedisZaddReturnBehavior {
     case changedElementsCount
     /// Count only new elements that were inserted into the SortedSet.
     case insertedElementsCount
-    
+
     /// Redis representation of this option.
     @usableFromInline
     internal var string: String? {
@@ -115,7 +115,7 @@ extension RedisClient {
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) -> EventLoopFuture<Int> {
         var args: [RESPValue] = [.init(from: key)]
-        
+
         args.append(convertingContentsOf: [insertBehavior.string, returnBehavior.string].compactMap({ $0 }))
         args.add(contentsOf: elements, overestimatedCountBeingAdded: elements.count * 2) { (array, next) in
             array.append(.init(bulk: next.score.description))
@@ -125,7 +125,7 @@ extension RedisClient {
         return self.send(command: "ZADD", with: args)
             .tryConverting()
     }
-    
+
     /// Adds elements to a sorted set, assigning their score to the values provided.
     ///
     /// See [https://redis.io/commands/zadd](https://redis.io/commands/zadd)
@@ -142,7 +142,7 @@ extension RedisClient {
         inserting insertBehavior: RedisZaddInsertBehavior = .allElements,
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) -> EventLoopFuture<Int> {
-        return self.zadd(elements, to: key, inserting: insertBehavior, returning: returnBehavior)
+        self.zadd(elements, to: key, inserting: insertBehavior, returning: returnBehavior)
     }
 
     /// Adds an element to a sorted set, assigning their score to the value provided.
@@ -161,8 +161,8 @@ extension RedisClient {
         inserting insertBehavior: RedisZaddInsertBehavior = .allElements,
         returning returnBehavior: RedisZaddReturnBehavior = .insertedElementsCount
     ) -> EventLoopFuture<Bool> {
-        return self.zadd(element, to: key, inserting: insertBehavior, returning: returnBehavior)
-            .map { return $0 == 1 }
+        self.zadd(element, to: key, inserting: insertBehavior, returning: returnBehavior)
+            .map { $0 == 1 }
     }
 }
 
@@ -191,10 +191,10 @@ extension RedisClient {
     public func zscore<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Double?> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "ZSCORE", with: args)
-            .map { return Double(fromRESP: $0) }
+            .map { Double(fromRESP: $0) }
     }
 
     /// Incrementally iterates over all elements in a sorted set.
@@ -212,13 +212,13 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) -> EventLoopFuture<(Int, [(RESPValue, Double)])> {
-        return self._scan(command: "ZSCAN", resultType: [RESPValue].self, key, position, match, count)
+        self._scan(command: "ZSCAN", resultType: [RESPValue].self, key, position, match, count)
             .flatMapThrowing {
                 let values = try Self._mapSortedSetResponse($0.1, scoreIsFirst: false)
                 return ($0.0, values)
             }
     }
-    
+
     /// Incrementally iterates over all elements in a sorted set.
     ///
     /// See [https://redis.io/commands/zscan](https://redis.io/commands/zscan)
@@ -238,7 +238,7 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) -> EventLoopFuture<(Int, [(Value, Double)?])> {
-        return self.zscan(key, startingFrom: position, matching: match, count: count)
+        self.zscan(key, startingFrom: position, matching: match, count: count)
             .map { (cursor, elements) in
                 let mappedElements = elements.map { next -> (Value, Double)? in
                     guard let value = Value(fromRESP: next.0) else { return nil }
@@ -265,7 +265,7 @@ extension RedisClient {
     public func zrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Int?> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "ZRANK", with: args)
             .tryConverting()
@@ -284,7 +284,7 @@ extension RedisClient {
     public func zrevrank<Value: RESPValueConvertible>(of element: Value, in key: RedisKey) -> EventLoopFuture<Int?> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "ZREVRANK", with: args)
             .tryConverting()
@@ -306,7 +306,7 @@ extension RedisClient {
 public enum RedisZScoreBound {
     case inclusive(Double)
     case exclusive(Double)
-    
+
     /// The underlying raw score value this bound represents.
     public var rawValue: Double {
         switch self {
@@ -326,7 +326,7 @@ extension RedisZScoreBound: CustomStringConvertible {
 
 extension RedisZScoreBound: ExpressibleByFloatLiteral {
     public typealias FloatLiteralType = Double
-    
+
     public init(floatLiteral value: Double) {
         self = .inclusive(value)
     }
@@ -366,12 +366,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min.description),
-            .init(bulk: range.max.description)
+            .init(bulk: range.max.description),
         ]
         return self.send(command: "ZCOUNT", with: args)
             .tryConverting()
     }
-    
+
     /// Returns the count of elements in a SortedSet with a score within the inclusive range specified.
     ///
     /// To get a count of elements that have at least the score of 3, but no greater than 10:
@@ -385,9 +385,9 @@ extension RedisClient {
     ///     - range: The inclusive range of scores to filter elements to count.
     /// - Returns: The count of elements in the SortedSet with a score within the range specified.
     public func zcount(of key: RedisKey, withScores range: ClosedRange<Double>) -> EventLoopFuture<Int> {
-        return self.zcount(of: key, withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound)))
+        self.zcount(of: key, withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound)))
     }
-    
+
     /// Returns the count of elements in a SortedSet with a minimum score up to, but not including, a max score.
     ///
     /// To get a count of elements that have at least the score of 3, but less than 10:
@@ -401,9 +401,9 @@ extension RedisClient {
     ///     - range: A range with an inclusive lower and exclusive upper bound of scores to filter elements to count.
     /// - Returns: The count of elements in the SortedSet with a score within the range specified.
     public func zcount(of key: RedisKey, withScores range: Range<Double>) -> EventLoopFuture<Int> {
-        return self.zcount(of: key, withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound)))
+        self.zcount(of: key, withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound)))
     }
-    
+
     /// Returns the count of elements in a SortedSet whose score is greater than a minimum score value.
     ///
     /// By default, the value provided will be treated as _inclusive_, meaning any element that has a score matching the value **will** be counted.
@@ -414,9 +414,9 @@ extension RedisClient {
     ///     - minScore: The minimum score bound an element in the SortedSet should have in order to be counted.
     /// - Returns: The count of elements in the SortedSet above the `minScore` threshold.
     public func zcount(of key: RedisKey, withMinimumScoreOf minScore: RedisZScoreBound) -> EventLoopFuture<Int> {
-        return self.zcount(of: key, withScoresBetween: (minScore, .inclusive(.infinity)))
+        self.zcount(of: key, withScoresBetween: (minScore, .inclusive(.infinity)))
     }
-    
+
     /// Returns the count of elements in a SortedSet whose score is less than a maximum score value.
     ///
     /// By default, the value provided will be treated as _inclusive_, meaning any element that has a score matching the value **will** be counted.
@@ -428,7 +428,7 @@ extension RedisClient {
     ///     - exclusive: Should the `maxScore` provided be exclusive? If `true`, scores matching the `maxScore` will **not** be counted.
     /// - Returns: The count of elements in the SortedSet below the `maxScore` threshold.
     public func zcount(of key: RedisKey, withMaximumScoreOf maxScore: RedisZScoreBound) -> EventLoopFuture<Int> {
-        return self.zcount(of: key, withScoresBetween: (.inclusive(-.infinity), maxScore))
+        self.zcount(of: key, withScoresBetween: (.inclusive(-.infinity), maxScore))
     }
 }
 
@@ -495,12 +495,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min.description),
-            .init(bulk: range.max.description)
+            .init(bulk: range.max.description),
         ]
         return self.send(command: "ZLEXCOUNT", with: args)
             .tryConverting()
     }
-    
+
     /// Returns the count of elements in a SortedSet whose lexiographical value is greater than a minimum value.
     ///
     /// For example with a SortedSet that contains the values [1, 2, 3, 10] and each a score of 1:
@@ -523,9 +523,9 @@ extension RedisClient {
         of key: RedisKey,
         withMinimumValueOf minValue: RedisZLexBound<Value>
     ) -> EventLoopFuture<Int> {
-        return self.zlexcount(of: key, withValuesBetween: (minValue, .positiveInfinity))
+        self.zlexcount(of: key, withValuesBetween: (minValue, .positiveInfinity))
     }
-    
+
     /// Returns the count of elements in a SortedSet whose lexiographical value is less than a maximum value.
     ///
     /// For example with a SortedSet that contains the values [1, 2, 3, 10] and each a score of 1:
@@ -548,7 +548,7 @@ extension RedisClient {
         of key: RedisKey,
         withMaximumValueOf maxValue: RedisZLexBound<Value>
     ) -> EventLoopFuture<Int> {
-        return self.zlexcount(of: key, withValuesBetween: (.negativeInfinity, maxValue))
+        self.zlexcount(of: key, withValuesBetween: (.negativeInfinity, maxValue))
     }
 }
 
@@ -563,7 +563,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmin(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
-        return _zpop(command: "ZPOPMIN", count, key)
+        _zpop(command: "ZPOPMIN", count, key)
     }
 
     /// Removes the element from a sorted set with the lowest score.
@@ -572,8 +572,8 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmin(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
-        return _zpop(command: "ZPOPMIN", nil, key)
-            .map { return $0.count > 0 ? $0[0] : nil }
+        _zpop(command: "ZPOPMIN", nil, key)
+            .map { $0.count > 0 ? $0[0] : nil }
     }
 
     /// Removes elements from a sorted set with the highest scores.
@@ -584,7 +584,7 @@ extension RedisClient {
     ///     - count: The max number of elements to pop from the set.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmax(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
-        return _zpop(command: "ZPOPMAX", count, key)
+        _zpop(command: "ZPOPMAX", count, key)
     }
 
     /// Removes the element from a sorted set with the highest score.
@@ -593,8 +593,8 @@ extension RedisClient {
     /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmax(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
-        return _zpop(command: "ZPOPMAX", nil, key)
-            .map { return $0.count > 0 ? $0[0] : nil }
+        _zpop(command: "ZPOPMAX", nil, key)
+            .map { $0.count > 0 ? $0[0] : nil }
     }
 
     func _zpop(
@@ -612,7 +612,7 @@ extension RedisClient {
 
         return send(command: command, with: args)
             .tryConverting(to: [RESPValue].self)
-            .flatMapThrowing { return try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
+            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
     }
 }
 
@@ -640,7 +640,7 @@ extension RedisClient {
         from key: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(Double, RESPValue)?> {
-        return bzpopmin(from: [key], timeout: timeout)
+        bzpopmin(from: [key], timeout: timeout)
             .map {
                 guard let response = $0 else { return nil }
                 return (response.1, response.2)
@@ -670,7 +670,7 @@ extension RedisClient {
         from keys: [RedisKey],
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
-        return self._bzpop(command: "BZPOPMIN", keys, timeout)
+        self._bzpop(command: "BZPOPMIN", keys, timeout)
     }
 
     /// Removes the element from a sorted set with the highest score, blocking until an element is
@@ -694,7 +694,7 @@ extension RedisClient {
         from key: RedisKey,
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(Double, RESPValue)?> {
-        return self.bzpopmax(from: [key], timeout: timeout)
+        self.bzpopmax(from: [key], timeout: timeout)
             .map {
                 guard let response = $0 else { return nil }
                 return (response.1, response.2)
@@ -724,7 +724,7 @@ extension RedisClient {
         from keys: [RedisKey],
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
-        return self._bzpop(command: "BZPOPMAX", keys, timeout)
+        self._bzpop(command: "BZPOPMAX", keys, timeout)
     }
 
     func _bzpop(
@@ -734,7 +734,7 @@ extension RedisClient {
     ) -> EventLoopFuture<(String, Double, RESPValue)?> {
         var args = keys.map(RESPValue.init)
         args.append(.init(bulk: timeout.seconds))
-        
+
         return send(command: command, with: args)
             // per the Redis docs,
             // we will receive either a nil response,
@@ -776,7 +776,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: amount.description),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "ZINCRBY", with: args)
             .tryConverting()
@@ -816,7 +816,7 @@ extension RedisClient {
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
-        return _zopstore(command: "ZUNIONSTORE", sources, destination, weights, aggregate)
+        _zopstore(command: "ZUNIONSTORE", sources, destination, weights, aggregate)
     }
 
     /// Calculates the intersection of two or more sorted sets and stores the result.
@@ -835,7 +835,7 @@ extension RedisClient {
         weights: [Int]? = nil,
         aggregateMethod aggregate: RedisSortedSetAggregateMethod? = nil
     ) -> EventLoopFuture<Int> {
-        return _zopstore(command: "ZINTERSTORE", sources, destination, weights, aggregate)
+        _zopstore(command: "ZINTERSTORE", sources, destination, weights, aggregate)
     }
 
     func _zopstore(
@@ -849,7 +849,7 @@ extension RedisClient {
 
         var args: [RESPValue] = [
             .init(from: destination),
-            .init(bulk: sources.count)
+            .init(bulk: sources.count),
         ]
         args.append(convertingContentsOf: sources)
 
@@ -891,9 +891,9 @@ extension RedisClient {
         lastIndex: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self._zrange(command: "ZRANGE", key, firstIndex, lastIndex, includeScores)
+        self._zrange(command: "ZRANGE", key, firstIndex, lastIndex, includeScores)
     }
-    
+
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
     ///
     /// To get the elements at index 4 through 7:
@@ -933,9 +933,14 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound, includeScoresInResponse: includeScores)
+        self.zrange(
+            from: key,
+            firstIndex: range.lowerBound,
+            lastIndex: range.upperBound,
+            includeScoresInResponse: includeScores
+        )
     }
-    
+
     /// Gets all the elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
     ///
     /// To get the elements at index 4 through 7:
@@ -975,9 +980,14 @@ extension RedisClient {
         indices range: Range<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1, includeScoresInResponse: includeScores)
+        self.zrange(
+            from: key,
+            firstIndex: range.lowerBound,
+            lastIndex: range.upperBound - 1,
+            includeScoresInResponse: includeScores
+        )
     }
-    
+
     /// Gets all elements from the index specified to the end of a SortedSet.
     ///
     /// To get all except the first 2 elements of a SortedSet:
@@ -1003,9 +1013,9 @@ extension RedisClient {
         fromIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
+        self.zrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
     }
-    
+
     /// Gets all elements from the start of a SortedSet up to, and including, the element at the index specified.
     ///
     /// To get the first 3 elements of a SortedSet:
@@ -1031,9 +1041,9 @@ extension RedisClient {
         throughIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
+        self.zrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
     }
-    
+
     /// Gets all elements from the start of a SortedSet up to, but not including, the element at the index specified.
     ///
     /// To get the first 3 elements of a List:
@@ -1059,9 +1069,9 @@ extension RedisClient {
         upToIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
+        self.zrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
     }
-    
+
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/zrevrange](https://redis.io/commands/zrevrange)
@@ -1079,9 +1089,9 @@ extension RedisClient {
         lastIndex: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self._zrange(command: "ZREVRANGE", key, firstIndex, lastIndex, includeScores)
+        self._zrange(command: "ZREVRANGE", key, firstIndex, lastIndex, includeScores)
     }
-    
+
     /// Gets all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
     ///
     /// To get the elements at index 4 through 7:
@@ -1121,9 +1131,14 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound, includeScoresInResponse: includeScores)
+        self.zrevrange(
+            from: key,
+            firstIndex: range.lowerBound,
+            lastIndex: range.upperBound,
+            includeScoresInResponse: includeScores
+        )
     }
-    
+
     /// Gets all the elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
     ///
     /// To get the elements at index 4 through 7:
@@ -1163,9 +1178,14 @@ extension RedisClient {
         indices range: Range<Int>,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1, includeScoresInResponse: includeScores)
+        self.zrevrange(
+            from: key,
+            firstIndex: range.lowerBound,
+            lastIndex: range.upperBound - 1,
+            includeScoresInResponse: includeScores
+        )
     }
-    
+
     /// Gets all elements from the index specified to the end of a SortedSet.
     ///
     /// To get all except the first 2 elements of a SortedSet:
@@ -1191,9 +1211,9 @@ extension RedisClient {
         fromIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
+        self.zrevrange(from: key, firstIndex: index, lastIndex: -1, includeScoresInResponse: includeScores)
     }
-    
+
     /// Gets all elements from the start of a SortedSet up to, and including, the element at the index specified.
     ///
     /// To get the first 3 elements of a SortedSet:
@@ -1219,9 +1239,9 @@ extension RedisClient {
         throughIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
+        self.zrevrange(from: key, firstIndex: 0, lastIndex: index, includeScoresInResponse: includeScores)
     }
-    
+
     /// Gets all elements from the start of a SortedSet up to, but not including, the element at the index specified.
     ///
     /// To get the first 3 elements of a List:
@@ -1247,7 +1267,7 @@ extension RedisClient {
         upToIndex index: Int,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
+        self.zrevrange(from: key, firstIndex: 0, lastIndex: index - 1, includeScoresInResponse: includeScores)
     }
 
     func _zrange(
@@ -1260,7 +1280,7 @@ extension RedisClient {
         var args: [RESPValue] = [
             .init(from: key),
             .init(bulk: start),
-            .init(bulk: stop)
+            .init(bulk: stop),
         ]
 
         if withScores { args.append(.init(bulk: "WITHSCORES")) }
@@ -1291,9 +1311,15 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return _zrangebyscore(command: "ZRANGEBYSCORE", key, (range.min.description, range.max.description), includeScores, limit)
+        _zrangebyscore(
+            command: "ZRANGEBYSCORE",
+            key,
+            (range.min.description, range.max.description),
+            includeScores,
+            limit
+        )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is within the inclusive range specified.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1312,14 +1338,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebyscore(
+        self.zrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound)),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1338,14 +1364,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebyscore(
+        self.zrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound)),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is greater than a minimum score value.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1364,7 +1390,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebyscore(
+        self.zrangebyscore(
             from: key,
             withScoresBetween: (minScore, .inclusive(.infinity)),
             limitBy: limit,
@@ -1390,14 +1416,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebyscore(
+        self.zrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(-.infinity), maxScore),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is within the range specified.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1416,9 +1442,15 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return _zrangebyscore(command: "ZREVRANGEBYSCORE", key, (range.max.description, range.min.description), includeScores, limit)
+        _zrangebyscore(
+            command: "ZREVRANGEBYSCORE",
+            key,
+            (range.max.description, range.min.description),
+            includeScores,
+            limit
+        )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is within the inclusive range specified.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1437,14 +1469,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebyscore(
+        self.zrevrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound)),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1463,14 +1495,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebyscore(
+        self.zrevrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound)),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is greater than a minimum score value.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1489,14 +1521,14 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebyscore(
+        self.zrevrangebyscore(
             from: key,
             withScoresBetween: (minScore, .inclusive(.infinity)),
             limitBy: limit,
             includeScoresInResponse: includeScores
         )
     }
-    
+
     /// Gets all elements from a SortedSet whose score is less than a maximum score value.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zrangebyscore](https://redis.io/commands/zrangebyscore)
@@ -1515,7 +1547,7 @@ extension RedisClient {
         limitBy limit: (offset: Int, count: Int)? = nil,
         includeScoresInResponse includeScores: Bool = false
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebyscore(
+        self.zrevrangebyscore(
             from: key,
             withScoresBetween: (.inclusive(-.infinity), maxScore),
             limitBy: limit,
@@ -1533,7 +1565,7 @@ extension RedisClient {
         var args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min),
-            .init(bulk: range.max)
+            .init(bulk: range.max),
         ]
 
         if withScores { args.append(.init(bulk: "WITHSCORES")) }
@@ -1576,9 +1608,9 @@ extension RedisClient {
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>),
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self._zrangebylex(command: "ZRANGEBYLEX", key, (range.min.description, range.max.description), limit)
+        self._zrangebylex(command: "ZRANGEBYLEX", key, (range.min.description, range.max.description), limit)
     }
-    
+
     /// Gets all elements from a SortedSet whose lexiographical value is greater than a minimum value.
     ///
     /// ```
@@ -1603,9 +1635,9 @@ extension RedisClient {
         withMinimumValueOf minValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity), limitBy: limit)
+        self.zrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity), limitBy: limit)
     }
-    
+
     /// Gets all elements from a SortedSet whose lexiographical value is less than a maximum value.
     ///
     /// ```
@@ -1630,9 +1662,9 @@ extension RedisClient {
         withMaximumValueOf maxValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue), limitBy: limit)
+        self.zrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue), limitBy: limit)
     }
-    
+
     /// Gets all elements from a SortedSet whose lexiographical values are between the range specified.
     ///
     /// For example:
@@ -1658,9 +1690,9 @@ extension RedisClient {
         withValuesBetween range: (min: RedisZLexBound<Value>, max: RedisZLexBound<Value>),
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self._zrangebylex(command: "ZREVRANGEBYLEX", key, (range.max.description, range.min.description), limit)
+        self._zrangebylex(command: "ZREVRANGEBYLEX", key, (range.max.description, range.min.description), limit)
     }
-    
+
     /// Gets all elements from a SortedSet whose lexiographical value is greater than a minimum value.
     ///
     /// ```
@@ -1685,9 +1717,9 @@ extension RedisClient {
         withMinimumValueOf minValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity), limitBy: limit)
+        self.zrevrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity), limitBy: limit)
     }
-    
+
     /// Gets all elements from a SortedSet whose lexiographical value is less than a maximum value.
     ///
     /// ```
@@ -1712,7 +1744,7 @@ extension RedisClient {
         withMaximumValueOf maxValue: RedisZLexBound<Value>,
         limitBy limit: (offset: Int, count: Int)? = nil
     ) -> EventLoopFuture<[RESPValue]> {
-        return self.zrevrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue), limitBy: limit)
+        self.zrevrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue), limitBy: limit)
     }
 
     @usableFromInline
@@ -1725,11 +1757,11 @@ extension RedisClient {
         var args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min),
-            .init(bulk: range.max)
+            .init(bulk: range.max),
         ]
 
         if let l = limit {
-            args.reserveCapacity(6) // 3 above, plus 3 being added
+            args.reserveCapacity(6)  // 3 above, plus 3 being added
             args.append(.init(bulk: "LIMIT"))
             args.append(.init(bulk: l.offset))
             args.append(.init(bulk: l.count))
@@ -1756,11 +1788,11 @@ extension RedisClient {
 
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
-        
+
         return send(command: "ZREM", with: args)
             .tryConverting()
     }
-    
+
     /// Removes the specified elements from a sorted set.
     ///
     /// See [https://redis.io/commands/zrem](https://redis.io/commands/zrem)
@@ -1770,7 +1802,7 @@ extension RedisClient {
     /// - Returns: The number of elements removed from the set.
     @inlinable
     public func zrem<Value: RESPValueConvertible>(_ elements: Value..., from key: RedisKey) -> EventLoopFuture<Int> {
-        return self.zrem(elements, from: key)
+        self.zrem(elements, from: key)
     }
 }
 
@@ -1800,12 +1832,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min.description),
-            .init(bulk: range.max.description)
+            .init(bulk: range.max.description),
         ]
         return send(command: "ZREMRANGEBYLEX", with: args)
             .tryConverting()
     }
-    
+
     /// Removes elements from a SortedSet whose lexiographical values are greater than a minimum value.
     ///
     /// For example:
@@ -1826,9 +1858,9 @@ extension RedisClient {
         from key: RedisKey,
         withMinimumValueOf minValue: RedisZLexBound<Value>
     ) -> EventLoopFuture<Int> {
-        return self.zremrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity))
+        self.zremrangebylex(from: key, withValuesBetween: (minValue, .positiveInfinity))
     }
-    
+
     /// Removes elements from a SortedSet whose lexiographical values are less than a maximum value.
     ///
     /// For example:
@@ -1849,7 +1881,7 @@ extension RedisClient {
         from key: RedisKey,
         withMaximumValueOf maxValue: RedisZLexBound<Value>
     ) -> EventLoopFuture<Int> {
-        return self.zremrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue))
+        self.zremrangebylex(from: key, withValuesBetween: (.negativeInfinity, maxValue))
     }
 }
 
@@ -1868,12 +1900,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: firstIndex),
-            .init(bulk: lastIndex)
+            .init(bulk: lastIndex),
         ]
         return self.send(command: "ZREMRANGEBYRANK", with: args)
             .tryConverting()
     }
-    
+
     /// Removes all elements from a SortedSet within the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/zremrangebyrank](https://redis.io/commands/zremrangebyrank)
@@ -1886,9 +1918,9 @@ extension RedisClient {
     ///     - range: The range of inclusive indices of elements to remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, indices range: ClosedRange<Int>) -> EventLoopFuture<Int> {
-        return self.zremrangebyrank(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
+        self.zremrangebyrank(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
     }
-    
+
     /// Removes all elements from a SortedSet starting with the first index bound up to, but not including, the element at the last index bound.
     ///
     /// See [https://redis.io/commands/zremrangebyrank](https://redis.io/commands/zremrangebyrank)
@@ -1901,9 +1933,9 @@ extension RedisClient {
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, indices range: Range<Int>) -> EventLoopFuture<Int> {
-        return self.zremrangebyrank(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
+        self.zremrangebyrank(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
     }
-    
+
     /// Removes all elements from the index specified to the end of a SortedSet.
     ///
     /// See [https://redis.io/commands/zremrangebyrank](https://redis.io/commands/zremrangebyrank)
@@ -1912,9 +1944,9 @@ extension RedisClient {
     ///     - index: The index of the first element that will be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, fromIndex index: Int) -> EventLoopFuture<Int> {
-        return self.zremrangebyrank(from: key, firstIndex: index, lastIndex: -1)
+        self.zremrangebyrank(from: key, firstIndex: index, lastIndex: -1)
     }
-    
+
     /// Removes all elements from the start of a SortedSet up to, and including, the element at the index specified.
     ///
     /// See [https://redis.io/commands/zremrangebyrank](https://redis.io/commands/zremrangebyrank)
@@ -1923,9 +1955,9 @@ extension RedisClient {
     ///     - index: The index of the last element that will be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, throughIndex index: Int) -> EventLoopFuture<Int> {
-        return self.zremrangebyrank(from: key, firstIndex: 0, lastIndex: index)
+        self.zremrangebyrank(from: key, firstIndex: 0, lastIndex: index)
     }
-    
+
     /// Removes all elements from the start of a SortedSet up to, but not including, the element at the index specified.
     ///
     /// See [https://redis.io/commands/zremrangebyrank](https://redis.io/commands/zremrangebyrank)
@@ -1935,7 +1967,7 @@ extension RedisClient {
     ///     - index: The index of the last element to not remove.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyrank(from key: RedisKey, upToIndex index: Int) -> EventLoopFuture<Int> {
-        return self.zremrangebyrank(from: key, firstIndex: 0, lastIndex: index - 1)
+        self.zremrangebyrank(from: key, firstIndex: 0, lastIndex: index - 1)
     }
 }
 
@@ -1956,12 +1988,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: range.min.description),
-            .init(bulk: range.max.description)
+            .init(bulk: range.max.description),
         ]
         return self.send(command: "ZREMRANGEBYSCORE", with: args)
             .tryConverting()
     }
-    
+
     /// Removes elements from a SortedSet whose score is within the inclusive range specified.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zremrangebyscore](https://redis.io/commands/zremrangebyscore)
@@ -1970,9 +2002,12 @@ extension RedisClient {
     ///     - range: The inclusive range of scores to filter elements by.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withScores range: ClosedRange<Double>) -> EventLoopFuture<Int> {
-        return self.zremrangebyscore(from: key, withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound)))
+        self.zremrangebyscore(
+            from: key,
+            withScoresBetween: (.inclusive(range.lowerBound), .inclusive(range.upperBound))
+        )
     }
-    
+
     /// Removes elements from a SortedSet whose score is at least a minimum score up to, but not including, a max score.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zremrangebyscore](https://redis.io/commands/zremrangebyscore)
@@ -1981,9 +2016,12 @@ extension RedisClient {
     ///     - range: A range with an inclusive lower and exclusive upper bound of scores to filter elements by.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(from key: RedisKey, withScores range: Range<Double>) -> EventLoopFuture<Int> {
-        return self.zremrangebyscore(from: key, withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound)))
+        self.zremrangebyscore(
+            from: key,
+            withScoresBetween: (.inclusive(range.lowerBound), .exclusive(range.upperBound))
+        )
     }
-    
+
     /// Removes elements from a SortedSet whose score is greater than a minimum score value.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zremrangebyscore](https://redis.io/commands/zremrangebyscore)
@@ -1991,10 +2029,13 @@ extension RedisClient {
     ///     - key: The key of the SortedSet to remove elements from.
     ///     - minScore: The minimum score bound an element in the SortedSet should have to be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
-    public func zremrangebyscore(from key: RedisKey, withMinimumScoreOf minScore: RedisZScoreBound) -> EventLoopFuture<Int> {
-        return self.zremrangebyscore(from: key, withScoresBetween: (minScore, .inclusive(.infinity)))
+    public func zremrangebyscore(
+        from key: RedisKey,
+        withMinimumScoreOf minScore: RedisZScoreBound
+    ) -> EventLoopFuture<Int> {
+        self.zremrangebyscore(from: key, withScoresBetween: (minScore, .inclusive(.infinity)))
     }
-    
+
     /// Removes elements from a SortedSet whose score is less than a maximum score value.
     ///
     /// See `RedisZScoreBound` and [https://redis.io/commands/zremrangebyscore](https://redis.io/commands/zremrangebyscore)
@@ -2002,7 +2043,10 @@ extension RedisClient {
     ///     - key: The key of the SortedSet to remove elements from.
     ///     - minScore: The maximum score bound an element in the SortedSet should have to be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
-    public func zremrangebyscore(from key: RedisKey, withMaximumScoreOf maxScore: RedisZScoreBound) -> EventLoopFuture<Int> {
-        return self.zremrangebyscore(from: key, withScoresBetween: (.inclusive(-.infinity), maxScore))
+    public func zremrangebyscore(
+        from key: RedisKey,
+        withMaximumScoreOf maxScore: RedisZScoreBound
+    ) -> EventLoopFuture<Int> {
+        self.zremrangebyscore(from: key, withScoresBetween: (.inclusive(-.infinity), maxScore))
     }
 }

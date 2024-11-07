@@ -27,13 +27,14 @@ extension RedisClient {
         repeat {
             guard let field = String(fromRESP: values[index]) else {
                 throw RedisClientError.assertionFailure(
-                    message: "Received non-string value where string hash field key was expected. Raw Value: \(values[index])"
+                    message:
+                        "Received non-string value where string hash field key was expected. Raw Value: \(values[index])"
                 )
             }
             let value = values[index + 1]
             result[field] = value
             index += 2
-        } while (index < values.count)
+        } while index < values.count
 
         return result
     }
@@ -51,14 +52,14 @@ extension RedisClient {
     /// - Returns: The number of fields that were deleted.
     public func hdel(_ fields: [String], from key: RedisKey) -> EventLoopFuture<Int> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
-        
+
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: fields)
 
         return send(command: "HDEL", with: args)
             .tryConverting()
     }
-    
+
     /// Removes the specified fields from a hash.
     ///
     /// See [https://redis.io/commands/hdel](https://redis.io/commands/hdel)
@@ -67,7 +68,7 @@ extension RedisClient {
     ///     - key: The key of the hash to delete from.
     /// - Returns: The number of fields that were deleted.
     public func hdel(_ fields: String..., from key: RedisKey) -> EventLoopFuture<Int> {
-        return self.hdel(fields, from: key)
+        self.hdel(fields, from: key)
     }
 
     /// Checks if a hash contains the field specified.
@@ -80,11 +81,11 @@ extension RedisClient {
     public func hexists(_ field: String, in key: RedisKey) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: field)
+            .init(bulk: field),
         ]
         return send(command: "HEXISTS", with: args)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     /// Gets the number of fields contained in a hash.
@@ -108,7 +109,7 @@ extension RedisClient {
     public func hstrlen(of field: String, in key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: field)
+            .init(bulk: field),
         ]
         return send(command: "HSTRLEN", with: args)
             .tryConverting()
@@ -135,7 +136,7 @@ extension RedisClient {
         return send(command: "HVALS", with: args)
             .tryConverting()
     }
-    
+
     /// Gets all values stored in a hash.
     ///
     /// See [https://redis.io/commands/hvals](https://redis.io/commands/hvals)
@@ -145,8 +146,8 @@ extension RedisClient {
     /// - Returns: A list of all values stored in a hash.
     @inlinable
     public func hvals<Value: RESPValueConvertible>(in key: RedisKey, as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.hvals(in: key)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.hvals(in: key)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Incrementally iterates over all fields in a hash.
@@ -167,7 +168,7 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) -> EventLoopFuture<(Int, [String: Value?])> {
-        return self.hscan(key, startingFrom: position, matching: match, count: count)
+        self.hscan(key, startingFrom: position, matching: match, count: count)
             .map { (cursor, fields) in
                 let mappedFields = fields.mapValues(Value.init(fromRESP:))
                 return (cursor, mappedFields)
@@ -189,7 +190,7 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) -> EventLoopFuture<(Int, [String: RESPValue])> {
-        return _scan(command: "HSCAN", resultType: [RESPValue].self, key, position, match, count)
+        _scan(command: "HSCAN", resultType: [RESPValue].self, key, position, match, count)
             .flatMapThrowing {
                 let values = try Self._mapHashResponse($0.1)
                 return ($0.0, values)
@@ -218,11 +219,11 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: field),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "HSET", with: args)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     /// Sets a hash field to the value specified only if the field does not currently exist.
@@ -243,11 +244,11 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: field),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "HSETNX", with: args)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     /// Sets the fields in a hash to the respective values provided.
@@ -269,7 +270,7 @@ extension RedisClient {
             array.append(.init(bulk: element.key))
             array.append(element.value.convertedToRESPValue())
         }
-        
+
         return send(command: "HMSET", with: args)
             .map { _ in () }
     }
@@ -288,11 +289,11 @@ extension RedisClient {
     public func hget(_ field: String, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: field)
+            .init(bulk: field),
         ]
         return send(command: "HGET", with: args)
     }
-    
+
     /// Gets a hash field's value as the desired type.
     ///
     /// See [https://redis.io/commands/hget](https://redis.io/commands/hget)
@@ -307,7 +308,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) -> EventLoopFuture<Value?> {
-        return self.hget(field, from: key)
+        self.hget(field, from: key)
             .map(Value.init(fromRESP:))
     }
 
@@ -320,7 +321,7 @@ extension RedisClient {
     /// - Returns: A list of values in the same order as the `fields` argument. Non-existent fields return `.null` values.
     public func hmget(_ fields: [String], from key: RedisKey) -> EventLoopFuture<[RESPValue]> {
         guard fields.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
-        
+
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: fields)
 
@@ -342,10 +343,10 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.hmget(fields, from: key)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.hmget(fields, from: key)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets the values of a hash for the fields specified.
     ///
     /// See [https://redis.io/commands/hmget](https://redis.io/commands/hmget)
@@ -354,7 +355,7 @@ extension RedisClient {
     ///     - key: The key of the hash being accessed.
     /// - Returns: A list of values in the same order as the `fields` argument. Non-existent fields return `.null` values.
     public func hmget(_ fields: String..., from key: RedisKey) -> EventLoopFuture<[RESPValue]> {
-        return self.hmget(fields, from: key)
+        self.hmget(fields, from: key)
     }
 
     /// Gets the values of a hash for the fields specified.
@@ -371,7 +372,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.hmget(fields, from: key, as: type)
+        self.hmget(fields, from: key, as: type)
     }
 
     /// Returns all the fields and values stored in a hash.
@@ -398,8 +399,8 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) -> EventLoopFuture<[String: Value?]> {
-        return self.hgetall(from: key)
-            .map { return $0.mapValues(Value.init(fromRESP:)) }
+        self.hgetall(from: key)
+            .map { $0.mapValues(Value.init(fromRESP:)) }
     }
 }
 
@@ -420,7 +421,7 @@ extension RedisClient {
         field: String,
         in key: RedisKey
     ) -> EventLoopFuture<Value> {
-        return _hincr(command: "HINCRBY", amount, field, key)
+        _hincr(command: "HINCRBY", amount, field, key)
     }
 
     /// Increments a hash field's value and returns the new value.
@@ -437,9 +438,9 @@ extension RedisClient {
         field: String,
         in key: RedisKey
     ) -> EventLoopFuture<Value> {
-        return _hincr(command: "HINCRBYFLOAT", amount, field, key)
+        _hincr(command: "HINCRBYFLOAT", amount, field, key)
     }
-    
+
     @usableFromInline
     internal func _hincr<Value: RESPValueConvertible>(
         command: String,
@@ -450,7 +451,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: field),
-            amount.convertedToRESPValue()
+            amount.convertedToRESPValue(),
         ]
         return send(command: command, with: args)
             .tryConverting()

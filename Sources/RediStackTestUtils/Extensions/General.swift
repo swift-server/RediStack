@@ -18,8 +18,8 @@ private let allocator = ByteBufferAllocator()
 
 extension String {
     /// The UTF-8 byte representation of the string.
-    public var bytes: [UInt8] { return .init(self.utf8) }
-    
+    public var bytes: [UInt8] { .init(self.utf8) }
+
     /// Creates a `NIO.ByteBuffer` with the string's value written into it.
     public var byteBuffer: ByteBuffer {
         var buffer = allocator.buffer(capacity: self.count)

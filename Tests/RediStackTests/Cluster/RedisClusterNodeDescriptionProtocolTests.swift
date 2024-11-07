@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 import XCTest
+
 @testable import RediStack
 
 final class RedisClusterNodeDescriptionProtocolTests: XCTestCase {

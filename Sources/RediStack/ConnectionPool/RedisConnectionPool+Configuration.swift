@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIOCore
 import NIOPosix
-import Logging
 
 extension RedisConnectionPool {
     /// A configuration object for creating Redis connections with a connection pool.
@@ -93,7 +93,8 @@ extension RedisConnectionPool {
         /// The maximum number of connections to for this pool, either to be preserved or as a hard limit.
         public let maximumConnectionCount: RedisConnectionPoolSize
         /// The configuration object that controls the connection retry behavior.
-        public let connectionRetryConfiguration: (backoff: (initialDelay: TimeAmount, factor: Float32), timeout: TimeAmount)
+        public let connectionRetryConfiguration:
+            (backoff: (initialDelay: TimeAmount, factor: Float32), timeout: TimeAmount)
         /// Called when a connection in the pool is closed unexpectedly.
         public let onUnexpectedConnectionClose: ((RedisConnection) -> Void)?
         // these need to be var so they can be updated by the pool in some cases
@@ -134,7 +135,7 @@ extension RedisConnectionPool {
             self.minimumConnectionCount = minimumConnectionCount
             self.connectionRetryConfiguration = (
                 (initialConnectionBackoffDelay, connectionBackoffFactor),
-                connectionRetryTimeout ?? .milliseconds(10) // always default to a baseline 10ms
+                connectionRetryTimeout ?? .milliseconds(10)  // always default to a baseline 10ms
             )
             self.onUnexpectedConnectionClose = onUnexpectedConnectionClose
             self.poolDefaultLogger = poolDefaultLogger ?? .redisBaseConnectionPoolLogger

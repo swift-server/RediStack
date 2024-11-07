@@ -15,4 +15,3 @@ changelog:
     - title: 🚨🚨🚨 Missing Labels - Add labels to the prs listed here and generate the release notes again
       labels:
         - "*"
-

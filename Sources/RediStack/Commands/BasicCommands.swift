@@ -32,8 +32,9 @@ extension RedisClient {
     /// - Parameter message: The optional message that the server should respond with.
     /// - Returns: The provided message or Redis' default response of `"PONG"`.
     public func ping(with message: String? = nil) -> EventLoopFuture<String> {
-        let args: [RESPValue] = message != nil
-            ? [.init(bulk: message!)] // safe because we did a nil pre-check
+        let args: [RESPValue] =
+            message != nil
+            ? [.init(bulk: message!)]  // safe because we did a nil pre-check
             : []
         return send(command: "PING", with: args)
             .flatMapThrowing {
@@ -57,7 +58,7 @@ extension RedisClient {
     public func select(database index: Int) -> EventLoopFuture<Void> {
         let args = [RESPValue(bulk: index)]
         return send(command: "SELECT", with: args)
-            .map { _ in return () }
+            .map { _ in () }
     }
 
     /// Swaps the data of two Redis databases by their index IDs.
@@ -70,13 +71,13 @@ extension RedisClient {
     public func swapDatabase(_ first: Int, with second: Int) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(bulk: first),
-            .init(bulk: second)
+            .init(bulk: second),
         ]
         return send(command: "SWAPDB", with: args)
             .tryConverting(to: String.self)
-            .map { return $0 == "OK" }
+            .map { $0 == "OK" }
     }
-    
+
     /// Requests the client to authenticate with Redis to allow other commands to be executed.
     ///
     /// [https://redis.io/commands/auth](https://redis.io/commands/auth)
@@ -85,7 +86,7 @@ extension RedisClient {
     public func authorize(with password: String) -> EventLoopFuture<Void> {
         let args = [RESPValue(bulk: password)]
         return send(command: "AUTH", with: args)
-            .map { _ in return () }
+            .map { _ in () }
     }
 
     /// Requests the client to authenticate with Redis to allow other commands to be executed.
@@ -98,7 +99,7 @@ extension RedisClient {
         password: String
     ) -> EventLoopFuture<Void> {
         let args = [RESPValue(from: username), RESPValue(from: password)]
-        return self.send(command: "AUTH", with: args).map { _ in return () }
+        return self.send(command: "AUTH", with: args).map { _ in () }
     }
 
     /// Removes the specified keys. A key is ignored if it does not exist.
@@ -108,19 +109,19 @@ extension RedisClient {
     /// - Returns: The number of keys deleted from the database.
     public func delete(_ keys: [RedisKey]) -> EventLoopFuture<Int> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
-        
+
         let args = keys.map(RESPValue.init)
         return send(command: "DEL", with: args)
             .tryConverting()
     }
-    
+
     /// Removes the specified keys. A key is ignored if it does not exist.
     ///
     /// [https://redis.io/commands/del](https://redis.io/commands/del)
     /// - Parameter keys: A list of keys to delete from the database.
     /// - Returns: The number of keys deleted from the database.
     public func delete(_ keys: RedisKey...) -> EventLoopFuture<Int> {
-        return self.delete(keys)
+        self.delete(keys)
     }
 
     /// Checks the existence of the provided keys in the database.
@@ -142,7 +143,7 @@ extension RedisClient {
     /// - Parameter keys: A list of keys whose existence will be checked for in the database.
     /// - Returns: The number of provided keys which exist in the database.
     public func exists(_ keys: RedisKey...) -> EventLoopFuture<Int> {
-        return self.exists(keys)
+        self.exists(keys)
     }
 
     /// Sets a timeout on key. After the timeout has expired, the key will automatically be deleted.
@@ -156,11 +157,11 @@ extension RedisClient {
     public func expire(_ key: RedisKey, after timeout: TimeAmount) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: timeout.seconds)
+            .init(bulk: timeout.seconds),
         ]
         return send(command: "EXPIRE", with: args)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 }
 
@@ -208,7 +209,7 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) -> EventLoopFuture<(Int, [String])> {
-        return _scan(command: "SCAN", nil, position, match, count)
+        _scan(command: "SCAN", nil, position, match, count)
     }
 
     @usableFromInline
@@ -220,7 +221,7 @@ extension RedisClient {
         _ match: String?,
         _ count: Int?
     ) -> EventLoopFuture<(Int, T)>
-        where
+    where
         T: RESPValueConvertible
     {
         var args: [RESPValue] = [.init(bulk: pos)]
@@ -248,8 +249,9 @@ extension RedisClient {
             }
             return position
         }
-        let elements = response
-            .map { return $0[1] }
+        let elements =
+            response
+            .map { $0[1] }
             .tryConverting(to: resultType)
 
         return position.and(elements)

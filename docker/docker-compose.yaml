@@ -29,7 +29,7 @@ services:
   documentation-check:
     <<: *common
     command: /bin/bash -xcl "./scripts/check-docs.sh"
-    
+
   test:
     <<: *common
     depends_on: [runtime-setup, redis]

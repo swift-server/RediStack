@@ -17,7 +17,7 @@ import NIOCore
 #if DEBUG
 // used only for debugging purposes where we build a formatted string for the encoded bytes
 private func getPrintableString(for buffer: inout ByteBuffer) -> String {
-    return String(describing: buffer.getString(at: 0, length: buffer.readableBytes))
+    String(describing: buffer.getString(at: 0, length: buffer.readableBytes))
         .dropFirst(9)
         .dropLast()
         .description
@@ -31,7 +31,7 @@ public final class RedisMessageEncoder: MessageToByteEncoder {
     /// See `MessageToByteEncoder.OutboundIn`
     public typealias OutboundIn = RESPValue
 
-    public init() { }
+    public init() {}
 
     /// Encodes the `RedisValue` to bytes, following the RESP specification.
     ///

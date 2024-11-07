@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+import NIOCore
+
 import protocol Foundation.LocalizedError
 import struct Logging.Logger
-import NIOCore
 
 // - Important: Any RedisClient defined by RediStack should conform to the RedisClientWithUserContext protocol as well
 
@@ -35,12 +36,12 @@ public protocol RedisClient {
     ///     - arguments: The arguments, if any, to be sent with the command.
     /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
     func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue>
-    
+
     /// Temporarily overrides the default logger for command logs to the provided instance.
     /// - Parameter logger: The `Logging.Logger` instance to use for command logs.
     /// - Returns: A RedisClient with the temporary override for command logging.
     func logging(to logger: Logger) -> RedisClient
-    
+
     /// Subscribes the client to the specified Redis channels, invoking the provided message receiver each time a message is published.
     ///
     /// See [SUBSCRIBE](https://redis.io/commands/subscribe)
@@ -85,7 +86,7 @@ public protocol RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
     ) -> EventLoopFuture<Void>
-    
+
     /// Unsubscribes the client from a specific Redis channel from receiving any future published messages.
     ///
     /// See [UNSUBSCRIBE](https://redis.io/commands/unsubscribe)
@@ -99,7 +100,7 @@ public protocol RedisClient {
     /// - Parameter channels: A list of channel names to be unsubscribed from.
     /// - Returns: A notification `NIO.EventLoopFuture` that resolves once the subscription(s) have been removed from Redis.
     func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void>
-    
+
     /// Unsubscribes the client from a pattern of Redis channel names from receiving any future published messages.
     ///
     /// See [PUNSUBSCRIBE](https://redis.io/commands/punsubscribe)
@@ -121,19 +122,19 @@ extension RedisClient {
     /// - Parameter command: The command keyword to execute.
     /// - Returns: A `NIO.EventLoopFuture` that will resolve with the Redis command response.
     public func send(command: String) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: [])
+        self.send(command: command, with: [])
     }
 
     /// Unsubscribes the client from all active Redis channel name subscriptions.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the subscriptions have been removed.
     public func unsubscribe() -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: [])
+        self.unsubscribe(from: [])
     }
-    
+
     /// Unsubscribes the client from all active Redis channel name patterns subscriptions.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the subscriptions have been removed.
     public func punsubscribe() -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: [])
+        self.punsubscribe(from: [])
     }
 }
 
@@ -141,11 +142,11 @@ extension RedisClient {
 
 extension RedisClient {
     public func unsubscribe(from channels: RedisChannelName...) -> EventLoopFuture<Void> {
-        return self.unsubscribe(from: channels)
+        self.unsubscribe(from: channels)
     }
 
     public func punsubscribe(from patterns: String...) -> EventLoopFuture<Void> {
-        return self.punsubscribe(from: patterns)
+        self.punsubscribe(from: patterns)
     }
 
     public func subscribe(
@@ -154,7 +155,12 @@ extension RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        self.subscribe(
+            to: channels,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler
+        )
     }
 
     public func subscribe(
@@ -163,7 +169,12 @@ extension RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.subscribe(to: channels, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        self.subscribe(
+            to: channels,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler
+        )
     }
 
     public func psubscribe(
@@ -172,7 +183,12 @@ extension RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        self.psubscribe(
+            to: patterns,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler
+        )
     }
 
     public func psubscribe(
@@ -181,7 +197,12 @@ extension RedisClient {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self.psubscribe(to: patterns, messageReceiver: receiver, onSubscribe: subscribeHandler, onUnsubscribe: unsubscribeHandler)
+        self.psubscribe(
+            to: patterns,
+            messageReceiver: receiver,
+            onSubscribe: subscribeHandler,
+            onUnsubscribe: unsubscribeHandler
+        )
     }
 }
 
@@ -195,21 +216,21 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
     public static var subscriptionModeRaceCondition: RedisClientError { .init(.subscriptionModeRaceCondition) }
     /// A connection that is not authorized for PubSub subscriptions attempted to create a subscription.
     public static var pubsubNotAllowed: RedisClientError { .init(.pubsubNotAllowed) }
-    
+
     /// Conversion from `RESPValue` to the specified type failed.
     ///
     /// If this is ever triggered, please capture the original `RESPValue` string sent from Redis for bug reports.
     public static func failedRESPConversion(to type: Any.Type) -> RedisClientError {
-        return .init(.failedRESPConversion(to: type))
+        .init(.failedRESPConversion(to: type))
     }
-    
+
     /// Expectations of message structures were not met.
     ///
     /// If this is ever triggered, please capture the original `RESPValue` string sent from Redis along with the command and arguments sent to Redis for bug reports.
     public static func assertionFailure(message: String) -> RedisClientError {
-        return .init(.assertionFailure(message: message))
+        .init(.assertionFailure(message: message))
     }
-    
+
     public var errorDescription: String? {
         let message: String
         switch self.baseError {
@@ -221,31 +242,41 @@ public struct RedisClientError: LocalizedError, Equatable, Hashable {
         }
         return "(RediStack) \(message)"
     }
-    
+
     public var recoverySuggestion: String? {
         switch self.baseError {
-        case .connectionClosed: return "Check that the connection is not closed before invoking commands. With RedisConnection, this can be done with the 'isConnected' property."
-        case .failedRESPConversion: return "Ensure that the data type being requested is actually what's being returned. If you see this error and are not sure why, capture the original RESPValue string sent from Redis to add to your bug report."
-        case .assertionFailure: return "This error should in theory never happen. If you trigger this error, capture the original RESPValue string sent from Redis along with the command and arguments that you sent to Redis to add to your bug report."
-        case .subscriptionModeRaceCondition: return "This is a race condition where the PubSub handler was removed after a subscription was being added, but before it was committed. This can be solved by just retrying the subscription."
-        case .pubsubNotAllowed: return "When connections are managed by a pool, they are not allowed to create PubSub subscriptions on their own. Use the appropriate PubSub commands on the connection pool itself. If the connection is not managed by a pool, this is a bug and should be reported."
+        case .connectionClosed:
+            return
+                "Check that the connection is not closed before invoking commands. With RedisConnection, this can be done with the 'isConnected' property."
+        case .failedRESPConversion:
+            return
+                "Ensure that the data type being requested is actually what's being returned. If you see this error and are not sure why, capture the original RESPValue string sent from Redis to add to your bug report."
+        case .assertionFailure:
+            return
+                "This error should in theory never happen. If you trigger this error, capture the original RESPValue string sent from Redis along with the command and arguments that you sent to Redis to add to your bug report."
+        case .subscriptionModeRaceCondition:
+            return
+                "This is a race condition where the PubSub handler was removed after a subscription was being added, but before it was committed. This can be solved by just retrying the subscription."
+        case .pubsubNotAllowed:
+            return
+                "When connections are managed by a pool, they are not allowed to create PubSub subscriptions on their own. Use the appropriate PubSub commands on the connection pool itself. If the connection is not managed by a pool, this is a bug and should be reported."
         }
     }
-    
+
     private var baseError: BaseError
-    
+
     private init(_ baseError: BaseError) { self.baseError = baseError }
-    
-    /* Protocol Conformances and Private Type implementation */
-    
-    public static func ==(lhs: RedisClientError, rhs: RedisClientError) -> Bool {
-        return lhs.localizedDescription == rhs.localizedDescription
+
+    // Protocol Conformances and Private Type implementation
+
+    public static func == (lhs: RedisClientError, rhs: RedisClientError) -> Bool {
+        lhs.localizedDescription == rhs.localizedDescription
     }
-    
+
     public func hash(into hasher: inout Hasher) {
         hasher.combine(self.localizedDescription)
     }
-    
+
     fileprivate enum BaseError {
         case connectionClosed
         case failedRESPConversion(to: Any.Type)

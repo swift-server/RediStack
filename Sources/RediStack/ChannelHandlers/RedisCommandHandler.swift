@@ -41,7 +41,9 @@ public final class RedisCommandHandler {
 
     deinit {
         if !self.commandResponseQueue.isEmpty {
-            assertionFailure("Command handler deinit when queue is not empty! Queue size: \(self.commandResponseQueue.count)")
+            assertionFailure(
+                "Command handler deinit when queue is not empty! Queue size: \(self.commandResponseQueue.count)"
+            )
         }
     }
 
@@ -51,7 +53,7 @@ public final class RedisCommandHandler {
     public init(initialQueueCapacity: Int = 3) {
         self.commandResponseQueue = CircularBuffer(initialCapacity: initialQueueCapacity)
     }
-    
+
     private enum State {
         case `default`
         case draining(EventLoopPromise<Void>?)
@@ -74,7 +76,7 @@ extension RedisCommandHandler: ChannelInboundHandler {
         self._failCommandQueue(because: error)
         context.close(promise: nil)
     }
-    
+
     /// Invoked by SwiftNIO when the channel's active state has changed, such as when it is closed. The command queue will be drained
     ///     with each promise in the queue being failed from a connection closed error.
     ///
@@ -84,12 +86,14 @@ extension RedisCommandHandler: ChannelInboundHandler {
         self.state = .error(RedisClientError.connectionClosed)
         self._failCommandQueue(because: RedisClientError.connectionClosed)
     }
-    
+
     private func _failCommandQueue(because error: Error) {
         self.state = .error(error)
         let queue = self.commandResponseQueue
         self.commandResponseQueue.removeAll()
-        queue.forEach { $0.fail(error) }
+        for element in queue {
+            element.fail(error)
+        }
     }
 
     /// Invoked by SwiftNIO when a read has been fired from earlier in the response chain.
@@ -141,14 +145,14 @@ extension RedisCommandHandler: ChannelOutboundHandler {
     /// See `NIO.ChannelOutboundHandler.write(context:data:promise:)`
     public func write(context: ChannelHandlerContext, data: NIOAny, promise: EventLoopPromise<Void>?) {
         let commandContext = self.unwrapOutboundIn(data)
-        
+
         switch self.state {
         case let .error(e):
             commandContext.responsePromise.fail(e)
 
         case .draining:
             commandContext.responsePromise.fail(RedisClientError.connectionClosed)
-            
+
         case .default:
             self.commandResponseQueue.append(commandContext.responsePromise)
             context.write(

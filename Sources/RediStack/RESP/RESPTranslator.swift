@@ -12,21 +12,22 @@
 //
 //===----------------------------------------------------------------------===//
 
-import protocol Foundation.LocalizedError
 import NIOCore
+
+import protocol Foundation.LocalizedError
 
 /// A helper object for translating between raw bytes and Swift types according to the Redis Serialization Protocol (RESP).
 ///
 /// See [https://redis.io/topics/protocol](https://redis.io/topics/protocol)
 public struct RESPTranslator {
-    public init() { }
+    public init() {}
 }
 
 // MARK: Writing RESP
 
 /// The carriage return and newline escape symbols, used as the standard signal in RESP for a "message" end.
 /// A "message" in this case is a single data type.
-fileprivate let respEnd: StaticString = "\r\n"
+private let respEnd: StaticString = "\r\n"
 
 extension ByteBuffer {
     /// Writes the `RESPValue` into the current buffer, following the RESP specification.
@@ -39,35 +40,37 @@ extension ByteBuffer {
             self.writeStaticString("+")
             self.writeBuffer(&buffer)
             self.writeStaticString(respEnd)
-            
+
         case .bulkString(.some(var buffer)):
             self.writeStaticString("$")
             self.writeString("\(buffer.readableBytes)")
             self.writeStaticString(respEnd)
             self.writeBuffer(&buffer)
             self.writeStaticString(respEnd)
-            
+
         case .bulkString(.none):
             self.writeStaticString("$0\r\n\r\n")
-            
+
         case .integer(let number):
             self.writeStaticString(":")
             self.writeString(number.description)
             self.writeStaticString(respEnd)
-            
+
         case .null:
             self.writeStaticString("$-1\r\n")
-            
+
         case .error(let error):
             self.writeStaticString("-")
             self.writeString(error.message)
             self.writeStaticString(respEnd)
-            
+
         case .array(let array):
             self.writeStaticString("*")
             self.writeString("\(array.count)")
             self.writeStaticString(respEnd)
-            array.forEach { self.writeRESPValue($0) }
+            for element in array {
+                self.writeRESPValue(element)
+            }
         }
     }
 }
@@ -108,14 +111,14 @@ extension RESPTranslator {
         public static let bulkStringSizeMismatch = ParsingError(.bulkStringSizeMismatch)
         /// A RESP integer did not follow the RESP schema.
         public static let invalidIntegerFormat = ParsingError(.invalidIntegerFormat)
-        
+
         public var errorDescription: String? {
-            return self.base.rawValue
+            self.base.rawValue
         }
-        
+
         private let base: Base
         private init(_ base: Base) { self.base = base }
-        
+
         private enum Base: String, Equatable {
             case invalidToken = "Cannot parse RESP: invalid token"
             case invalidBulkStringSize = "Cannot parse RESP Bulk String: received invalid size"
@@ -136,51 +139,51 @@ extension RESPTranslator {
         var copy = buffer
 
         guard let token = copy.readInteger(as: UInt8.self) else { return nil }
-        
+
         let result: RESPValue?
         switch token {
         case .plus:
             guard let value = self.parseSimpleString(from: &copy) else { return nil }
             result = .simpleString(value)
-            
+
         case .colon:
             guard let value = try self.parseInteger(from: &copy) else { return nil }
             result = .integer(value)
-            
+
         case .dollar:
             result = try self.parseBulkString(from: &copy)
             break
-            
+
         case .asterisk:
             result = try self.parseArray(from: &copy)
             break
-            
+
         case .hyphen:
             guard
                 let stringBuffer = self.parseSimpleString(from: &copy),
                 let message = stringBuffer.getString(at: 0, length: stringBuffer.readableBytes)
             else { return nil }
             result = .error(RedisError(reason: message))
-            
+
         default: throw ParsingError.invalidToken
         }
-        
+
         // if we successfully parsed a value, we need to update the original buffer's readerIndex
         if result != nil {
             buffer.moveReaderIndex(to: copy.readerIndex)
         }
-        
+
         return result
     }
-    
+
     /// See [https://redis.io/topics/protocol#resp-simple-strings](https://redis.io/topics/protocol#resp-simple-strings)
     internal func parseSimpleString(from buffer: inout ByteBuffer) -> ByteBuffer? {
         let bytes = buffer.readableBytesView
         guard
             let newlineIndex = bytes.firstIndex(of: .newline),
-            newlineIndex - bytes.startIndex >= 1 // strings should at least have a CRLF ending
+            newlineIndex - bytes.startIndex >= 1  // strings should at least have a CRLF ending
         else { return nil }
-        
+
         // grab the bytes that we've determined is the full simple string,
         // and make sure to move the reader index afterwards
         defer {
@@ -191,7 +194,7 @@ extension RESPTranslator {
         let endIndex = newlineIndex - bytes.startIndex
         return buffer.getSlice(at: bytes.startIndex, length: endIndex - 1)
     }
-    
+
     /// See [https://redis.io/topics/protocol#resp-integers](https://redis.io/topics/protocol#resp-integers)
     internal func parseInteger(from buffer: inout ByteBuffer) throws -> Int? {
         guard
@@ -202,61 +205,61 @@ extension RESPTranslator {
         guard let result = Int(string) else { throw ParsingError.invalidIntegerFormat }
         return result
     }
-    
+
     /// See [https://redis.io/topics/protocol#resp-bulk-strings](https://redis.io/topics/protocol#resp-bulk-strings)
     internal func parseBulkString(from buffer: inout ByteBuffer) throws -> RESPValue? {
         guard let size = try self.parseInteger(from: &buffer) else {
             return nil
         }
-        
+
         // only -1 is the only valid negative value for a size
         guard size >= -1 else { throw ParsingError.invalidBulkStringSize }
-        
+
         // Redis sends '$-1\r\n' to represent a null bulk string
         guard size > -1 else { return .null }
-        
+
         // Verify that we have the entire bulk string message by adding the expected CRLF end bytes
         // to the parsed size of the message content.
         // Even if the content is empty, Redis sends '$0\r\n\r\n'
         let expectedRemainingMessageSize = size + 2
         guard buffer.readableBytes >= expectedRemainingMessageSize else { return nil }
-        
+
         // soundness check that the declared content size matches the actual size.
         guard
             buffer.getInteger(at: buffer.readerIndex + expectedRemainingMessageSize - 1, as: UInt8.self) == .newline
         else { throw ParsingError.bulkStringSizeMismatch }
-        
+
         // empty content bulk strings are different from null, and represented as .bulkString(nil)
         guard size > 0 else {
             buffer.moveReaderIndex(forwardBy: 2)
             return .bulkString(nil)
         }
-        
+
         // move the reader position forward by the size of the total message (including the CRLF ending)
         defer {
             buffer.moveReaderIndex(forwardBy: expectedRemainingMessageSize)
         }
-        
+
         return .bulkString(
             buffer.getSlice(at: buffer.readerIndex, length: size)
         )
     }
-    
+
     /// See [https://redis.io/topics/protocol#resp-arrays](https://redis.io/topics/protocol#resp-arrays)
     internal func parseArray(from buffer: inout ByteBuffer) throws -> RESPValue? {
         guard let elementCount = try parseInteger(from: &buffer) else { return nil }
-        guard elementCount > -1 else { return .null } // '*-1\r\n'
-        guard elementCount > 0 else { return .array([]) } // '*0\r\n'
-        
+        guard elementCount > -1 else { return .null }  // '*-1\r\n'
+        guard elementCount > 0 else { return .array([]) }  // '*0\r\n'
+
         var results: [RESPValue] = []
         results.reserveCapacity(elementCount)
-        
+
         for _ in 0..<elementCount {
             guard buffer.readableBytes > 0 else { return nil }
             guard let element = try self.parseBytes(from: &buffer) else { return nil }
             results.append(element)
         }
-        
+
         return .array(results)
     }
 }

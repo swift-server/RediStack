@@ -38,11 +38,11 @@ extension RedisClient {
     public func lindex(_ index: Int, from key: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: index)
+            .init(bulk: index),
         ]
         return send(command: "LINDEX", with: args)
     }
-    
+
     /// Gets the element from a list stored at the provided index position.
     ///
     /// See [https://redis.io/commands/lindex](https://redis.io/commands/lindex)
@@ -57,7 +57,7 @@ extension RedisClient {
         from key: RedisKey,
         as type: Value.Type
     ) -> EventLoopFuture<Value?> {
-        return self.lindex(index, from: key)
+        self.lindex(index, from: key)
             .map(Value.init(fromRESP:))
     }
 
@@ -78,7 +78,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: index),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "LSET", with: args)
             .map { _ in () }
@@ -101,7 +101,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: count),
-            value.convertedToRESPValue()
+            value.convertedToRESPValue(),
         ]
         return send(command: "LREM", with: args)
             .tryConverting()
@@ -123,12 +123,12 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: start),
-            .init(bulk: stop)
+            .init(bulk: stop),
         ]
         return send(command: "LTRIM", with: args)
             .map { _ in () }
     }
-    
+
     /// Trims a List to only contain elements within the specified inclusive bounds of 0-based indices.
     ///
     /// To keep elements 4 through 7:
@@ -156,7 +156,7 @@ extension RedisClient {
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, keepingIndices range: ClosedRange<Int>) -> EventLoopFuture<Void> {
-        return self.ltrim(key, before: range.lowerBound, after: range.upperBound)
+        self.ltrim(key, before: range.lowerBound, after: range.upperBound)
     }
 
     /// Trims a List to only contain elements starting from the specified index.
@@ -177,9 +177,9 @@ extension RedisClient {
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeFrom<Int>) -> EventLoopFuture<Void> {
-        return self.ltrim(key, before: range.lowerBound, after: -1)
+        self.ltrim(key, before: range.lowerBound, after: -1)
     }
-    
+
     /// Trims a List to only contain elements before the specified index.
     ///
     /// To keep the first 3 elements:
@@ -198,9 +198,9 @@ extension RedisClient {
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeUpTo<Int>) -> EventLoopFuture<Void> {
-        return self.ltrim(key, before: 0, after: range.upperBound - 1)
+        self.ltrim(key, before: 0, after: range.upperBound - 1)
     }
-    
+
     /// Trims a List to only contain elements up to the specified index.
     ///
     /// To keep the first 4 elements:
@@ -219,9 +219,9 @@ extension RedisClient {
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, keepingIndices range: PartialRangeThrough<Int>) -> EventLoopFuture<Void> {
-        return self.ltrim(key, before: 0, after: range.upperBound)
+        self.ltrim(key, before: 0, after: range.upperBound)
     }
-    
+
     /// Trims a List to only contain the elements from the specified index up to the index provided.
     ///
     /// To keep the first 4 elements:
@@ -244,7 +244,7 @@ extension RedisClient {
     ///     - range: The range of indices that should be kept in the List.
     /// - Returns: A `NIO.EventLoopFuture` that resolves when the operation has succeeded, or fails with a `RedisError`.
     public func ltrim(_ key: RedisKey, keepingIndices range: Range<Int>) -> EventLoopFuture<Void> {
-        return self.ltrim(key, before: range.lowerBound, after: range.upperBound - 1)
+        self.ltrim(key, before: range.lowerBound, after: range.upperBound - 1)
     }
 }
 
@@ -263,7 +263,7 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: key),
             .init(bulk: firstIndex),
-            .init(bulk: lastIndex)
+            .init(bulk: lastIndex),
         ]
         return send(command: "LRANGE", with: args)
             .tryConverting()
@@ -285,10 +285,10 @@ extension RedisClient {
         lastIndex: Int,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, firstIndex: firstIndex, lastIndex: lastIndex)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, firstIndex: firstIndex, lastIndex: lastIndex)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
     ///
     /// To get the elements at index 4 through 7:
@@ -321,9 +321,9 @@ extension RedisClient {
     ///     - range: The range of inclusive indices of elements to get.
     /// - Returns: An array of elements found within the range specified.
     public func lrange(from key: RedisKey, indices range: ClosedRange<Int>) -> EventLoopFuture<[RESPValue]> {
-        return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
+        self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound)
     }
-    
+
     /// Gets all elements from a List within the specified inclusive bounds of 0-based indices.
     ///
     /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange).
@@ -342,10 +342,10 @@ extension RedisClient {
         indices range: ClosedRange<Int>,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, indices: range)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, indices: range)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets all the elements from a List starting with the first index bound up to, but not including, the element at the last index bound.
     ///
     /// To get the elements at index 4 through 7:
@@ -378,9 +378,9 @@ extension RedisClient {
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
     /// - Returns: An array of elements found within the range specified.
     public func lrange(from key: RedisKey, indices range: Range<Int>) -> EventLoopFuture<[RESPValue]> {
-        return self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
+        self.lrange(from: key, firstIndex: range.lowerBound, lastIndex: range.upperBound - 1)
     }
-    
+
     /// Gets all the elements from a List starting with the first index bound up to, but not including, the element at the last index bound.
     ///
     /// See [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
@@ -399,8 +399,8 @@ extension RedisClient {
         indices range: Range<Int>,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, indices: range)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, indices: range)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Gets all elements from the index specified to the end of a List.
@@ -421,9 +421,9 @@ extension RedisClient {
     ///     - index: The index of the first element that will be in the returned values.
     /// - Returns: An array of elements from the List between the index and the end.
     public func lrange(from key: RedisKey, fromIndex index: Int) -> EventLoopFuture<[RESPValue]> {
-        return self.lrange(from: key, firstIndex: index, lastIndex: -1)
+        self.lrange(from: key, firstIndex: index, lastIndex: -1)
     }
-    
+
     /// Gets all elements from the index specified to the end of a List.
     ///
     /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
@@ -438,10 +438,10 @@ extension RedisClient {
         fromIndex index: Int,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, fromIndex: index)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, fromIndex: index)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets all elements from the the start of a List up to, and including, the element at the index specified.
     ///
     /// To get the first 3 elements of a List:
@@ -460,9 +460,9 @@ extension RedisClient {
     ///     - index: The index of the last element that will be in the returned values.
     /// - Returns: An array of elements from the start of a List to the index.
     public func lrange(from key: RedisKey, throughIndex index: Int) -> EventLoopFuture<[RESPValue]> {
-        return self.lrange(from: key, firstIndex: 0, lastIndex: index)
+        self.lrange(from: key, firstIndex: 0, lastIndex: index)
     }
-    
+
     /// Gets all elements from the the start of a List up to, and including, the element at the index specified.
     ///
     /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
@@ -477,10 +477,10 @@ extension RedisClient {
         throughIndex index: Int,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, throughIndex: index)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, throughIndex: index)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Gets all elements from the the start of a List up to, but not including, the element at the index specified.
     ///
     /// To get the first 3 elements of a List:
@@ -499,9 +499,9 @@ extension RedisClient {
     ///     - index: The index of the element to not include in the returned values.
     /// - Returns: An array of elements from the start of the List and up to the index.
     public func lrange(from key: RedisKey, upToIndex index: Int) -> EventLoopFuture<[RESPValue]> {
-        return self.lrange(from: key, firstIndex: 0, lastIndex: index - 1)
+        self.lrange(from: key, firstIndex: 0, lastIndex: index - 1)
     }
-    
+
     /// Gets all elements from the the start of a List up to, but not including, the element at the index specified.
     ///
     /// See `lrange(from:indices:)`, `lrange(from:firstIndex:lastIndex:)`, and [https://redis.io/commands/lrange](https://redis.io/commands/lrange)
@@ -516,8 +516,8 @@ extension RedisClient {
         upToIndex index: Int,
         as type: Value.Type
     ) -> EventLoopFuture<[Value?]> {
-        return self.lrange(from: key, upToIndex: index)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.lrange(from: key, upToIndex: index)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 }
 
@@ -534,11 +534,11 @@ extension RedisClient {
     public func rpoplpush(from source: RedisKey, to dest: RedisKey) -> EventLoopFuture<RESPValue> {
         let args: [RESPValue] = [
             .init(from: source),
-            .init(from: dest)
+            .init(from: dest),
         ]
         return send(command: "RPOPLPUSH", with: args)
     }
-    
+
     /// Pops the last element from a source list and pushes it to a destination list.
     ///
     /// See [https://redis.io/commands/rpoplpush](https://redis.io/commands/rpoplpush)
@@ -553,7 +553,7 @@ extension RedisClient {
         to dest: RedisKey,
         valueType: Value.Type
     ) -> EventLoopFuture<Value?> {
-        return self.rpoplpush(from: source, to: dest)
+        self.rpoplpush(from: source, to: dest)
             .map(Value.init(fromRESP:))
     }
 
@@ -581,11 +581,10 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: source),
             .init(from: dest),
-            .init(from: timeout.seconds)
+            .init(from: timeout.seconds),
         ]
         return send(command: "BRPOPLPUSH", with: args)
     }
-    
 
     /// Pops the last element from a source list and pushes it to a destination list, blocking until
     /// an element is available from the source list.
@@ -612,7 +611,7 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0),
         valueType: Value.Type
     ) -> EventLoopFuture<Value?> {
-        return self.brpoplpush(from: source, to: dest, timeout: timeout)
+        self.brpoplpush(from: source, to: dest, timeout: timeout)
             .map(Value.init(fromRESP:))
     }
 }
@@ -634,7 +633,7 @@ extension RedisClient {
         into key: RedisKey,
         before pivot: Value
     ) -> EventLoopFuture<Int> {
-        return _linsert(pivotKeyword: "BEFORE", element, key, pivot)
+        _linsert(pivotKeyword: "BEFORE", element, key, pivot)
     }
 
     /// Inserts the element after the first element matching the "pivot" value provided.
@@ -651,7 +650,7 @@ extension RedisClient {
         into key: RedisKey,
         after pivot: Value
     ) -> EventLoopFuture<Int> {
-        return _linsert(pivotKeyword: "AFTER", element, key, pivot)
+        _linsert(pivotKeyword: "AFTER", element, key, pivot)
     }
 
     @usableFromInline
@@ -665,7 +664,7 @@ extension RedisClient {
             .init(from: key),
             .init(bulk: pivotKeyword),
             pivot.convertedToRESPValue(),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "LINSERT", with: args)
             .tryConverting()
@@ -684,7 +683,7 @@ extension RedisClient {
         let args = [RESPValue(from: key)]
         return send(command: "LPOP", with: args)
     }
-    
+
     /// Removes the first element of a list.
     ///
     /// See [https://redis.io/commands/lpop](https://redis.io/commands/lpop)
@@ -694,7 +693,7 @@ extension RedisClient {
     /// - Returns: The element that was popped from the list. If the list is empty or the `RESPValue` conversion failed, this value is `nil`.
     @inlinable
     public func lpop<Value: RESPValueConvertible>(from key: RedisKey, as type: Value.Type) -> EventLoopFuture<Value?> {
-        return self.lpop(from: key)
+        self.lpop(from: key)
             .map(Value.init(fromRESP:))
     }
 
@@ -709,14 +708,14 @@ extension RedisClient {
     @inlinable
     public func lpush<Value: RESPValueConvertible>(_ elements: [Value], into key: RedisKey) -> EventLoopFuture<Int> {
         assert(elements.count > 0, "At least 1 element should be provided.")
-        
+
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
-        
+
         return send(command: "LPUSH", with: args)
             .tryConverting()
     }
-    
+
     /// Pushes all of the provided elements into a list.
     /// - Note: This inserts the elements at the head of the list; for the tail see `rpush(_:into:)`.
     ///
@@ -727,7 +726,7 @@ extension RedisClient {
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
     public func lpush<Value: RESPValueConvertible>(_ elements: Value..., into key: RedisKey) -> EventLoopFuture<Int> {
-        return self.lpush(elements, into: key)
+        self.lpush(elements, into: key)
     }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
@@ -742,7 +741,7 @@ extension RedisClient {
     public func lpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "LPUSHX", with: args)
             .tryConverting()
@@ -761,7 +760,7 @@ extension RedisClient {
         let args = [RESPValue(from: key)]
         return send(command: "RPOP", with: args)
     }
-    
+
     /// Removes the last element a list.
     ///
     /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
@@ -769,7 +768,7 @@ extension RedisClient {
     /// - Returns: The element that was popped from the list. If the list is empty or the `RESPValue` conversion fails, this value is `nil`.
     @inlinable
     public func rpop<Value: RESPValueConvertible>(from key: RedisKey, as type: Value.Type) -> EventLoopFuture<Value?> {
-        return self.rpop(from: key)
+        self.rpop(from: key)
             .map(Value.init(fromRESP:))
     }
 
@@ -786,11 +785,11 @@ extension RedisClient {
 
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
-        
+
         return send(command: "RPUSH", with: args)
             .tryConverting()
     }
-    
+
     /// Pushes all of the provided elements into a list.
     /// - Note: This inserts the elements at the tail of the list; for the head see `lpush(_:into:)`.
     ///
@@ -800,7 +799,7 @@ extension RedisClient {
     /// - Returns: The length of the list after adding the new elements.
     @inlinable
     public func rpush<Value: RESPValueConvertible>(_ elements: Value..., into key: RedisKey) -> EventLoopFuture<Int> {
-        return self.rpush(elements, into: key)
+        self.rpush(elements, into: key)
     }
 
     /// Pushes an element into a list, but only if the key exists and holds a list.
@@ -815,7 +814,7 @@ extension RedisClient {
     public func rpushx<Value: RESPValueConvertible>(_ element: Value, into key: RedisKey) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "RPUSHX", with: args)
             .tryConverting()
@@ -840,10 +839,10 @@ extension RedisClient {
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns: The element that was popped from the list, or `.null` if the timeout was reached.
     public func blpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue> {
-        return blpop(from: [key], timeout: timeout)
-            .map { return $0?.1 ?? .null }
+        blpop(from: [key], timeout: timeout)
+            .map { $0?.1 ?? .null }
     }
-    
+
     /// Removes the first element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -865,7 +864,7 @@ extension RedisClient {
         as type: Value.Type,
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<Value?> {
-        return self.blpop(from: key, timeout: timeout)
+        self.blpop(from: key, timeout: timeout)
             .map(Value.init(fromRESP:))
     }
 
@@ -886,10 +885,13 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    public func blpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
-        return _bpop(command: "BLPOP", keys, timeout)
+    public func blpop(
+        from keys: [RedisKey],
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+        _bpop(command: "BLPOP", keys, timeout)
     }
-    
+
     /// Removes the first element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -914,7 +916,7 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0),
         valueType: Value.Type
     ) -> EventLoopFuture<(RedisKey, Value)?> {
-        return self.blpop(from: keys, timeout: timeout)
+        self.blpop(from: keys, timeout: timeout)
             .map {
                 guard
                     let result = $0,
@@ -923,7 +925,7 @@ extension RedisClient {
                 return (result.0, value)
             }
     }
-    
+
     /// Removes the first element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -941,10 +943,13 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    public func blpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
-        return self.blpop(from: keys, timeout: timeout)
+    public func blpop(
+        from keys: RedisKey...,
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+        self.blpop(from: keys, timeout: timeout)
     }
-    
+
     /// Removes the first element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -969,7 +974,7 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0),
         valueType: Value.Type
     ) -> EventLoopFuture<(RedisKey, Value)?> {
-        return self.blpop(from: keys, timeout: timeout, valueType: valueType)
+        self.blpop(from: keys, timeout: timeout, valueType: valueType)
     }
 
     /// Removes the last element of a list, blocking until an element is available.
@@ -987,10 +992,10 @@ extension RedisClient {
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
     /// - Returns: The element that was popped from the list, or `.null` if the timeout was reached.
     public func brpop(from key: RedisKey, timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<RESPValue> {
-        return brpop(from: [key], timeout: timeout)
-            .map { return $0?.1 ?? .null }
+        brpop(from: [key], timeout: timeout)
+            .map { $0?.1 ?? .null }
     }
-    
+
     /// Removes the last element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -1012,7 +1017,7 @@ extension RedisClient {
         as type: Value.Type,
         timeout: TimeAmount = .seconds(0)
     ) -> EventLoopFuture<Value?> {
-        return self.brpop(from: key, timeout: timeout)
+        self.brpop(from: key, timeout: timeout)
             .map(Value.init(fromRESP:))
     }
 
@@ -1033,8 +1038,11 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    public func brpop(from keys: [RedisKey], timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
-        return _bpop(command: "BRPOP", keys, timeout)
+    public func brpop(
+        from keys: [RedisKey],
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+        _bpop(command: "BRPOP", keys, timeout)
     }
 
     /// Removes the last element of a list, blocking until an element is available.
@@ -1060,7 +1068,7 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0),
         valueType: Value.Type
     ) -> EventLoopFuture<(RedisKey, Value)?> {
-        return self.brpop(from: keys, timeout: timeout)
+        self.brpop(from: keys, timeout: timeout)
             .map {
                 guard
                     let result = $0,
@@ -1087,10 +1095,13 @@ extension RedisClient {
     ///     If timeout was reached, `nil`.
     ///
     ///     Otherwise, the key of the list the element was removed from and the popped element.
-    public func brpop(from keys: RedisKey..., timeout: TimeAmount = .seconds(0)) -> EventLoopFuture<(RedisKey, RESPValue)?> {
-        return self.brpop(from: keys, timeout: timeout)
+    public func brpop(
+        from keys: RedisKey...,
+        timeout: TimeAmount = .seconds(0)
+    ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
+        self.brpop(from: keys, timeout: timeout)
     }
-    
+
     /// Removes the last element of a list, blocking until an element is available.
     ///
     /// - Important:
@@ -1114,7 +1125,7 @@ extension RedisClient {
         timeout: TimeAmount = .seconds(0),
         valueType: Value.Type
     ) -> EventLoopFuture<(RedisKey, Value)?> {
-        return self.brpop(from: keys, timeout: timeout, valueType: valueType)
+        self.brpop(from: keys, timeout: timeout, valueType: valueType)
     }
 
     @usableFromInline
@@ -1125,7 +1136,7 @@ extension RedisClient {
     ) -> EventLoopFuture<(RedisKey, RESPValue)?> {
         var args = keys.map(RESPValue.init)
         args.append(.init(bulk: timeout.seconds))
-        
+
         return send(command: command, with: args)
             .flatMapThrowing {
                 guard !$0.isNull else { return nil }

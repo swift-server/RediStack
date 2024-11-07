@@ -26,19 +26,20 @@ protocol RESP3BlobStringEncodable {
 struct RedisCommandEncoder {
     var buffer: ByteBuffer
 
-#if swift(>=5.9)
-    mutating func encodeRESPArray<each S: RESP3BlobStringEncodable>(_ first: some RESP3BlobStringEncodable, _ args: repeat each S) {
+    #if swift(>=5.9)
+    mutating func encodeRESPArray<each S: RESP3BlobStringEncodable>(
+        _ first: some RESP3BlobStringEncodable,
+        _ args: repeat each S
+    ) {
         let count = ComputeParameterPackLength.count(ofPack: repeat each args)
 
         self.buffer.writeBytes("*".utf8)
         self.buffer.writeBytes("\(count + 1)".utf8)
         self.buffer.writeRESPNewLine()
         first.encodeRedisBlobString(into: &self.buffer)
-        repeat (
-            (each args).encodeRedisBlobString(into: &self.buffer)
-        )
+        repeat ((each args).encodeRedisBlobString(into: &self.buffer))
     }
-#endif
+    #endif
 }
 
 extension String: RESP3BlobStringEncodable {
@@ -61,7 +62,6 @@ extension ByteBuffer: RESP3BlobStringEncodable {
         buffer.writeRESPNewLine()
     }
 }
-
 
 #if swift(>=5.9)
 private enum ComputeParameterPackLength {

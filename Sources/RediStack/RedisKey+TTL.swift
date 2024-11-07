@@ -30,12 +30,12 @@ extension RedisKey.Lifetime {
             }
         }
 
-        public static func <(lhs: Duration, rhs: Duration) -> Bool {
-            return lhs.timeAmount < rhs.timeAmount
+        public static func < (lhs: Duration, rhs: Duration) -> Bool {
+            lhs.timeAmount < rhs.timeAmount
         }
 
-        public static func ==(lhs: Duration, rhs: Duration) -> Bool {
-            return lhs.timeAmount == rhs.timeAmount
+        public static func == (lhs: Duration, rhs: Duration) -> Bool {
+            lhs.timeAmount == rhs.timeAmount
         }
     }
 }
@@ -81,4 +81,3 @@ extension RedisKey {
         }
     }
 }
-

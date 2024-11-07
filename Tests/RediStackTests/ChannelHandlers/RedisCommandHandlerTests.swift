@@ -12,32 +12,33 @@
 //
 //===----------------------------------------------------------------------===//
 
-import NIOCore
-import NIOPosix
-import NIOEmbedded
 import Atomics
-@testable import RediStack
+import NIOCore
+import NIOEmbedded
+import NIOPosix
 import XCTest
+
+@testable import RediStack
 
 final class RedisCommandHandlerTests: XCTestCase {
     func test_whenRemoteConnectionCloses_handlerFailsCommandQueue() throws {
         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
         defer { try? group.syncShutdownGracefully() }
         let socketAddress = try SocketAddress.makeAddressResolvingHost("localhost", port: 8080)
-        
+
         let server = try ServerBootstrap(group: group)
             .serverChannelOption(ChannelOptions.socket(.init(SOL_SOCKET), .init(SO_REUSEADDR)), value: 1)
             .childChannelInitializer { $0.pipeline.addHandler(RemoteCloseHandler()) }
             .bind(to: socketAddress)
             .wait()
         defer { try? server.close().wait() }
-        
+
         let connection = try RedisConnection.make(
             configuration: .init(hostname: "localhost", port: 8080),
             boundEventLoop: group.next()
         ).wait()
         defer { try? connection.close().wait() }
-        
+
         XCTAssertThrowsError(try connection.ping().wait()) {
             guard let error = $0 as? RedisClientError else {
                 XCTFail("Wrong error type thrown")
@@ -127,7 +128,7 @@ final class RedisCommandHandlerTests: XCTestCase {
 
 private final class RemoteCloseHandler: ChannelInboundHandler {
     typealias InboundIn = ByteBuffer
-    
+
     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
         context.close(promise: nil)
     }

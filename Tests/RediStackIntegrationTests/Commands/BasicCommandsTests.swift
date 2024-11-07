@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import RediStackTestUtils
 import XCTest
+
+@testable import RediStack
 
 final class BasicCommandsTests: RediStackIntegrationTestCase {
     func test_select() {
@@ -22,7 +23,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_delete() throws {
-        let keys = [ #function + "1", #function + "2", #function + "3" ].map(RedisKey.init(_:))
+        let keys = [#function + "1", #function + "2", #function + "3"].map(RedisKey.init(_:))
         try connection.set(keys[0], to: "value").wait()
         try connection.set(keys[1], to: "value").wait()
         try connection.set(keys[2], to: "value").wait()
@@ -58,7 +59,7 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
         XCTAssertNotNil(try connection.get(#function).wait())
         XCTAssertTrue(try connection.expire(#function, after: .nanoseconds(1)).wait())
         XCTAssertEqual(try connection.get(#function).wait(), .null)
-        
+
         try connection.set(#function, to: "new value").wait()
         XCTAssertNotNil(try connection.get(#function).wait())
         XCTAssertTrue(try connection.expire(#function, after: .seconds(10)).wait())
@@ -166,29 +167,29 @@ final class BasicCommandsTests: RediStackIntegrationTestCase {
 
     // TODO: #23 -- Rework Scan Unit Test
     // This is extremely flakey, and causes non-deterministic failures because of the assert on key counts
-//    func test_scan() throws {
-//        var dataset: [RedisKey] = .init(repeating: "", count: 10)
-//        for index in 1...15 {
-//            let key = RedisKey("key\(index)\(index % 2 == 0 ? "_even" : "_odd")")
-//            dataset.append(key)
-//            _ = try connection.set(key, to: "\(index)").wait()
-//        }
-//
-//        var (cursor, keys) = try connection.scan(count: 5).wait()
-//        XCTAssertGreaterThanOrEqual(cursor, 0)
-//        XCTAssertGreaterThanOrEqual(keys.count, 5)
-//
-//        (_, keys) = try connection.scan(startingFrom: cursor, count: 8).wait()
-//        XCTAssertGreaterThanOrEqual(keys.count, 8)
-//
-//        (cursor, keys) = try connection.scan(matching: "*_odd").wait()
-//        XCTAssertGreaterThanOrEqual(cursor, 0)
-//        XCTAssertGreaterThanOrEqual(keys.count, 1)
-//        XCTAssertLessThanOrEqual(keys.count, 7)
-//
-//        (cursor, keys) = try connection.scan(matching: "*_even*").wait()
-//        XCTAssertGreaterThanOrEqual(cursor, 0)
-//        XCTAssertGreaterThanOrEqual(keys.count, 1)
-//        XCTAssertLessThanOrEqual(keys.count, 7)
-//    }
+    //    func test_scan() throws {
+    //        var dataset: [RedisKey] = .init(repeating: "", count: 10)
+    //        for index in 1...15 {
+    //            let key = RedisKey("key\(index)\(index % 2 == 0 ? "_even" : "_odd")")
+    //            dataset.append(key)
+    //            _ = try connection.set(key, to: "\(index)").wait()
+    //        }
+    //
+    //        var (cursor, keys) = try connection.scan(count: 5).wait()
+    //        XCTAssertGreaterThanOrEqual(cursor, 0)
+    //        XCTAssertGreaterThanOrEqual(keys.count, 5)
+    //
+    //        (_, keys) = try connection.scan(startingFrom: cursor, count: 8).wait()
+    //        XCTAssertGreaterThanOrEqual(keys.count, 8)
+    //
+    //        (cursor, keys) = try connection.scan(matching: "*_odd").wait()
+    //        XCTAssertGreaterThanOrEqual(cursor, 0)
+    //        XCTAssertGreaterThanOrEqual(keys.count, 1)
+    //        XCTAssertLessThanOrEqual(keys.count, 7)
+    //
+    //        (cursor, keys) = try connection.scan(matching: "*_even*").wait()
+    //        XCTAssertGreaterThanOrEqual(cursor, 0)
+    //        XCTAssertGreaterThanOrEqual(keys.count, 1)
+    //        XCTAssertLessThanOrEqual(keys.count, 7)
+    //    }
 }

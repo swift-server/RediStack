@@ -31,4 +31,3 @@ final class RedisConnection_ConfigurationTest: XCTestCase {
         RedisConnection.Configuration.defaultPort = 6379
     }
 }
-

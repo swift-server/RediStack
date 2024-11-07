@@ -12,6 +12,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+import struct Foundation.Data
+
 /// An object that is capable of being converted to and from `RESPValue` representations arbitrarily.
 /// - Important: When conforming your types to be sent to a Redis server, it is expected to always be stored in a `.bulkString` representation. Redis will
 /// reject any other `RESPValue` type sent to it.
@@ -40,7 +42,7 @@ extension String: RESPValueConvertible {
     public init?(fromRESP value: RESPValue) {
         switch value {
         case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
+            let .bulkString(.some(buffer)):
             guard let string = buffer.getString(at: buffer.readerIndex, length: buffer.readableBytes) else {
                 return nil
             }
@@ -54,7 +56,7 @@ extension String: RESPValueConvertible {
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self)
+        .init(bulk: self)
     }
 }
 
@@ -77,7 +79,7 @@ extension FixedWidthInteger {
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self.description)
+        .init(bulk: self.description)
     }
 }
 
@@ -107,7 +109,7 @@ extension Double: RESPValueConvertible {
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self.description)
+        .init(bulk: self.description)
     }
 }
 
@@ -121,12 +123,12 @@ extension Float: RESPValueConvertible {
         guard
             let string = String(fromRESP: value),
             let float = Float(string)
-            else { return nil }
+        else { return nil }
         self = float
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return .init(bulk: self.description)
+        .init(bulk: self.description)
     }
 }
 
@@ -158,10 +160,10 @@ extension Array where Element == UInt8 {
     public init?(fromRESP value: RESPValue) {
         switch value {
         case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
+            let .bulkString(.some(buffer)):
             guard let bytes = buffer.getBytes(at: buffer.readerIndex, length: buffer.readableBytes) else { return nil }
             self = bytes
-            
+
         case .bulkString(.none): self = []
         default: return nil
         }
@@ -190,15 +192,13 @@ extension Optional: RESPValueConvertible where Wrapped: RESPValueConvertible {
     }
 }
 
-import struct Foundation.Data
-
 extension Data: RESPValueConvertible {
     public init?(fromRESP value: RESPValue) {
         switch value {
         case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
+            let .bulkString(.some(buffer)):
             self = Data(buffer.readableBytesView)
-            
+
         case .bulkString(.none): self = Data()
         default: return nil
         }

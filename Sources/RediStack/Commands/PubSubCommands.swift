@@ -32,7 +32,7 @@ extension RedisClient {
     ) -> EventLoopFuture<Int> {
         let args: [RESPValue] = [
             .init(from: channel),
-            message.convertedToRESPValue()
+            message.convertedToRESPValue(),
         ]
         return self.send(command: "PUBLISH", with: args)
             .tryConverting()
@@ -50,13 +50,13 @@ extension RedisClient {
     /// - Returns: A list of all active channel names.
     public func activeChannels(matching match: String? = nil) -> EventLoopFuture<[RedisChannelName]> {
         var args: [RESPValue] = [.init(bulk: "CHANNELS")]
-        
+
         if let m = match { args.append(.init(bulk: m)) }
-        
+
         return self.send(command: "PUBSUB", with: args)
             .tryConverting()
     }
-    
+
     /// Resolves the total count of active subscriptions to channels that were made using patterns.
     ///
     /// See [PUBSUB NUMPAT](https://redis.io/commands/pubsub#codepubsub-numpatcode)
@@ -66,7 +66,7 @@ extension RedisClient {
         return self.send(command: "PUBSUB", with: args)
             .tryConverting()
     }
-    
+
     /// Resolves a count of (non-pattern) subscribers for each given channel.
     ///
     /// See [PUBSUB NUMSUB](https://redis.io/commands/pubsub#codepubsub-numsub-channel-1--channel-ncode)
@@ -74,23 +74,27 @@ extension RedisClient {
     /// - Returns: A mapping of channel names and their (non-pattern) subscriber count.
     public func subscriberCount(forChannels channels: [RedisChannelName]) -> EventLoopFuture<[RedisChannelName: Int]> {
         guard channels.count > 0 else { return self.eventLoop.makeSucceededFuture([:]) }
-        
+
         var args: [RESPValue] = [.init(bulk: "NUMSUB")]
         args.append(convertingContentsOf: channels)
-        
+
         return self.send(command: "PUBSUB", with: args)
             .tryConverting(to: [RESPValue].self)
             .flatMapThrowing { response in
                 assert(response.count == channels.count * 2, "Unexpected response size!")
-                
+
                 // Redis guarantees that the response format is [channel1Name, channel1Count, channel2Name, ...]
                 // with the order of channels matching the order sent in the request
-                return try channels
+                return
+                    try channels
                     .enumerated()
                     .reduce(into: [:]) { (result, next) in
                         let responseOffset = next.offset * 2
-                        assert(next.element.rawValue == response[responseOffset].string, "Unexpected value in current index!")
-                        
+                        assert(
+                            next.element.rawValue == response[responseOffset].string,
+                            "Unexpected value in current index!"
+                        )
+
                         guard let count = response[responseOffset + 1].int else {
                             throw RedisClientError.assertionFailure(
                                 message: "Unexpected value at position \(responseOffset + 1) in \(response)"

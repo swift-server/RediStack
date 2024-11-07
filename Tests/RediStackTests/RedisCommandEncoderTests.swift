@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisCommandEncoderTests: XCTestCase {
 
@@ -61,7 +62,6 @@ final class RedisCommandEncoderTests: XCTestCase {
         self.encoder.encodeRESPArray("SET", "key", "value", "NX", "GET", "EX", "60")
         var buffer = self.encoder.buffer
 
-
         var resp: RESPValue?
         XCTAssertNoThrow(resp = try RESPTranslator().parseBytes(from: &buffer))
         let expected = RESPValue.array([
@@ -71,7 +71,7 @@ final class RedisCommandEncoderTests: XCTestCase {
             .bulkString(.init(string: "NX")),
             .bulkString(.init(string: "GET")),
             .bulkString(.init(string: "EX")),
-            .bulkString(.init(string: "60"))
+            .bulkString(.init(string: "60")),
         ])
         XCTAssertEqual(resp, expected)
     }

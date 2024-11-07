@@ -19,7 +19,7 @@ extension RedisConnection {
     /// A default hostname of `localhost` to try and connect to Redis at.
     @available(*, deprecated, message: "Use RedisConnection.Configuration.defaultHostname")
     public static let defaultHostname = "localhost"
-    
+
     /// Creates a connection intended for tests using `REDIS_URL` and `REDIS_PW` environment variables if available.
     ///
     /// The default URL is `127.0.0.1` while the default port is `RedisConnection.defaultPort`.
@@ -42,7 +42,7 @@ extension RedisConnection {
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
-        
+
         return RedisConnection.connect(to: address, on: eventLoop, password: password)
     }
 }

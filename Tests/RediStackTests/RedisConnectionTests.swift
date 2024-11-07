@@ -15,8 +15,9 @@
 import Logging
 import NIOCore
 import NIOEmbedded
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisConnectionTests: XCTestCase {
 
@@ -55,7 +56,9 @@ final class RedisConnectionTests: XCTestCase {
         XCTAssertNoThrow(maybeSocketAddress = try SocketAddress.makeAddressResolvingHost("localhost", port: 0))
         guard let socketAddress = maybeSocketAddress else { return XCTFail("Expected a socketAddress") }
         var maybeConfiguration: RedisConnection.Configuration?
-        XCTAssertNoThrow(maybeConfiguration = try .init(address: socketAddress, username: "username", password: "password"))
+        XCTAssertNoThrow(
+            maybeConfiguration = try .init(address: socketAddress, username: "username", password: "password")
+        )
         guard let configuration = maybeConfiguration else { return XCTFail("Expected a configuration") }
 
         let channel = EmbeddedChannel(handlers: [RedisCommandHandler()])
