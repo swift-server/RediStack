@@ -140,7 +140,7 @@ extension RedisSet {
     /// Removes the given element from the set.
     ///
     /// See `RediStack.RedisClient.srem(_:from:)`
-    /// - Parameter members: The element in the set to remove.
+    /// - Parameter member: The element in the set to remove.
     /// - Returns: A `NIO.EventLoopFuture<Bool>` resolving `true` if `member` was removed from the set; otherwise, `false`.
     public func remove(_ member: Element) -> EventLoopFuture<Bool> {
         self.remove([member])

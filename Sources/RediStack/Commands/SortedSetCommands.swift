@@ -425,7 +425,6 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet that will be counted.
     ///     - maxScore: The maximum score bound an element in the SortedSet should have in order to be counted.
-    ///     - exclusive: Should the `maxScore` provided be exclusive? If `true`, scores matching the `maxScore` will **not** be counted.
     /// - Returns: The count of elements in the SortedSet below the `maxScore` threshold.
     public func zcount(of key: RedisKey, withMaximumScoreOf maxScore: RedisZScoreBound) -> EventLoopFuture<Int> {
         self.zcount(of: key, withScoresBetween: (.inclusive(-.infinity), maxScore))
@@ -808,7 +807,7 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the union.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the union. If one isn't specified, Redis will default to `.sum`.
+    ///     - aggregate: The method of aggregating the values of the union. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     public func zunionstore(
         as destination: RedisKey,
@@ -827,7 +826,7 @@ extension RedisClient {
     ///     - destination: The key of the new sorted set from the result.
     ///     - sources: The list of sorted set keys to treat as the source of the intersection.
     ///     - weights: The multiplying factor to apply to the corresponding `sources` key based on index of the two parameters.
-    ///     - aggregateMethod: The method of aggregating the values of the intersection. If one isn't specified, Redis will default to `.sum`.
+    ///     - aggregate: The method of aggregating the values of the intersection. If one isn't specified, Redis will default to `.sum`.
     /// - Returns: The number of elements in the new sorted set.
     public func zinterstore(
         as destination: RedisKey,
@@ -884,6 +883,7 @@ extension RedisClient {
     ///     - key: The key of the SortedSet
     ///     - firstIndex: The index of the first element to include in the range of elements returned.
     ///     - lastIndex: The index of the last element to include in the range of elements returned.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements found within the range specified.
     public func zrange(
         from key: RedisKey,
@@ -927,6 +927,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - range: The range of inclusive indices of elements to get.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements found within the range specified.
     public func zrange(
         from key: RedisKey,
@@ -974,6 +975,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements found within the range specified.
     public func zrange(
         from key: RedisKey,
@@ -1007,6 +1009,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the first element that will be in the returned values.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements from the SortedSet between the index and the end.
     public func zrange(
         from key: RedisKey,
@@ -1035,6 +1038,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the last element that will be in the returned values.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements from the start of a SortedSet to the index.
     public func zrange(
         from key: RedisKey,
@@ -1238,6 +1242,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the last element that will be in the returned values.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements from the start of a SortedSet to the index.
     public func zrevrange(
         from key: RedisKey,
@@ -1266,6 +1271,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the last element to not include in the returned values.
+    ///     - includeScores: If to include scores in result value.
     /// - Returns: An array of elements from the start of the SortedSet and up to the index.
     public func zrevrange(
         from key: RedisKey,
@@ -1385,7 +1391,7 @@ extension RedisClient {
     /// For the inverse, see `zrevrangebyscore(from:withMinimumScoreOf:limitBy:includeScoresInResponse:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - range: The minimum score bound an element in the SortedSet should have to be included in the response.
+    ///     - minScore: The minimum score bound an element in the SortedSet should have to be included in the response.
     ///     - limit: The optional offset and count of elements to query.
     ///     - includeScores: Should the response array contain the elements AND their scores? If `true`, the response array will follow the pattern [Item_1, Score_1, Item_2, ...]
     /// - Returns: An array of elements from the SortedSet that were within the range provided, and optionally their scores.
@@ -1411,7 +1417,7 @@ extension RedisClient {
     /// For the inverse, see `zrevrangebyscore(from:withMaximumScoreOf:limitBy:includeScoresInResponse:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - range: The maximum score bound an element in the SortedSet should have to be included in the response.
+    ///     - maxScore: The maximum score bound an element in the SortedSet should have to be included in the response.
     ///     - limit: The optional offset and count of elements to query.
     ///     - includeScores: Should the response array contain the elements AND their scores? If `true`, the response array will follow the pattern [Item_1, Score_1, Item_2, ...]
     /// - Returns: An array of elements from the SortedSet that were within the range provided, and optionally their scores.
@@ -1516,8 +1522,8 @@ extension RedisClient {
     /// For the inverse, see `zrangebyscore(from:withMinimumScoreOf:limitBy:includeScoresInResponse:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - range: The minimum score bound an element in the SortedSet should have to be included in the response.
-    ///     - limit: The optional offset and count of elements to query.
+    ///     - limit: The minimum score bound an element in the SortedSet should have to be included in the response.
+    ///     - minScore: The minimum score to compare against.
     ///     - includeScores: Should the response array contain the elements AND their scores? If `true`, the response array will follow the pattern [Item_1, Score_1, Item_2, ...]
     /// - Returns: An array of elements from the SortedSet that were within the range provided, and optionally their scores.
     public func zrevrangebyscore(
@@ -1542,8 +1548,8 @@ extension RedisClient {
     /// For the inverse, see `zrangebyscore(from:withMaximumScoreOf:limitBy:includeScoresInResponse:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - range: The maximum score bound an element in the SortedSet should have to be included in the response.
-    ///     - limit: The optional offset and count of elements to query.
+    ///     - maxScore: The max score to compare against.
+    ///     - limit: The maximum score bound an element in the SortedSet should have to be included in the response.
     ///     - includeScores: Should the response array contain the elements AND their scores? If `true`, the response array will follow the pattern [Item_1, Score_1, Item_2, ...]
     /// - Returns: An array of elements from the SortedSet that were within the range provided, and optionally their scores.
     public func zrevrangebyscore(
@@ -1605,7 +1611,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet that will be counted.
     ///     - range: The min and max value bounds for filtering elements by.
-    ///     - limitBy: The optional offset and count of elements to query.
+    ///     - limit: The optional offset and count of elements to query.
     /// - Returns: An array of elements from the SortedSet that were within the range provided.
     @inlinable
     public func zrangebylex<Value: CustomStringConvertible>(
@@ -1658,7 +1664,7 @@ extension RedisClient {
     /// For the inverse, see `zrevrangebylex(from:withMaximumValueOf:limitBy:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - minValue: The maximum lexiographical value an element in the SortedSet should have to be included in the result set.
+    ///     - maxValue: The maximum lexiographical value an element in the SortedSet should have to be included in the result set.
     ///     - limit: The optional offset and count of elements to query
     /// - Returns: An array of elements from the SortedSet below the `maxValue` threshold.
     @inlinable
@@ -1687,7 +1693,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet that will be counted.
     ///     - range: The min and max value bounds for filtering elements by.
-    ///     - limitBy: The optional offset and count of elements to query.
+    ///     - limit: The optional offset and count of elements to query.
     /// - Returns: An array of elements from the SortedSet that were within the range provided.
     @inlinable
     public func zrevrangebylex<Value: CustomStringConvertible>(
@@ -1740,7 +1746,7 @@ extension RedisClient {
     /// For the inverse, see `zrangebylex(from:withMaximumValueOf:limitBy:)`.
     /// - Parameters:
     ///     - key: The key of the SortedSet.
-    ///     - minValue: The maximum lexiographical value an element in the SortedSet should have to be included in the result set.
+    ///     - maxValue: The maximum lexiographical value an element in the SortedSet should have to be included in the result set.
     ///     - limit: The optional offset and count of elements to query
     /// - Returns: An array of elements from the SortedSet below the `maxValue` threshold.
     @inlinable
@@ -2046,7 +2052,7 @@ extension RedisClient {
     /// See `RedisZScoreBound` and [https://redis.io/commands/zremrangebyscore](https://redis.io/commands/zremrangebyscore)
     /// - Parameters:
     ///     - key: The key of the SortedSet to remove elements from.
-    ///     - minScore: The maximum score bound an element in the SortedSet should have to be removed.
+    ///     - maxScore: The maximum score bound an element in the SortedSet should have to be removed.
     /// - Returns: The count of elements that were removed from the SortedSet.
     public func zremrangebyscore(
         from key: RedisKey,

@@ -27,7 +27,9 @@ extension RedisConnection {
     /// If `REDIS_PW` is not defined, no authentication will happen on the connection.
     /// - Parameters:
     ///     - eventLoop: The event loop that the connection should execute on.
+    ///     - host: the host to connect to.
     ///     - port: The port to connect on.
+    ///     - password: The optional password to use while connecting.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the new connection.
     @available(*, deprecated, message: "Use RedisConnection.make(configuration:boundEventLoop:) method")
     public static func connect(

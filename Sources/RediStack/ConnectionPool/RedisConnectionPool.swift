@@ -15,6 +15,7 @@
 import Logging
 import NIOConcurrencyHelpers
 import NIOCore
+
 import struct Foundation.UUID
 
 /// A `RedisConnectionPool` is an implementation of `RedisClient` backed by a pool of connections to Redis,

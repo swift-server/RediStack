@@ -545,7 +545,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
-    ///     - type: The type to convert the value to.
+    ///     - valueType: Type of the value.
     /// - Returns: The element that was moved. This value is `nil` if the `RESPValue` conversion failed.
     @inlinable
     public func rpoplpush<Value: RESPValueConvertible>(
@@ -601,7 +601,7 @@ extension RedisClient {
     ///     - source: The key of the list to pop from.
     ///     - dest: The key of the list to push to.
     ///     - timeout: The max time to wait for a value to use. `0` seconds means to wait indefinitely.
-    ///     - type: The type to convert the value to.
+    ///     - valueType: Type of the value.
     /// - Returns: The element popped from the source list and pushed to the destination.
     ///     If the timeout was reached or `RESPValue` conversion failed, the returned value will be `nil`.
     @inlinable
@@ -765,6 +765,7 @@ extension RedisClient {
     ///
     /// See [https://redis.io/commands/rpop](https://redis.io/commands/rpop)
     /// - Parameter key: The key of the list to pop from.
+    /// - Parameter type: The type of the value.
     /// - Returns: The element that was popped from the list. If the list is empty or the `RESPValue` conversion fails, this value is `nil`.
     @inlinable
     public func rpop<Value: RESPValueConvertible>(from key: RedisKey, as type: Value.Type) -> EventLoopFuture<Value?> {
@@ -1058,6 +1059,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    ///     - valueType: Type of the value.
     /// - Returns:
     ///     If timeout was reached or `RESPValue` conversion failed, `nil`.
     ///
@@ -1115,6 +1117,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - keys: The keys of lists in Redis that should be popped from.
     ///     - timeout: The max time to wait for a value to use. `0`seconds means to wait indefinitely.
+    ///     - valueType: The type of the value.
     /// - Returns:
     ///     If timeout was reached or `RESPValue` conversion failed, `nil`.
     ///

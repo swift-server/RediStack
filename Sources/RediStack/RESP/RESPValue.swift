@@ -181,6 +181,9 @@ extension EventLoopFuture where Value == RESPValue {
     /// This method is intended to be used much like a precondition in synchronous code, where a value is expected to be available from the `RESPValue`.
     /// - Important: If the `RESPValueConvertible` initializer fails, then the `NIO.EventLoopFuture` will fail.
     /// - Parameter to: The desired type to convert to.
+    /// - Parameter type: The resulting type.
+    /// - Parameter file: Source file location where the method was called.
+    /// - Parameter line: Source line location where the method was called.
     /// - Throws: `RedisClientError.failedRESPConversion(to:)`
     /// - Returns: A `NIO.EventLoopFuture` that resolves a value of the desired type or fails if the conversion does.
     @usableFromInline

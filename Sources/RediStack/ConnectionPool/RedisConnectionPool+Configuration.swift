@@ -117,6 +117,7 @@ extension RedisConnectionPool {
         ///         Subsequent backoffs are computed by compounding this value by `connectionBackoffFactor`.
         ///     - connectionRetryTimeout: The max time to wait for a connection to be available before failing a particular command or connection operation.
         ///         The default is 60 seconds.
+        ///     - onUnexpectedConnectionClose: Called when the connection unexpectedly is closed.
         ///     - poolDefaultLogger: The `Logger` used by the connection pool itself.
         public init(
             initialServerConnectionAddresses: [SocketAddress],

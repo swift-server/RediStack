@@ -93,7 +93,7 @@ extension RedisHashSlot: CustomStringConvertible {
 }
 
 extension RedisHashSlot {
-    /// Creates a slot for a given `key`. A ``HashSlot`` is used to determine which shard to connect to.
+    /// Creates a slot for a given `key`. A `HashSlot` is used to determine which shard to connect to.
     /// - Parameter key: The key used in a redis command
     public init(key: String) {
         // Banging is safe because the modulo ensures we are in range

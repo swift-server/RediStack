@@ -204,7 +204,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/srandmember](https://redis.io/commands/srandmember)
     /// - Parameters:
     ///     - key: The key of the set.
-    ///     - type; The type to convert the values to.
+    ///     - type: The type to convert the values to.
     ///     - count: The max number of elements to select from the set.
     /// - Returns: The elements randomly selected from the set. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
@@ -349,7 +349,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/sdiffstore](https://redis.io/commands/sdiffstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: The list of source sets to calculate the difference of.
+    ///     - keys: The list of source sets to calculate the difference of.
     /// - Returns: The number of elements in the difference result.
     public func sdiffstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
@@ -424,7 +424,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/sinterstore](https://redis.io/commands/sinterstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: A list of source sets to calculate the intersection of.
+    ///     - keys: A list of source sets to calculate the intersection of.
     /// - Returns: The number of elements in the intersection result.
     public func sinterstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
@@ -499,7 +499,7 @@ extension RedisClient {
     /// See [https://redis.io/commands/sunionstore](https://redis.io/commands/sunionstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: A list of source sets to calculate the union of.
+    ///     - keys: A list of source sets to calculate the union of.
     /// - Returns: The number of elements in the union result.
     public func sunionstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
