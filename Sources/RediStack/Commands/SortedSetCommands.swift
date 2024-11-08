@@ -1063,6 +1063,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the last element to not include in the returned values.
+    ///     - includeScores: If to include scores in the response.
     /// - Returns: An array of elements from the start of the SortedSet and up to the index.
     public func zrange(
         from key: RedisKey,
@@ -1082,6 +1083,7 @@ extension RedisClient {
     ///     - key: The key of the SortedSet
     ///     - firstIndex: The index of the first element to include in the range of elements returned.
     ///     - lastIndex: The index of the last element to include in the range of elements returned.
+    ///     - includeScores: If to include scores in the response.
     /// - Returns: An array of elements found within the range specified.
     public func zrevrange(
         from key: RedisKey,
@@ -1125,6 +1127,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - range: The range of inclusive indices of elements to get.
+    ///     - includeScores: If to include scores in the response.
     /// - Returns: An array of elements found within the range specified.
     public func zrevrange(
         from key: RedisKey,
@@ -1172,6 +1175,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - range: The range of indices (inclusive lower, exclusive upper) elements to get.
+    ///     - includeScores: If to include scores in the response.
     /// - Returns: An array of elements found within the range specified.
     public func zrevrange(
         from key: RedisKey,
@@ -1205,6 +1209,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key of the SortedSet to return elements from.
     ///     - index: The index of the first element that will be in the returned values.
+    ///     - includeScores: If to include scores in the response.
     /// - Returns: An array of elements from the SortedSet between the index and the end.
     public func zrevrange(
         from key: RedisKey,
