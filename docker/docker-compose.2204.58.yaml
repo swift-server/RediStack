@@ -16,7 +16,6 @@ services:
     image: redistack:22.04-5.8
     environment:
       - IMPORT_CHECK_ARG=--explicit-target-dependency-import-check error
-      #- SANITIZER_ARG=--sanitize=thread
 
   shell:
     image: redistack:22.04-5.8
