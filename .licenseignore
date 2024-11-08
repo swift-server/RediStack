@@ -34,3 +34,5 @@ Snippets/*
 dev/git.commit.template
 .unacceptablelanguageignore
 IntegrationTests/*.sh
+scripts/generate_contributors_list.sh
+scripts/generate_rediscommandencoder_multi_encode.sh
