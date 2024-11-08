@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,18 +20,18 @@ import XCTest
 final class RedisLoggingTests: RediStackIntegrationTestCase {
     func test_connectionUsesCustomLogger() throws {
         let handler = TestLogHandler()
-        let logger = Logger(label: #function, factory: { _ in return handler })
+        let logger = Logger(label: #function, factory: { _ in handler })
         _ = try self.connection
             .logging(to: logger)
             .ping()
             .wait()
         XCTAssertFalse(handler.messages.isEmpty)
     }
-    
+
     func test_connectionLoggerMetadata() throws {
         let handler = TestLogHandler()
-        let logger = Logger(label: #function, factory: { _ in return handler })
-        
+        let logger = Logger(label: #function, factory: { _ in handler })
+
         _ = try self.connection
             .logging(to: logger)
             .ping()
@@ -41,14 +41,16 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
             .string(self.connection.id.description)
         )
     }
-    
+
     func test_poolLoggerMetadata() throws {
         let handler = TestLogHandler()
-        let logger = Logger(label: #function, factory: { _ in return handler })
-        
+        let logger = Logger(label: #function, factory: { _ in handler })
+
         let pool = RedisConnectionPool(
             configuration: .init(
-                initialServerConnectionAddresses: [try .makeAddressResolvingHost(self.redisHostname, port: self.redisPort)],
+                initialServerConnectionAddresses: [
+                    try .makeAddressResolvingHost(self.redisHostname, port: self.redisPort)
+                ],
                 maximumConnectionCount: .maximumActiveConnections(1),
                 connectionFactoryConfiguration: .init(connectionPassword: self.redisPassword)
             ),
@@ -56,8 +58,9 @@ final class RedisLoggingTests: RediStackIntegrationTestCase {
         )
         defer { pool.close() }
         pool.activate()
-        
-        _ = try pool
+
+        _ =
+            try pool
             .logging(to: logger)
             .ping()
             .wait()
@@ -80,7 +83,14 @@ final class TestLogHandler: LogHandler {
         self.logLevel = .trace
     }
 
-    func log(level: Logger.Level, message: Logger.Message, metadata: Logger.Metadata?, file: String, function: String, line: UInt) {
+    func log(
+        level: Logger.Level,
+        message: Logger.Message,
+        metadata: Logger.Metadata?,
+        file: String,
+        function: String,
+        line: UInt
+    ) {
         self.messages.append(message)
     }
 

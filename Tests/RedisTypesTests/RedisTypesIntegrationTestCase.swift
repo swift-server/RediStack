@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import class Foundation.ProcessInfo
 import RediStackTestUtils
+
+import class Foundation.ProcessInfo
 
 class RedisTypesIntegrationTestCase: RedisIntegrationTestCase {
     override var redisHostname: String {
-        return ProcessInfo.processInfo.environment["REDIS_URL"] ?? "localhost"
+        ProcessInfo.processInfo.environment["REDIS_URL"] ?? "localhost"
     }
     override var redisPassword: String? {
-        return ProcessInfo.processInfo.environment["REDIS_PW"]
+        ProcessInfo.processInfo.environment["REDIS_PW"]
     }
 }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2023 RediStack project authors
+// Copyright (c) 2019-2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,14 +12,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-import struct Foundation.UUID
-import struct Dispatch.DispatchTime
 import Atomics
 import Logging
 import Metrics
-import NIOCore
 import NIOConcurrencyHelpers
+import NIOCore
 import NIOPosix
+
+import struct Dispatch.DispatchTime
+import struct Foundation.UUID
 
 extension RedisConnection {
 
@@ -57,7 +58,8 @@ extension RedisConnection {
     ) -> EventLoopFuture<RedisConnection> {
         let client = client ?? .makeRedisTCPClient(group: eventLoop)
 
-        return client
+        return
+            client
             .connect(to: config.address)
             .flatMap {
                 let connection = RedisConnection(configuredRESPChannel: $0, backgroundLogger: config.defaultLogger)
@@ -86,12 +88,12 @@ extension RedisConnection {
 public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     /// A unique identifer to represent this connection.
     public let id = UUID()
-    public var eventLoop: EventLoop { return self.channel.eventLoop }
+    public var eventLoop: EventLoop { self.channel.eventLoop }
     /// Is the connection to Redis still open?
     public var isConnected: Bool {
         // `Channel.isActive` is set to false before the `closeFuture` resolves in cases where the channel might be
         // closed, or closing, before our state has been updated
-        return self.channel.isActive && self.state.isConnected
+        self.channel.isActive && self.state.isConnected
     }
     /// Is the connection currently subscribed for PubSub?
     ///
@@ -106,7 +108,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     /// - Important: Even when set to `true`, the host machine may still choose to delay sending commands.
     /// - Note: Setting this to `true` will immediately drain the buffer.
     public var sendCommandsImmediately: Bool {
-        get { return autoflush.load(ordering: .sequentiallyConsistent) }
+        get { autoflush.load(ordering: .sequentiallyConsistent) }
         set(newValue) {
             if newValue { self.channel.flush() }
             autoflush.store(newValue, ordering: .sequentiallyConsistent)
@@ -122,10 +124,13 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
             self.allowPubSub.store(newValue, ordering: .sequentiallyConsistent)
             // if we're subscribed, and we're not allowed to be in pubsub, end our subscriptions
             guard self.isSubscribed && !self.allowPubSub.load(ordering: .sequentiallyConsistent) else { return }
-            _ = EventLoopFuture<Void>.whenAllComplete([
-                self.unsubscribe(),
-                self.punsubscribe()
-            ], on: self.eventLoop)
+            _ = EventLoopFuture<Void>.whenAllComplete(
+                [
+                    self.unsubscribe(),
+                    self.punsubscribe(),
+                ],
+                on: self.eventLoop
+            )
         }
     }
     /// A closure to invoke when the connection closes unexpectedly.
@@ -142,7 +147,7 @@ public final class RedisConnection: RedisClient, RedisClientWithUserContext {
     private let _stateLock = NIOLock()
     private var _state = ConnectionState.open
     private var state: ConnectionState {
-        get { return _stateLock.withLock { self._state } }
+        get { _stateLock.withLock { self._state } }
         set(newValue) { _stateLock.withLockVoid { self._state = newValue } }
     }
 
@@ -237,7 +242,7 @@ extension RedisConnection {
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the command's result stored in a `RESPValue`.
     ///     If a `RedisError` is returned, the future will be failed instead.
     public func send(command: String, with arguments: [RESPValue]) -> EventLoopFuture<RESPValue> {
-        return self.send(command: command, with: arguments, logger: nil)
+        self.send(command: command, with: arguments, logger: nil)
     }
 
     internal func send(
@@ -270,10 +275,13 @@ extension RedisConnection {
         }
         logger.trace("received command request")
 
-        logger.debug("sending command", metadata: [
-            RedisLogging.MetadataKeys.commandKeyword: "\(command)",
-            RedisLogging.MetadataKeys.commandArguments: "\(arguments)"
-        ])
+        logger.debug(
+            "sending command",
+            metadata: [
+                RedisLogging.MetadataKeys.commandKeyword: "\(command)",
+                RedisLogging.MetadataKeys.commandArguments: "\(arguments)",
+            ]
+        )
 
         var message: [RESPValue] = [.init(bulk: command)]
         message.append(contentsOf: arguments)
@@ -292,14 +300,20 @@ extension RedisConnection {
             // log data based on the result
             switch result {
             case let .failure(error):
-                logger.error("command failed", metadata: [
-                    RedisLogging.MetadataKeys.error: "\(error.loggableDescription)"
-                ])
+                logger.error(
+                    "command failed",
+                    metadata: [
+                        RedisLogging.MetadataKeys.error: "\(error.loggableDescription)"
+                    ]
+                )
 
             case let .success(value):
-                logger.debug("command succeeded", metadata: [
-                    RedisLogging.MetadataKeys.commandResult: "\(value)"
-                ])
+                logger.debug(
+                    "command succeeded",
+                    metadata: [
+                        RedisLogging.MetadataKeys.commandResult: "\(value)"
+                    ]
+                )
             }
         }
 
@@ -344,9 +358,12 @@ extension RedisConnection {
         self.channel.triggerUserOutboundEvent(RedisGracefulConnectionCloseEvent(), promise: closePromise)
 
         closeFuture.whenFailure {
-            logger.error("error while closing connection", metadata: [
-                RedisLogging.MetadataKeys.error: "\($0)"
-            ])
+            logger.error(
+                "error while closing connection",
+                metadata: [
+                    RedisLogging.MetadataKeys.error: "\($0)"
+                ]
+            )
         }
         closeFuture.whenSuccess {
             logger.trace("connection is now closed")
@@ -360,7 +377,7 @@ extension RedisConnection {
 
 extension RedisConnection {
     public func logging(to logger: Logger) -> RedisClient {
-        return UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
+        UserContextRedisClient(client: self, logger: self.prepareLoggerForUse(logger))
     }
 
     private func prepareLoggerForUse(_ logger: Logger?) -> Logger {
@@ -379,7 +396,7 @@ extension RedisConnection {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler?,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, nil)
+        self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, nil)
     }
 
     public func psubscribe(
@@ -388,7 +405,7 @@ extension RedisConnection {
         onSubscribe subscribeHandler: RedisSubscriptionChangeHandler? = nil,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler? = nil
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, nil)
+        self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, nil)
     }
 
     internal func subscribe(
@@ -398,7 +415,7 @@ extension RedisConnection {
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, logger)
+        self._subscribe(.channels(channels), receiver, subscribeHandler, unsubscribeHandler, logger)
     }
 
     internal func psubscribe(
@@ -408,7 +425,7 @@ extension RedisConnection {
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         logger: Logger?
     ) -> EventLoopFuture<Void> {
-        return self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, logger)
+        self._subscribe(.patterns(patterns), receiver, subscribeHandler, unsubscribeHandler, logger)
     }
 
     private func _subscribe(
@@ -430,9 +447,12 @@ extension RedisConnection {
             return self.eventLoop.makeFailedFuture(RedisClientError.pubsubNotAllowed)
         }
 
-        logger.trace("adding subscription", metadata: [
-            RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
-        ])
+        logger.trace(
+            "adding subscription",
+            metadata: [
+                RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
+            ]
+        )
 
         // if we're in pubsub mode already, great - add the subscriptions
         guard case let .pubsub(handler) = self.state else {
@@ -442,8 +462,14 @@ extension RedisConnection {
                 .addRedisPubSubHandler()
                 .flatMap { handler in
                     logger.trace("handler added, adding subscription")
-                    return handler
-                        .addSubscription(for: target, messageReceiver: receiver, onSubscribe: onSubscribe, onUnsubscribe: onUnsubscribe)
+                    return
+                        handler
+                        .addSubscription(
+                            for: target,
+                            messageReceiver: receiver,
+                            onSubscribe: onSubscribe,
+                            onUnsubscribe: onUnsubscribe
+                        )
                         .flatMapError { error in
                             logger.debug(
                                 "failed to add subscriptions that triggered pubsub mode. removing handler",
@@ -471,8 +497,14 @@ extension RedisConnection {
         }
 
         // add the subscription and just ignore the subscription count
-        return handler
-            .addSubscription(for: target, messageReceiver: receiver, onSubscribe: onSubscribe, onUnsubscribe: onUnsubscribe)
+        return
+            handler
+            .addSubscription(
+                for: target,
+                messageReceiver: receiver,
+                onSubscribe: onSubscribe,
+                onUnsubscribe: onUnsubscribe
+            )
             .map { _ in logger.trace("subscription added") }
     }
 }
@@ -481,19 +513,19 @@ extension RedisConnection {
 
 extension RedisConnection {
     public func unsubscribe(from channels: [RedisChannelName]) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.channels(channels), nil)
+        self._unsubscribe(.channels(channels), nil)
     }
 
     public func punsubscribe(from patterns: [String]) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.patterns(patterns), nil)
+        self._unsubscribe(.patterns(patterns), nil)
     }
 
     internal func unsubscribe(from channels: [RedisChannelName], logger: Logger?) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.channels(channels), logger)
+        self._unsubscribe(.channels(channels), logger)
     }
 
     internal func punsubscribe(from patterns: [String], logger: Logger?) -> EventLoopFuture<Void> {
-        return self._unsubscribe(.patterns(patterns), logger)
+        self._unsubscribe(.patterns(patterns), logger)
     }
 
     private func _unsubscribe(_ target: RedisSubscriptionTarget, _ logger: Logger?) -> EventLoopFuture<Void> {
@@ -507,25 +539,34 @@ extension RedisConnection {
         // if we're not in pubsub mode, then we just succeed as a no-op
         guard case let .pubsub(handler) = self.state else {
             // but we still assert just to give some notification to devs at debug
-            logger.notice("received request to unsubscribe while not in pubsub mode", metadata: [
-                RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
-            ])
+            logger.notice(
+                "received request to unsubscribe while not in pubsub mode",
+                metadata: [
+                    RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
+                ]
+            )
             return self.eventLoop.makeSucceededFuture(())
         }
 
-        logger.trace("removing subscription", metadata: [
-            RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
-        ])
+        logger.trace(
+            "removing subscription",
+            metadata: [
+                RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
+            ]
+        )
 
         // remove the subscription
         return handler.removeSubscription(for: target)
             .flatMap {
                 // if we still have subscriptions, just succeed this request
                 guard $0 == 0 else {
-                    logger.debug("subscription removed, but still have active subscription count", metadata: [
-                        RedisLogging.MetadataKeys.subscriptionCount: "\($0)",
-                        RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)"
-                    ])
+                    logger.debug(
+                        "subscription removed, but still have active subscription count",
+                        metadata: [
+                            RedisLogging.MetadataKeys.subscriptionCount: "\($0)",
+                            RedisLogging.MetadataKeys.pubsubTarget: "\(target.debugDescription)",
+                        ]
+                    )
                     return self.eventLoop.makeSucceededFuture(())
                 }
                 logger.debug("subscription removed, with no current active subscriptions. leaving pubsub mode")

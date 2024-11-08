@@ -3,7 +3,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2023 RediStack project authors
+// Copyright (c) 2019-2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -20,12 +20,12 @@ let package = Package(
     products: [
         .library(name: "RediStack", targets: ["RediStack"]),
         .library(name: "RediStackTestUtils", targets: ["RediStackTestUtils"]),
-        .library(name: "RedisTypes", targets: ["RedisTypes"])
+        .library(name: "RedisTypes", targets: ["RedisTypes"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-atomics.git", from: "1.1.0"),
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
-        .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0" ..< "3.0.0"),
+        .package(url: "https://github.com/apple/swift-metrics.git", "1.0.0"..<"3.0.0"),
         .package(url: "https://github.com/apple/swift-nio.git", from: "2.43.0"),
         .package(url: "https://github.com/apple/swift-nio-ssl.git", from: "2.23.1"),
     ],
@@ -40,7 +40,7 @@ let package = Package(
                 .product(name: "NIOSSL", package: "swift-nio-ssl"),
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "Logging", package: "swift-log"),
-                .product(name: "Metrics", package: "swift-metrics")
+                .product(name: "Metrics", package: "swift-metrics"),
             ]
         ),
         .target(name: "RedisTypes", dependencies: ["RediStack"]),
@@ -49,13 +49,13 @@ let package = Package(
             dependencies: [
                 .product(name: "NIOCore", package: "swift-nio"),
                 .product(name: "NIOEmbedded", package: "swift-nio"),
-                "RediStack"
+                "RediStack",
             ]
         ),
         .target(
             name: "RESP3",
             dependencies: [
-                .product(name: "NIOCore", package: "swift-nio"),
+                .product(name: "NIOCore", package: "swift-nio")
             ]
         ),
         .testTarget(
@@ -65,14 +65,14 @@ let package = Package(
                 "RediStackTestUtils",
                 .product(name: "Atomics", package: "swift-atomics"),
                 .product(name: "NIO", package: "swift-nio"),
-                .product(name: "NIOTestUtils", package: "swift-nio")
+                .product(name: "NIOTestUtils", package: "swift-nio"),
             ]
         ),
         .testTarget(
             name: "RedisTypesTests",
             dependencies: [
                 "RediStack", "RedisTypes", "RediStackTestUtils",
-                .product(name: "NIO", package: "swift-nio")
+                .product(name: "NIO", package: "swift-nio"),
             ]
         ),
         .testTarget(
@@ -88,8 +88,8 @@ let package = Package(
             name: "RediStackIntegrationTests",
             dependencies: [
                 "RediStack", "RediStackTestUtils",
-                .product(name: "NIO", package: "swift-nio")
+                .product(name: "NIO", package: "swift-nio"),
             ]
-        )
+        ),
     ]
 )

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2022 RediStack project authors
+// Copyright (c) 2019-2022 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -21,7 +21,7 @@ extension TimeAmount {
     /// The seconds representation of the TimeAmount.
     @usableFromInline
     internal var seconds: Int64 {
-        return self.nanoseconds / 1_000_000_000
+        self.nanoseconds / 1_000_000_000
     }
 }
 
@@ -60,14 +60,14 @@ extension ChannelPipeline {
         let handlers: [(ChannelHandler, name: String)] = [
             (MessageToByteHandler(RedisMessageEncoder()), "RediStack.OutgoingHandler"),
             (ByteToMessageHandler(RedisByteDecoder()), "RediStack.IncomingHandler"),
-            (RedisCommandHandler(), "RediStack.CommandHandler")
+            (RedisCommandHandler(), "RediStack.CommandHandler"),
         ]
         return .andAllSucceed(
             handlers.map { self.addHandler($0, name: $1) },
             on: self.eventLoop
         )
     }
-    
+
     /// Adds the channel handler that is responsible for handling everything related to Redis PubSub.
     /// - Important: The connection that manages this channel is responsible for removing the `RedisPubSubHandler`.
     ///
@@ -110,7 +110,7 @@ extension ChannelPipeline {
     public func addRedisPubSubHandler() -> EventLoopFuture<RedisPubSubHandler> {
         // first try to return the handler that already exists in the pipeline
 
-        return self.handler(type: RedisPubSubHandler.self)
+        self.handler(type: RedisPubSubHandler.self)
             .flatMapError {
                 // if it doesn't exist, add it to the pipeline
                 guard
@@ -155,7 +155,7 @@ extension ClientBootstrap {
     /// - Parameter group: The `EventLoopGroup` to create the `ClientBootstrap` with.
     /// - Returns: A TCP connection with the base configuration of a `Channel` pipeline for RESP messages.
     public static func makeRedisTCPClient(group: EventLoopGroup) -> ClientBootstrap {
-        return ClientBootstrap(group: group)
+        ClientBootstrap(group: group)
             .channelOption(
                 ChannelOptions.socket(SocketOptionLevel(SOL_SOCKET), SO_REUSEADDR),
                 value: 1

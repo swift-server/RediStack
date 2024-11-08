@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-import struct Foundation.Data
 import NIOCore
+
+import struct Foundation.Data
 
 /// A representation of a Redis Serialization Protocol (RESP) primitive value.
 ///
@@ -42,7 +43,8 @@ public enum RESPValue {
         self = value.convertedToRESPValue()
     }
 
-    /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString` and `.bulkString` representations directly, if needed.
+    /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString`
+    /// and `.bulkString` representations directly, if needed.
     internal static let allocator = ByteBufferAllocator()
 
     /// Initializes a `bulkString` value.
@@ -53,7 +55,7 @@ public enum RESPValue {
             self = .bulkString(nil)
             return
         }
-        
+
         var buffer = RESPValue.allocator.buffer(capacity: unwrappedValue.count)
         buffer.writeString(unwrappedValue)
         self = .bulkString(buffer)
@@ -74,15 +76,19 @@ extension RESPValue: CustomStringConvertible {
     public var description: String {
         switch self {
         case let .simpleString(buffer),
-             let .bulkString(.some(buffer)):
-            guard let value = String(fromRESP: self) else { return "\(buffer)" } // default to ByteBuffer's representation
+            let .bulkString(.some(buffer)):
+            guard let value = String(fromRESP: self) else {
+                // default to ByteBuffer's representation
+                return "\(buffer)"
+            }
+
             return value
 
         // .integer, .error, and .bulkString(.none) conversions to String always succeed
         case .integer,
-             .bulkString(.none):
+            .bulkString(.none):
             return String(fromRESP: self)!
-            
+
         case .null: return "NULL"
         case let .error(e): return e.message
         case let .array(elements): return "[\(elements.map({ $0.description }).joined(separator: ","))]"
@@ -95,11 +101,11 @@ extension RESPValue: CustomStringConvertible {
 extension RESPValue {
     /// The unwrapped value for `.array` representations.
     /// - Note: This is a shorthand for `Array<RESPValue>.init(fromRESP:)`
-    public var array: [RESPValue]? { return [RESPValue](fromRESP: self) }
+    public var array: [RESPValue]? { [RESPValue](fromRESP: self) }
 
     /// The unwrapped value as an `Int`.
     /// - Note: This is a shorthand for `Int(fromRESP:)`.
-    public var int: Int? { return Int(fromRESP: self) }
+    public var int: Int? { Int(fromRESP: self) }
 
     /// Returns `true` if the unwrapped value is `.null`.
     public var isNull: Bool {
@@ -109,13 +115,14 @@ extension RESPValue {
 
     /// The unwrapped `RedisError` that was returned from Redis.
     /// - Note: This is a shorthand for `RedisError(fromRESP:)`.
-    public var error: RedisError? { return RedisError(fromRESP: self) }
+    public var error: RedisError? { RedisError(fromRESP: self) }
 
     /// The unwrapped `NIO.ByteBuffer` for `.simpleString` or `.bulkString` representations.
     public var byteBuffer: ByteBuffer? {
         switch self {
         case let .simpleString(buffer),
-             let .bulkString(.some(buffer)): return buffer
+            let .bulkString(.some(buffer)):
+            return buffer
 
         default: return nil
         }
@@ -127,15 +134,15 @@ extension RESPValue {
 extension RESPValue {
     /// The value as a UTF-8 `String` representation.
     /// - Note: This is a shorthand for `String.init(fromRESP:)`.
-    public var string: String? { return String(fromRESP: self) }
-    
+    public var string: String? { String(fromRESP: self) }
+
     /// The data stored in either a `.simpleString` or `.bulkString` represented as `Foundation.Data` instead of `NIO.ByteBuffer`.
     /// - Note: This is a shorthand for `Data.init(fromRESP:)`.
-    public var data: Data? { return Data(fromRESP: self) }
-    
+    public var data: Data? { Data(fromRESP: self) }
+
     /// The raw bytes stored in the `.simpleString` or `.bulkString` representations.
     /// - Note: This is a shorthand for `Array<UInt8>.init(fromRESP:)`.
-    public var bytes: [UInt8]? { return [UInt8](fromRESP: self) }
+    public var bytes: [UInt8]? { [UInt8](fromRESP: self) }
 }
 
 // MARK: Equatable
@@ -162,13 +169,11 @@ extension RESPValue: RESPValueConvertible {
     }
 
     public func convertedToRESPValue() -> RESPValue {
-        return self
+        self
     }
 }
 
 // MARK: EventLoopFuture Extensions
-
-import NIOCore
 
 extension EventLoopFuture where Value == RESPValue {
     /// Attempts to convert the resolved RESPValue to the desired type.
@@ -176,6 +181,9 @@ extension EventLoopFuture where Value == RESPValue {
     /// This method is intended to be used much like a precondition in synchronous code, where a value is expected to be available from the `RESPValue`.
     /// - Important: If the `RESPValueConvertible` initializer fails, then the `NIO.EventLoopFuture` will fail.
     /// - Parameter to: The desired type to convert to.
+    /// - Parameter type: The resulting type.
+    /// - Parameter file: Source file location where the method was called.
+    /// - Parameter line: Source line location where the method was called.
     /// - Throws: `RedisClientError.failedRESPConversion(to:)`
     /// - Returns: A `NIO.EventLoopFuture` that resolves a value of the desired type or fails if the conversion does.
     @usableFromInline
@@ -184,7 +192,7 @@ extension EventLoopFuture where Value == RESPValue {
         file: StaticString = #file,
         line: UInt = #line
     ) -> EventLoopFuture<T> {
-        return self.flatMapThrowing {
+        self.flatMapThrowing {
             guard let value = T(fromRESP: $0) else {
                 throw RedisClientError.failedRESPConversion(to: type)
             }
@@ -200,16 +208,18 @@ extension RangeReplaceableCollection where Element == RESPValue {
     /// - Note: This method guarantees that only one storage expansion will happen to copy the elements.
     /// - Parameters elementsToCopy: The collection of elements to convert to `RESPValue` and append to the array.
     public mutating func append<ValueCollection>(convertingContentsOf elementsToCopy: ValueCollection)
-        where
+    where
         ValueCollection: Collection,
         ValueCollection.Element: RESPValueConvertible
     {
         guard elementsToCopy.count > 0 else { return }
-        
+
         self.reserveCapacity(self.count + elementsToCopy.count)
-        elementsToCopy.forEach { self.append($0.convertedToRESPValue()) }
+        for element in elementsToCopy {
+            self.append(element.convertedToRESPValue())
+        }
     }
-    
+
     /// Adds the elements of a collection to this array, delegating the details of how they are added to the given closure.
     ///
     /// When your closure will be doing more than a simple transform of the element value, such as when you're adding both the key _and_ value from a `KeyValuePair`,
@@ -250,11 +260,13 @@ extension RangeReplaceableCollection where Element == RESPValue {
         _ closure: (inout Self, ValueCollection.Element) -> Void
     ) {
         guard elementsToCopy.count > 0 else { return }
-        
+
         let sizeToAdd = overestimatedCountBeingAdded ?? elementsToCopy.count
         self.reserveCapacity(self.count + sizeToAdd)
-        
-        elementsToCopy.forEach { closure(&self, $0) }
+
+        for element in elementsToCopy {
+            closure(&self, element)
+        }
     }
 }
 
@@ -266,20 +278,19 @@ extension Collection where Element == RESPValue {
     /// - Returns: An array of the results from the conversions.
     @inlinable
     public func map<T: RESPValueConvertible>(as t1: T.Type) -> [T?] {
-        return self.map(T.init(fromRESP:))
+        self.map(T.init(fromRESP:))
     }
-    
+
     /// Maps the first element to the type sepcified, with all remaining elements mapped to the second type.
     @inlinable
     public func map<T1, T2>(firstAs t1: T1.Type, remainingAs t2: T2.Type) -> (T1?, [T2?])
-        where T1: RESPValueConvertible, T2: RESPValueConvertible
-    {
+    where T1: RESPValueConvertible, T2: RESPValueConvertible {
         guard self.count > 1 else { return (nil, []) }
         let first = self.first.map(T1.init(fromRESP:)) ?? nil
         let remaining = self.dropFirst().map(T2.init(fromRESP:))
         return (first, remaining)
     }
-    
+
     /// Maps the first and second elements to the types specified, with any remaining mapped to the third type.
     @inlinable
     public func map<T1, T2, T3>(
@@ -287,15 +298,14 @@ extension Collection where Element == RESPValue {
         _ t2: T2.Type,
         remainingAs t3: T3.Type
     ) -> (T1?, T2?, [T3?])
-        where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible
-    {
+    where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible {
         guard self.count > 2 else { return (nil, nil, []) }
         let first = self.first.map(T1.init(fromRESP:)) ?? nil
         let second = T2.init(fromRESP: self[self.index(after: self.startIndex)])
         let remaining = self.dropFirst(2).map(T3.init(fromRESP:))
         return (first, second, remaining)
     }
-    
+
     /// Maps the first, second, and third elements to the types specified, with any remaining mapped to the fourth type.
     @inlinable
     public func map<T1, T2, T3, T4>(
@@ -304,8 +314,7 @@ extension Collection where Element == RESPValue {
         _ t3: T3.Type,
         remainingAs t4: T4.Type
     ) -> (T1?, T2?, T3?, [T4?])
-        where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible, T4: RESPValueConvertible
-    {
+    where T1: RESPValueConvertible, T2: RESPValueConvertible, T3: RESPValueConvertible, T4: RESPValueConvertible {
         guard self.count > 3 else { return (nil, nil, nil, []) }
 
         let firstIndex = self.startIndex
@@ -320,4 +329,3 @@ extension Collection where Element == RESPValue {
         return (first, second, third, remaining)
     }
 }
-

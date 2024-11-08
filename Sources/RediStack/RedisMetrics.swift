@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -39,7 +39,7 @@ public struct RedisMetrics {
         case commandRoundTripTime
 
         public var description: String {
-            return "RediStack.\(self.rawValue)"
+            "RediStack.\(self.rawValue)"
         }
     }
 
@@ -63,7 +63,7 @@ public struct RedisMetrics {
     /// is first sent through the `NIO.Channel`, to when the response is first resolved.
     public static let commandRoundTripTime = Timer(label: .commandRoundTripTime)
 
-    private init() { }
+    private init() {}
 }
 
 extension RedisMetrics {
@@ -71,28 +71,28 @@ extension RedisMetrics {
     public class IncrementalGauge {
         private let gauge: Gauge
         private let count = ManagedAtomic<Int>(0)
-        
+
         /// The number of the objects that are currently reported as active.
-        public var currentCount: Int { return count.load(ordering: .sequentiallyConsistent) }
-        
+        public var currentCount: Int { count.load(ordering: .sequentiallyConsistent) }
+
         internal init(_ label: Label) {
             self.gauge = .init(label: label)
         }
-        
+
         /// Increments the current count by the amount specified.
         /// - Parameter amount: The number to increase the current count by. Default is `1`.
         public func increment(by amount: Int = 1) {
             self.count.wrappingIncrement(by: amount, ordering: .sequentiallyConsistent)
             self.gauge.record(self.count.load(ordering: .sequentiallyConsistent))
         }
-        
+
         /// Decrements the current count by the amount specified.
         /// - Parameter amount: The number to decrease the current count by. Default is `1`.
         public func decrement(by amount: Int = 1) {
             self.count.wrappingDecrement(by: amount, ordering: .sequentiallyConsistent)
             self.gauge.record(self.count.load(ordering: .sequentiallyConsistent))
         }
-        
+
         /// Resets the current count to `0`.
         public func reset() {
             _ = self.count.exchange(0, ordering: .sequentiallyConsistent)

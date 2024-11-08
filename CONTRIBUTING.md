@@ -22,7 +22,7 @@ When adding a new file to the project, add the following heading to the top of t
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -37,7 +37,7 @@ When editing a file, ensure that the copyright header states the year `2019-<cur
 
 ### Git Workflow
 
-`master` is always the development branch.
+`main` is always the development branch.
 
 For **minor** or **patch** SemVer changes, create a branch off of the tagged commit.
 

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -35,7 +35,7 @@ public protocol RedisClusterNodeDescriptionProtocol: Sendable, Equatable {
 
 extension RedisClusterNodeDescriptionProtocol {
     func isSame<Other: RedisClusterNodeDescriptionProtocol>(_ other: Other) -> Bool {
-        return self.ip == other.ip
+        self.ip == other.ip
             && self.port == other.port
             && self.endpoint == other.endpoint
             && self.useTLS == other.useTLS

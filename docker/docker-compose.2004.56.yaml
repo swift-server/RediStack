@@ -15,7 +15,6 @@ services:
   test:
     image: redistack:20.04-5.6
     environment: []
-      #- SANITIZER_ARG=--sanitize=thread
 
   shell:
     image: redistack:20.04-5.6

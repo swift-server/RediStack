@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2020 RediStack project authors
+// Copyright (c) 2019-2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import RediStackTestUtils
 import XCTest
+
+@testable import RediStack
 
 final class RedisConnectionTests: RediStackIntegrationTestCase {
     func test_unexpectedChannelClose() throws {
@@ -22,14 +23,14 @@ final class RedisConnectionTests: RediStackIntegrationTestCase {
         try self.connection.channel.close().wait()
         XCTAssertFalse(self.connection.isConnected)
     }
-    
+
     func test_callingCloseMultipleTimes() throws {
         let first = self.connection.close()
         let second = self.connection.close()
         XCTAssertNotEqual(first, self.connection.channel.closeFuture)
         XCTAssertEqual(second, self.connection.channel.closeFuture)
     }
-    
+
     func test_sendingCommandAfterClosing() throws {
         self.connection.close()
         do {
@@ -65,13 +66,13 @@ extension RedisConnectionTests {
 
         _ = try connection.subscribe(
             to: #function,
-            messageReceiver:  { _, _ in },
+            messageReceiver: { _, _ in },
             onSubscribe: nil,
             onUnsubscribe: { _, _ in subscriptionClosedExpectation.fulfill() }
         ).wait()
         _ = try connection.psubscribe(
             to: #function,
-            messageReceiver:  { _, _ in },
+            messageReceiver: { _, _ in },
             onSubscribe: nil,
             onUnsubscribe: { _, _ in subscriptionClosedExpectation.fulfill() }
         ).wait()

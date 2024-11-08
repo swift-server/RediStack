@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020-2023 RediStack project authors
+// Copyright (c) 2020-2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -82,7 +82,7 @@ internal final class ConnectionPool {
     /// The number of connections that are "live": either in the pool, in the process of being created, or
     /// leased to users.
     private var activeConnectionCount: Int {
-        return self.availableConnections.count + self.pendingConnectionCount + self.leasedConnectionCount
+        self.availableConnections.count + self.pendingConnectionCount + self.leasedConnectionCount
     }
 
     /// Whether a connection can be added into the availableConnections pool when it's returned. This is true
@@ -160,7 +160,7 @@ internal final class ConnectionPool {
             return self._leaseConnection(deadline, logger: logger)
         } else {
             return self.loop.flatSubmit {
-                return self._leaseConnection(deadline, logger: logger)
+                self._leaseConnection(deadline, logger: logger)
             }
         }
     }
@@ -188,9 +188,12 @@ extension ConnectionPool {
         }
 
         var neededConnections = self.minimumConnectionCount - self.activeConnectionCount
-        logger.trace("refilling connections", metadata: [
-            RedisLogging.MetadataKeys.connectionCount: "\(neededConnections)"
-        ])
+        logger.trace(
+            "refilling connections",
+            metadata: [
+                RedisLogging.MetadataKeys.connectionCount: "\(neededConnections)"
+            ]
+        )
         while neededConnections > 0 {
             self._createConnection(backoff: self.initialBackoffDelay, startIn: .nanoseconds(0), logger: logger)
             neededConnections -= 1
@@ -221,10 +224,13 @@ extension ConnectionPool {
 
     private func connectionCreationSucceeded(_ connection: RedisConnection, logger: Logger) {
         self.loop.assertInEventLoop()
-        
-        logger.trace("connection creation succeeded", metadata: [
-            RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
-        ])
+
+        logger.trace(
+            "connection creation succeeded",
+            metadata: [
+                RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+            ]
+        )
 
         switch self.state {
         case .closing:
@@ -232,9 +238,12 @@ extension ConnectionPool {
             self.closeConnectionForShutdown(connection)
         case .closed:
             // This is programmer error, we shouldn't have entered this state.
-            logger.critical("new connection created on a closed pool", metadata: [
-                RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
-            ])
+            logger.critical(
+                "new connection created on a closed pool",
+                metadata: [
+                    RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+                ]
+            )
             preconditionFailure("In closed while pending connections were outstanding.")
         case .active:
             // Great, we want this. We'll be "returning" it to the pool. First,
@@ -247,13 +256,16 @@ extension ConnectionPool {
     private func connectionCreationFailed(_ error: Error, backoff: TimeAmount, logger: Logger) {
         self.loop.assertInEventLoop()
 
-        logger.error("failed to create connection for pool", metadata: [
-            RedisLogging.MetadataKeys.error: "\(error)"
-        ])
+        logger.error(
+            "failed to create connection for pool",
+            metadata: [
+                RedisLogging.MetadataKeys.error: "\(error)"
+            ]
+        )
 
         switch self.state {
         case .active:
-            break // continue further down
+            break  // continue further down
 
         case .closing(let remaining, let promise):
             if remaining == 1 {
@@ -278,10 +290,12 @@ extension ConnectionPool {
         // 3. For either kind, if the number of active connections is less than the minimum.
         let shouldReconnect: Bool
         if self.leaky {
-            shouldReconnect = (self.connectionWaiters.count > self.pendingConnectionCount)
+            shouldReconnect =
+                (self.connectionWaiters.count > self.pendingConnectionCount)
                 || (self.minimumConnectionCount > self.activeConnectionCount)
         } else {
-            shouldReconnect = (!self.connectionWaiters.isEmpty && self.maximumConnectionCount > self.activeConnectionCount)
+            shouldReconnect =
+                (!self.connectionWaiters.isEmpty && self.maximumConnectionCount > self.activeConnectionCount)
                 || (self.minimumConnectionCount > self.activeConnectionCount)
         }
 
@@ -292,10 +306,13 @@ extension ConnectionPool {
 
         // Ok, we need the new connection.
         let newBackoff = TimeAmount.nanoseconds(Int64(Float32(backoff.nanoseconds) * self.backoffFactor))
-        logger.debug("reconnecting after failed connection attempt", metadata: [
-            RedisLogging.MetadataKeys.poolConnectionRetryBackoff: "\(backoff)ns",
-            RedisLogging.MetadataKeys.poolConnectionRetryNewBackoff: "\(newBackoff)ns"
-        ])
+        logger.debug(
+            "reconnecting after failed connection attempt",
+            metadata: [
+                RedisLogging.MetadataKeys.poolConnectionRetryBackoff: "\(backoff)ns",
+                RedisLogging.MetadataKeys.poolConnectionRetryNewBackoff: "\(newBackoff)ns",
+            ]
+        )
         self._createConnection(backoff: newBackoff, startIn: backoff, logger: logger)
     }
 
@@ -381,9 +398,12 @@ extension ConnectionPool {
         // that yet, so double-check. Leave the dead ones there: we'll get them later.
         while let connection = self.availableConnections.popLast() {
             if connection.isConnected {
-                logger.trace("found available connection", metadata: [
-                    RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
-                ])
+                logger.trace(
+                    "found available connection",
+                    metadata: [
+                        RedisLogging.MetadataKeys.connectionID: "\(connection.id)"
+                    ]
+                )
                 self.leaseConnection(connection, to: waiter)
                 return waiter.futureResult
             }
@@ -511,11 +531,11 @@ extension ConnectionPool {
         private var result: EventLoopPromise<RedisConnection>
 
         var id: ObjectIdentifier {
-            return ObjectIdentifier(self.result.futureResult)
+            ObjectIdentifier(self.result.futureResult)
         }
 
         var futureResult: EventLoopFuture<RedisConnection> {
-            return self.result.futureResult
+            self.result.futureResult
         }
 
         init(result: EventLoopPromise<RedisConnection>) {

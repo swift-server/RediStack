@@ -26,20 +26,20 @@ function genWithContextParameter() {
 
     echo "    @inlinable"
     echo -n "    mutating func encodeRESPArray<T0: RESP3BlobStringEncodable"
-    for ((n = 1; n<$how_many; n +=1)); do
-        echo -n ", T$(($n)): RESP3BlobStringEncodable"
+    for ((n = 1; n<how_many; n +=1)); do
+        echo -n ", T$((n)): RESP3BlobStringEncodable"
     done
 
     echo -n ">(_ t0: T0"
-    for ((n = 1; n<$how_many; n +=1)); do
-        echo -n ", _ t$(($n)): T$(($n))"
+    for ((n = 1; n<how_many; n +=1)); do
+        echo -n ", _ t$((n)): T$((n))"
     done
     echo ") {"
 
-    echo "        self.buffer.writeBytes(\"*"$how_many"\\r\\n\".utf8)"
+  printf "        self.buffer.writeBytes(\"*%s\\r\\n\".utf8)\n" "$how_many"
 
-    for ((n = 0; n<$how_many; n +=1)); do
-        echo "        t$(($n)).encodeRedisBlobString(into: &self.buffer)"
+    for ((n = 0; n<how_many; n +=1)); do
+        echo "        t$((n)).encodeRedisBlobString(into: &self.buffer)"
     done
     echo "    }"
 }
@@ -55,7 +55,7 @@ cat <<"EOF"
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information

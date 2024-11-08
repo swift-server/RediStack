@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,9 +12,10 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import RediStackTestUtils
 import XCTest
+
+@testable import RediStack
 
 final class StringCommandsTests: RediStackIntegrationTestCase {
     private static let testKey = "SortedSetCommandsTests"
@@ -35,7 +36,9 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
 
     func test_mget() throws {
         let keys = ["one", "two"].map(RedisKey.init(_:))
-        try keys.forEach { _ = try connection.set($0, to: $0).wait() }
+        for key in keys {
+            _ = try connection.set(key, to: key).wait()
+        }
 
         let values = try connection.mget(keys + ["empty"]).wait()
         XCTAssertEqual(values.count, 3)
@@ -55,7 +58,10 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     func test_set_condition() throws {
         XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyExists).wait(), .conditionNotMet)
         XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyDoesNotExist).wait(), .ok)
-        XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyDoesNotExist).wait(), .conditionNotMet)
+        XCTAssertEqual(
+            try connection.set(#function, to: "value", onCondition: .keyDoesNotExist).wait(),
+            .conditionNotMet
+        )
         XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .keyExists).wait(), .ok)
         XCTAssertEqual(try connection.set(#function, to: "value", onCondition: .none).wait(), .ok)
     }
@@ -157,7 +163,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     func test_mset() throws {
         let data: [RedisKey: Int] = [
             "first": 1,
-            "second": 2
+            "second": 2,
         ]
         XCTAssertNoThrow(try connection.mset(data).wait())
         let values = try connection.mget(["first", "second"]).wait().compactMap { $0.string }
@@ -173,7 +179,7 @@ final class StringCommandsTests: RediStackIntegrationTestCase {
     func test_msetnx() throws {
         let data: [RedisKey: Int] = [
             "first": 1,
-            "second": 2
+            "second": 2,
         ]
         var success = try connection.msetnx(data).wait()
         XCTAssertEqual(success, true)

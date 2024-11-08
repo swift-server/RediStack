@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020-2022 RediStack project authors
+// Copyright (c) 2020-2022 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -72,7 +72,7 @@ extension RedisConnection {
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
-        
+
         return self.make(configuration: config, boundEventLoop: eventLoop, configuredTCPClient: tcpClient)
     }
 }
@@ -104,8 +104,8 @@ extension RedisConnectionPool {
         loop: EventLoop,
         maximumConnectionCount: RedisConnectionPoolSize,
         minimumConnectionCount: Int = 1,
-        connectionPassword: String? = nil, // config
-        connectionLogger: Logger = .redisBaseConnectionLogger, // config
+        connectionPassword: String? = nil,  // config
+        connectionLogger: Logger = .redisBaseConnectionLogger,  // config
         connectionTCPClient: ClientBootstrap? = nil,
         poolLogger: Logger = .redisBaseConnectionPoolLogger,
         connectionBackoffFactor: Float32 = 2,
@@ -144,11 +144,11 @@ extension RedisKey.Lifetime {
 extension Channel {
     @available(*, deprecated, renamed: "pipeline.addBaseRedisHandlers()")
     public func addBaseRedisHandlers() -> EventLoopFuture<Void> {
-        return self.pipeline.addBaseRedisHandlers()
+        self.pipeline.addBaseRedisHandlers()
     }
 
     @available(*, deprecated, renamed: "pipeline.addRedisPubSubHandler()")
     public func addPubSubHandler() -> EventLoopFuture<RedisPubSubHandler> {
-        return self.pipeline.addRedisPubSubHandler()
+        self.pipeline.addRedisPubSubHandler()
     }
 }

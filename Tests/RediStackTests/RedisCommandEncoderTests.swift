@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,8 +13,9 @@
 //===----------------------------------------------------------------------===//
 
 import NIOCore
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisCommandEncoderTests: XCTestCase {
 
@@ -61,7 +62,6 @@ final class RedisCommandEncoderTests: XCTestCase {
         self.encoder.encodeRESPArray("SET", "key", "value", "NX", "GET", "EX", "60")
         var buffer = self.encoder.buffer
 
-
         var resp: RESPValue?
         XCTAssertNoThrow(resp = try RESPTranslator().parseBytes(from: &buffer))
         let expected = RESPValue.array([
@@ -71,7 +71,7 @@ final class RedisCommandEncoderTests: XCTestCase {
             .bulkString(.init(string: "NX")),
             .bulkString(.init(string: "GET")),
             .bulkString(.init(string: "EX")),
-            .bulkString(.init(string: "60"))
+            .bulkString(.init(string: "60")),
         ])
         XCTAssertEqual(resp, expected)
     }

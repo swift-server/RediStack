@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -19,7 +19,7 @@ extension RedisConnection {
     /// A default hostname of `localhost` to try and connect to Redis at.
     @available(*, deprecated, message: "Use RedisConnection.Configuration.defaultHostname")
     public static let defaultHostname = "localhost"
-    
+
     /// Creates a connection intended for tests using `REDIS_URL` and `REDIS_PW` environment variables if available.
     ///
     /// The default URL is `127.0.0.1` while the default port is `RedisConnection.defaultPort`.
@@ -27,7 +27,9 @@ extension RedisConnection {
     /// If `REDIS_PW` is not defined, no authentication will happen on the connection.
     /// - Parameters:
     ///     - eventLoop: The event loop that the connection should execute on.
+    ///     - host: the host to connect to.
     ///     - port: The port to connect on.
+    ///     - password: The optional password to use while connecting.
     /// - Returns: A `NIO.EventLoopFuture` that resolves with the new connection.
     @available(*, deprecated, message: "Use RedisConnection.make(configuration:boundEventLoop:) method")
     public static func connect(
@@ -42,7 +44,7 @@ extension RedisConnection {
         } catch {
             return eventLoop.makeFailedFuture(error)
         }
-        
+
         return RedisConnection.connect(to: address, on: eventLoop, password: password)
     }
 }

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019 RediStack project authors
+// Copyright (c) 2019 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -30,7 +30,7 @@ extension RedisClient {
         return send(command: "SMEMBERS", with: args)
             .tryConverting()
     }
-    
+
     /// Gets all of the elements contained in a set.
     /// - Note: Ordering of results are stable between multiple calls of this method to the same set.
     ///
@@ -42,9 +42,12 @@ extension RedisClient {
     ///     - type: The type to convert the values to.
     /// - Returns: A list of elements found within the set. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func smembers<Value: RESPValueConvertible>(of key: RedisKey, as type: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.smembers(of: key)
-            .map { return $0.map(Value.init(fromRESP:)) }
+    public func smembers<Value: RESPValueConvertible>(
+        of key: RedisKey,
+        as type: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.smembers(of: key)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Checks if the element is included in a set.
@@ -58,11 +61,11 @@ extension RedisClient {
     public func sismember<Value: RESPValueConvertible>(_ element: Value, of key: RedisKey) -> EventLoopFuture<Bool> {
         let args: [RESPValue] = [
             .init(from: key),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "SISMEMBER", with: args)
             .tryConverting(to: Int.self)
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     /// Gets the total count of elements within a set.
@@ -86,14 +89,14 @@ extension RedisClient {
     @inlinable
     public func sadd<Value: RESPValueConvertible>(_ elements: [Value], to key: RedisKey) -> EventLoopFuture<Int> {
         guard elements.count > 0 else { return self.eventLoop.makeSucceededFuture(0) }
-        
+
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
 
         return send(command: "SADD", with: args)
             .tryConverting()
     }
-    
+
     /// Adds elements to a set.
     ///
     /// See [https://redis.io/commands/sadd](https://redis.io/commands/sadd)
@@ -103,7 +106,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were added to the set.
     @inlinable
     public func sadd<Value: RESPValueConvertible>(_ elements: Value..., to key: RedisKey) -> EventLoopFuture<Int> {
-        return self.sadd(elements, to: key)
+        self.sadd(elements, to: key)
     }
 
     /// Removes elements from a set.
@@ -119,11 +122,11 @@ extension RedisClient {
 
         var args: [RESPValue] = [.init(from: key)]
         args.append(convertingContentsOf: elements)
-        
+
         return send(command: "SREM", with: args)
             .tryConverting()
     }
-    
+
     /// Removes elements from a set.
     ///
     /// See [https://redis.io/commands/srem](https://redis.io/commands/srem)
@@ -133,7 +136,7 @@ extension RedisClient {
     /// - Returns: The number of elements that were removed from the set.
     @inlinable
     public func srem<Value: RESPValueConvertible>(_ elements: Value..., from key: RedisKey) -> EventLoopFuture<Int> {
-        return self.srem(elements, from: key)
+        self.srem(elements, from: key)
     }
 
     /// Randomly selects and removes one or more elements in a set.
@@ -147,10 +150,10 @@ extension RedisClient {
         assert(count >= 0, "A negative max count is nonsense.")
 
         guard count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
-        
+
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: count)
+            .init(bulk: count),
         ]
         return send(command: "SPOP", with: args)
             .tryConverting()
@@ -170,8 +173,8 @@ extension RedisClient {
         as type: Value.Type,
         max count: Int = 1
     ) -> EventLoopFuture<[Value?]> {
-        return self.spop(from: key, max: count)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.spop(from: key, max: count)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Randomly selects one or more elements in a set.
@@ -190,18 +193,18 @@ extension RedisClient {
 
         let args: [RESPValue] = [
             .init(from: key),
-            .init(bulk: count)
+            .init(bulk: count),
         ]
         return send(command: "SRANDMEMBER", with: args)
             .tryConverting()
     }
-    
+
     /// Randomly selects one or more elements in a set.
     ///
     /// See [https://redis.io/commands/srandmember](https://redis.io/commands/srandmember)
     /// - Parameters:
     ///     - key: The key of the set.
-    ///     - type; The type to convert the values to.
+    ///     - type: The type to convert the values to.
     ///     - count: The max number of elements to select from the set.
     /// - Returns: The elements randomly selected from the set. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
@@ -210,8 +213,8 @@ extension RedisClient {
         as type: Value.Type,
         max count: Int = 1
     ) -> EventLoopFuture<[Value?]> {
-        return self.srandmember(from: key, max: count)
-            .map { return $0.map(Value.init(fromRESP:)) }
+        self.srandmember(from: key, max: count)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
 
     /// Moves an element from one set to another.
@@ -233,11 +236,11 @@ extension RedisClient {
         let args: [RESPValue] = [
             .init(from: sourceKey),
             .init(from: destKey),
-            element.convertedToRESPValue()
+            element.convertedToRESPValue(),
         ]
         return send(command: "SMOVE", with: args)
             .tryConverting()
-            .map { return $0 == 1 }
+            .map { $0 == 1 }
     }
 
     /// Incrementally iterates over all values in a set.
@@ -255,9 +258,9 @@ extension RedisClient {
         matching match: String? = nil,
         count: Int? = nil
     ) -> EventLoopFuture<(Int, [RESPValue])> {
-        return _scan(command: "SSCAN", key, position, match, count)
+        _scan(command: "SSCAN", key, position, match, count)
     }
-    
+
     /// Incrementally iterates over all values in a set.
     ///
     /// See [https://redis.io/commands/sscan](https://redis.io/commands/sscan)
@@ -276,7 +279,7 @@ extension RedisClient {
         count: Int? = nil,
         valueType: Value.Type
     ) -> EventLoopFuture<(Int, [Value?])> {
-        return self.sscan(key, startingFrom: position, matching: match, count: count)
+        self.sscan(key, startingFrom: position, matching: match, count: count)
             .map { (cursor, rawValues) in
                 let values = rawValues.map(Value.init(fromRESP:))
                 return (cursor, values)
@@ -299,7 +302,7 @@ extension RedisClient {
         return send(command: "SDIFF", with: args)
             .tryConverting()
     }
-    
+
     /// Calculates the difference between two or more sets.
     ///
     /// See [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
@@ -308,20 +311,23 @@ extension RedisClient {
     ///     - valueType: The type to convert the values to.
     /// - Returns: A list of elements resulting from the difference. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sdiff<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sdiff(of: keys)
-            .map { return $0.map(Value.init(fromRESP:)) }
+    public func sdiff<Value: RESPValueConvertible>(
+        of keys: [RedisKey],
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sdiff(of: keys)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Calculates the difference between two or more sets.
     ///
     /// See [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
     /// - Parameter keys: The source sets to calculate the difference of.
     /// - Returns: A list of elements resulting from the difference.
     public func sdiff(of keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
-        return self.sdiff(of: keys)
+        self.sdiff(of: keys)
     }
-    
+
     /// Calculates the difference between two or more sets.
     ///
     /// See [https://redis.io/commands/sdiff](https://redis.io/commands/sdiff)
@@ -330,8 +336,11 @@ extension RedisClient {
     ///     - valueType: The type to convert the values to.
     /// - Returns: A list of elements resulting from the difference. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sdiff<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sdiff(of: keys, valueType: valueType)
+    public func sdiff<Value: RESPValueConvertible>(
+        of keys: RedisKey...,
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sdiff(of: keys, valueType: valueType)
     }
 
     /// Calculates the difference between two or more sets and stores the result.
@@ -340,14 +349,14 @@ extension RedisClient {
     /// See [https://redis.io/commands/sdiffstore](https://redis.io/commands/sdiffstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: The list of source sets to calculate the difference of.
+    ///     - keys: The list of source sets to calculate the difference of.
     /// - Returns: The number of elements in the difference result.
     public func sdiffstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
-        
+
         return send(command: "SDIFFSTORE", with: args)
             .tryConverting()
     }
@@ -368,7 +377,7 @@ extension RedisClient {
         return send(command: "SINTER", with: args)
             .tryConverting()
     }
-    
+
     /// Calculates the intersection of two or more sets.
     ///
     /// See [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
@@ -377,20 +386,23 @@ extension RedisClient {
     ///     - valueType: The type to convert all values to.
     /// - Returns: A list of elements resulting from the intersection. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sinter<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sinter(of: keys)
-            .map { return $0.map(Value.init(fromRESP:)) }
+    public func sinter<Value: RESPValueConvertible>(
+        of keys: [RedisKey],
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sinter(of: keys)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Calculates the intersection of two or more sets.
     ///
     /// See [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
     /// - Parameter keys: The source sets to calculate the intersection of.
     /// - Returns: A list of elements resulting from the intersection.
     public func sinter(of keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
-        return self.sinter(of: keys)
+        self.sinter(of: keys)
     }
-    
+
     /// Calculates the intersection of two or more sets.
     ///
     /// See [https://redis.io/commands/sinter](https://redis.io/commands/sinter)
@@ -399,8 +411,11 @@ extension RedisClient {
     ///     - valueType: The type to convert all values to.
     /// - Returns: A list of elements resulting from the intersection. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sinter<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sinter(of: keys, valueType: valueType)
+    public func sinter<Value: RESPValueConvertible>(
+        of keys: RedisKey...,
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sinter(of: keys, valueType: valueType)
     }
 
     /// Calculates the intersetion of two or more sets and stores the result.
@@ -409,14 +424,14 @@ extension RedisClient {
     /// See [https://redis.io/commands/sinterstore](https://redis.io/commands/sinterstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: A list of source sets to calculate the intersection of.
+    ///     - keys: A list of source sets to calculate the intersection of.
     /// - Returns: The number of elements in the intersection result.
     public func sinterstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
-        
+
         return send(command: "SINTERSTORE", with: args)
             .tryConverting()
     }
@@ -432,12 +447,12 @@ extension RedisClient {
     /// - Returns: A list of elements resulting from the union.
     public func sunion(of keys: [RedisKey]) -> EventLoopFuture<[RESPValue]> {
         guard keys.count > 0 else { return self.eventLoop.makeSucceededFuture([]) }
-        
+
         let args = keys.map(RESPValue.init)
         return send(command: "SUNION", with: args)
             .tryConverting()
     }
-    
+
     /// Calculates the union of two or more sets.
     ///
     /// See [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
@@ -446,20 +461,23 @@ extension RedisClient {
     ///     - valueType: The type to convert all values to.
     /// - Returns: A list of elements resulting from the union. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sunion<Value: RESPValueConvertible>(of keys: [RedisKey], valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sunion(of: keys)
-            .map { return $0.map(Value.init(fromRESP:)) }
+    public func sunion<Value: RESPValueConvertible>(
+        of keys: [RedisKey],
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sunion(of: keys)
+            .map { $0.map(Value.init(fromRESP:)) }
     }
-    
+
     /// Calculates the union of two or more sets.
     ///
     /// See [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
     /// - Parameter keys: The source sets to calculate the union of.
     /// - Returns: A list of elements resulting from the union.
     public func sunion(of keys: RedisKey...) -> EventLoopFuture<[RESPValue]> {
-        return self.sunion(of: keys)
+        self.sunion(of: keys)
     }
-    
+
     /// Calculates the union of two or more sets.
     ///
     /// See [https://redis.io/commands/sunion](https://redis.io/commands/sunion)
@@ -468,8 +486,11 @@ extension RedisClient {
     ///     - valueType: The type to convert all values to.
     /// - Returns: A list of elements resulting from the union. Elements that fail the `RESPValue` conversion will be `nil`.
     @inlinable
-    public func sunion<Value: RESPValueConvertible>(of keys: RedisKey..., valueType: Value.Type) -> EventLoopFuture<[Value?]> {
-        return self.sunion(of: keys, valueType: valueType)
+    public func sunion<Value: RESPValueConvertible>(
+        of keys: RedisKey...,
+        valueType: Value.Type
+    ) -> EventLoopFuture<[Value?]> {
+        self.sunion(of: keys, valueType: valueType)
     }
 
     /// Calculates the union of two or more sets and stores the result.
@@ -478,14 +499,14 @@ extension RedisClient {
     /// See [https://redis.io/commands/sunionstore](https://redis.io/commands/sunionstore)
     /// - Parameters:
     ///     - destination: The key of the new set from the result.
-    ///     - sources: A list of source sets to calculate the union of.
+    ///     - keys: A list of source sets to calculate the union of.
     /// - Returns: The number of elements in the union result.
     public func sunionstore(as destination: RedisKey, sources keys: [RedisKey]) -> EventLoopFuture<Int> {
         assert(keys.count > 0, "At least 1 key should be provided.")
 
         var args: [RESPValue] = [.init(from: destination)]
         args.append(convertingContentsOf: keys)
-        
+
         return send(command: "SUNIONSTORE", with: args)
             .tryConverting()
     }

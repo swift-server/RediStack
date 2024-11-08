@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020 RediStack project authors
+// Copyright (c) 2020 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -25,7 +25,7 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertThrowsError(try RedisConnection.Configuration(url: "redis://:6379"))
         XCTAssertThrowsError(try RedisConnection.Configuration(url: "redis://localhost/-1"))
     }
-    
+
     func test_connectionConfiguration_urlComponents() throws {
         let configuration = try RedisConnection.Configuration(url: "redis://:password@localhost:6666/1")
         XCTAssertEqual(configuration.hostname, "localhost")
@@ -33,9 +33,12 @@ final class ConfigurationTests: XCTestCase {
         XCTAssertEqual(configuration.port, 6666)
         XCTAssertEqual(configuration.initialDatabase, 1)
     }
-    
+
     func test_connectionConfiguration_databaseIndex() throws {
-        let address = try SocketAddress.makeAddressResolvingHost("localhost", port: RedisConnection.Configuration.defaultPort)
+        let address = try SocketAddress.makeAddressResolvingHost(
+            "localhost",
+            port: RedisConnection.Configuration.defaultPort
+        )
         XCTAssertThrowsError(try RedisConnection.Configuration(address: address, initialDatabase: -1)) {
             XCTAssertEqual($0 as? RedisConnection.Configuration.ValidationError, .outOfBoundsDatabaseID)
         }

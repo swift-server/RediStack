@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -35,7 +35,7 @@ public struct RESP3Token: Hashable, Sendable {
             }
 
             public mutating func next() -> RESP3Token? {
-                return try! RESP3Token(consuming: &self.buffer)
+                try! RESP3Token(consuming: &self.buffer)
             }
         }
     }
@@ -194,19 +194,19 @@ public struct RESP3Token: Hashable, Sendable {
             validated = try buffer.readRESPBooleanSlice()
 
         case .some(.blobString),
-             .some(.verbatimString),
-             .some(.blobError):
+            .some(.verbatimString),
+            .some(.blobError):
             validated = try buffer.readRESPBlobStringSlice()
 
         case .some(.simpleString),
-             .some(.simpleError):
+            .some(.simpleError):
             validated = try buffer.readRESPSimpleStringSlice()
 
         case .some(.array),
-             .some(.push),
-             .some(.set),
-             .some(.map),
-             .some(.attribute):
+            .some(.push),
+            .some(.set),
+            .some(.map),
+            .some(.attribute):
             validated = try buffer.readRESPAggregateSlice(depth: depth)
 
         case .some(.integer):
@@ -514,4 +514,3 @@ extension UInt32 {
         return value
     }()
 }
-

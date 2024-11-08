@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -14,8 +14,9 @@
 
 import NIOCore
 import NIOTestUtils
-@testable import RESP3
 import XCTest
+
+@testable import RESP3
 
 final class RESP3TokenTests: XCTestCase {
     func testRESPNullToken() {
@@ -95,7 +96,7 @@ final class RESP3TokenTests: XCTestCase {
             XCTAssertThrowsError(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (buffer, [RESP3Token(validated: .init())]),
+                        (buffer, [RESP3Token(validated: .init())])
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
@@ -158,14 +159,14 @@ final class RESP3TokenTests: XCTestCase {
     // TODO: this test currently succeeds, even though it has an invalid value
     func testRESPDoubleInvalid() throws {
         let invalid = [
-            ",.1\r\n",
+            ",.1\r\n"
         ]
 
         for value in invalid {
             XCTAssertThrowsError(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (.init(string: value), [RESP3Token(validated: .init())]),
+                        (.init(string: value), [RESP3Token(validated: .init())])
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
@@ -178,7 +179,7 @@ final class RESP3TokenTests: XCTestCase {
 
     func testRESPBigNumber() {
         let valid = [
-            "123",
+            "123"
         ]
 
         for value in valid {
@@ -187,7 +188,7 @@ final class RESP3TokenTests: XCTestCase {
             XCTAssertNoThrow(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (token, [RESP3Token(validated: token)]),
+                        (token, [RESP3Token(validated: token)])
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 ),
@@ -211,7 +212,7 @@ final class RESP3TokenTests: XCTestCase {
             XCTAssertThrowsError(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (buffer, [RESP3Token(validated: .init())]),
+                        (buffer, [RESP3Token(validated: .init())])
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
@@ -303,18 +304,45 @@ final class RESP3TokenTests: XCTestCase {
         )
 
         XCTAssertEqual(respEmptyArray.value, .array(.init(count: 0, buffer: .init())))
-        XCTAssertEqual(respSimpleStringArray1.value, .array(.init(count: 1, buffer: .init(string: "+aaaabbbbcccc\r\n"))))
-        XCTAssertEqual(respSimpleStringArray2.value, .array(.init(count: 2, buffer: .init(string: "+aaaa\r\n+bbbb\r\n"))))
-        XCTAssertEqual(respSimpleStringArray3.value, .array(.init(count: 3, buffer: .init(string: "*0\r\n+a\r\n-b\r\n"))))
+        XCTAssertEqual(
+            respSimpleStringArray1.value,
+            .array(.init(count: 1, buffer: .init(string: "+aaaabbbbcccc\r\n")))
+        )
+        XCTAssertEqual(
+            respSimpleStringArray2.value,
+            .array(.init(count: 2, buffer: .init(string: "+aaaa\r\n+bbbb\r\n")))
+        )
+        XCTAssertEqual(
+            respSimpleStringArray3.value,
+            .array(.init(count: 3, buffer: .init(string: "*0\r\n+a\r\n-b\r\n")))
+        )
         XCTAssertEqual(respSimpleStringPush3.value, .push(.init(count: 3, buffer: .init(string: "*0\r\n+a\r\n-b\r\n"))))
         XCTAssertEqual(respSimpleStringSet3.value, .set(.init(count: 3, buffer: .init(string: "*0\r\n+a\r\n#t\r\n"))))
 
         XCTAssertEqual(respEmptyArray.testArray, [])
         XCTAssertEqual(respSimpleStringArray1.testArray, [.simpleString(.init(string: "aaaabbbbcccc"))])
-        XCTAssertEqual(respSimpleStringArray2.testArray, [.simpleString(.init(string: "aaaa")), .simpleString(.init(string: "bbbb"))])
-        XCTAssertEqual(respSimpleStringArray3.testArray, [.array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")), .simpleError(.init(string: "b"))])
-        XCTAssertEqual(respSimpleStringPush3.testArray, [.array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")), .simpleError(.init(string: "b"))])
-        XCTAssertEqual(respSimpleStringSet3.testArray, [.array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")), .boolean(true)])
+        XCTAssertEqual(
+            respSimpleStringArray2.testArray,
+            [.simpleString(.init(string: "aaaa")), .simpleString(.init(string: "bbbb"))]
+        )
+        XCTAssertEqual(
+            respSimpleStringArray3.testArray,
+            [
+                .array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")),
+                .simpleError(.init(string: "b")),
+            ]
+        )
+        XCTAssertEqual(
+            respSimpleStringPush3.testArray,
+            [
+                .array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")),
+                .simpleError(.init(string: "b")),
+            ]
+        )
+        XCTAssertEqual(
+            respSimpleStringSet3.testArray,
+            [.array(.init(count: 0, buffer: .init())), .simpleString(.init(string: "a")), .boolean(true)]
+        )
     }
 
     func testDeeplyNestedRESPCantStackOverflow() {
@@ -323,7 +351,7 @@ final class RESP3TokenTests: XCTestCase {
             (">1\r\n", ">0\r\n"),
             ("~1\r\n", "~0\r\n"),
             ("%1\r\n#t\r\n", "%0\r\n"),
-            ("|1\r\n#t\r\n", "|0\r\n")
+            ("|1\r\n#t\r\n", "|0\r\n"),
         ]
 
         for (nested, final) in pattern {
@@ -347,7 +375,7 @@ final class RESP3TokenTests: XCTestCase {
             XCTAssertNoThrow(
                 try ByteToMessageDecoderVerifier.verifyDecoder(
                     inputOutputPairs: [
-                        (buffer, [expected]),
+                        (buffer, [expected])
                     ],
                     decoderFactory: { RESP3TokenDecoder() }
                 )
@@ -379,10 +407,16 @@ final class RESP3TokenTests: XCTestCase {
 
         XCTAssertEqual(respEmptyMap.value, .map(.init(count: 0, buffer: .init())))
         XCTAssertEqual(respSimpleStringMap1.value, .map(.init(count: 1, buffer: .init(string: "+aaaa\r\n+bbbb\r\n"))))
-        XCTAssertEqual(respSimpleStringAttributes1.value, .attribute(.init(count: 1, buffer: .init(string: "+aaaa\r\n#f\r\n"))))
+        XCTAssertEqual(
+            respSimpleStringAttributes1.value,
+            .attribute(.init(count: 1, buffer: .init(string: "+aaaa\r\n#f\r\n")))
+        )
 
         XCTAssertEqual(respEmptyMap.testDict, [:])
-        XCTAssertEqual(respSimpleStringMap1.testDict, [.simpleString(.init(string: "aaaa")): .simpleString(.init(string: "bbbb"))])
+        XCTAssertEqual(
+            respSimpleStringMap1.testDict,
+            [.simpleString(.init(string: "aaaa")): .simpleString(.init(string: "bbbb"))]
+        )
         XCTAssertEqual(respSimpleStringAttributes1.testDict, [.simpleString(.init(string: "aaaa")): .boolean(false)])
     }
 }

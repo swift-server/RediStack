@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2023 RediStack project authors
+// Copyright (c) 2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,8 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-@testable import RediStack
 import XCTest
+
+@testable import RediStack
 
 final class RedisHashSlotTests: XCTestCase {
     func testEdgeValues() {
@@ -51,7 +52,11 @@ final class RedisHashSlotTests: XCTestCase {
     }
 
     func testHashTagComputation() {
-        XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual(RedisHashSlot.hashTag(forKey: "{user1000}.followers")))
+        XCTAssert(
+            RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual(
+                RedisHashSlot.hashTag(forKey: "{user1000}.followers")
+            )
+        )
         XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.following").elementsEqual("user1000".utf8))
         XCTAssert(RedisHashSlot.hashTag(forKey: "{user1000}.followers").elementsEqual("user1000".utf8))
 

@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020-2023 RediStack project authors
+// Copyright (c) 2020-2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -13,12 +13,13 @@
 //===----------------------------------------------------------------------===//
 
 import Atomics
-import NIOCore
-import NIOConcurrencyHelpers
-import NIOPosix
 import Logging
-import struct Foundation.URL
+import NIOConcurrencyHelpers
+import NIOCore
+import NIOPosix
+
 import protocol Foundation.LocalizedError
+import struct Foundation.URL
 
 extension RedisConnection {
     /// A configuration object for creating a single connection to Redis.
@@ -32,7 +33,11 @@ extension RedisConnection {
             get {
                 self._defaultPortAtomic.load(ordering: .acquiring)
             }
-            @available(*, deprecated, message: "Setting the default Redis port will be removed in the next major release")
+            @available(
+                *,
+                deprecated,
+                message: "Setting the default Redis port will be removed in the next major release"
+            )
             set {
                 self._defaultPortAtomic.store(newValue, ordering: .releasing)
             }
@@ -219,8 +224,8 @@ extension RedisConnection.Configuration {
 
         private init(_ kind: Kind) { self.kind = kind }
 
-        public static func ==(lhs: ValidationError, rhs: ValidationError) -> Bool {
-            return lhs.kind == rhs.kind
+        public static func == (lhs: ValidationError, rhs: ValidationError) -> Bool {
+            lhs.kind == rhs.kind
         }
 
         private enum Kind: LocalizedError {

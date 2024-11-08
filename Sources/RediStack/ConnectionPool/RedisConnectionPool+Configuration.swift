@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2020-2023 RediStack project authors
+// Copyright (c) 2020-2023 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -12,9 +12,9 @@
 //
 //===----------------------------------------------------------------------===//
 
+import Logging
 import NIOCore
 import NIOPosix
-import Logging
 
 extension RedisConnectionPool {
     /// A configuration object for creating Redis connections with a connection pool.
@@ -93,7 +93,8 @@ extension RedisConnectionPool {
         /// The maximum number of connections to for this pool, either to be preserved or as a hard limit.
         public let maximumConnectionCount: RedisConnectionPoolSize
         /// The configuration object that controls the connection retry behavior.
-        public let connectionRetryConfiguration: (backoff: (initialDelay: TimeAmount, factor: Float32), timeout: TimeAmount)
+        public let connectionRetryConfiguration:
+            (backoff: (initialDelay: TimeAmount, factor: Float32), timeout: TimeAmount)
         /// Called when a connection in the pool is closed unexpectedly.
         public let onUnexpectedConnectionClose: ((RedisConnection) -> Void)?
         // these need to be var so they can be updated by the pool in some cases
@@ -116,6 +117,7 @@ extension RedisConnectionPool {
         ///         Subsequent backoffs are computed by compounding this value by `connectionBackoffFactor`.
         ///     - connectionRetryTimeout: The max time to wait for a connection to be available before failing a particular command or connection operation.
         ///         The default is 60 seconds.
+        ///     - onUnexpectedConnectionClose: Called when the connection unexpectedly is closed.
         ///     - poolDefaultLogger: The `Logger` used by the connection pool itself.
         public init(
             initialServerConnectionAddresses: [SocketAddress],
@@ -134,7 +136,7 @@ extension RedisConnectionPool {
             self.minimumConnectionCount = minimumConnectionCount
             self.connectionRetryConfiguration = (
                 (initialConnectionBackoffDelay, connectionBackoffFactor),
-                connectionRetryTimeout ?? .milliseconds(10) // always default to a baseline 10ms
+                connectionRetryTimeout ?? .milliseconds(10)  // always default to a baseline 10ms
             )
             self.onUnexpectedConnectionClose = onUnexpectedConnectionClose
             self.poolDefaultLogger = poolDefaultLogger ?? .redisBaseConnectionPoolLogger
