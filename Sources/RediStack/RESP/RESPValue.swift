@@ -43,7 +43,8 @@ public enum RESPValue {
         self = value.convertedToRESPValue()
     }
 
-    /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString` and `.bulkString` representations directly, if needed.
+    /// A `NIO.ByteBufferAllocator` for use in creating `.simpleString`
+    /// and `.bulkString` representations directly, if needed.
     internal static let allocator = ByteBufferAllocator()
 
     /// Initializes a `bulkString` value.
@@ -76,7 +77,11 @@ extension RESPValue: CustomStringConvertible {
         switch self {
         case let .simpleString(buffer),
             let .bulkString(.some(buffer)):
-            guard let value = String(fromRESP: self) else { return "\(buffer)" }  // default to ByteBuffer's representation
+            guard let value = String(fromRESP: self) else {
+                // default to ByteBuffer's representation
+                return "\(buffer)"
+            }
+
             return value
 
         // .integer, .error, and .bulkString(.none) conversions to String always succeed

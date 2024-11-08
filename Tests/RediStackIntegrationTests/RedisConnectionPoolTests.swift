@@ -157,7 +157,7 @@ extension RedisConnectionPoolTests {
             }
 
         for promise in promises {
-          promise.succeed(())
+            promise.succeed(())
         }
         _ = try EventLoopFuture<Void>
             .whenAllSucceed(futures, on: pool.eventLoop)

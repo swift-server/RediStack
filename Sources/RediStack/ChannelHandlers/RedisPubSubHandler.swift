@@ -204,7 +204,8 @@ extension RedisPubSubHandler {
     ///     - receiver: The closure that receives any future pub/sub messages.
     ///     - subscribeHandler: An optional closure to invoke when the subscription first becomes active.
     ///     - unsubscribeHandler: An optional closure to invoke when the subscription becomes inactive.
-    /// - Returns: A `NIO.EventLoopFuture` that resolves the number of subscriptions the client has after the subscription has been added.
+    /// - Returns: A `NIO.EventLoopFuture` that resolves the number of subscriptions the client has after the
+    ///             subscription has been added.
     public func addSubscription(
         for target: RedisSubscriptionTarget,
         messageReceiver receiver: @escaping RedisSubscriptionMessageReceiver,
@@ -228,7 +229,8 @@ extension RedisPubSubHandler {
         case let .error(e): return self.eventLoop.makeFailedFuture(e)
 
         case .default:
-            // go through all the target patterns/names and update the map with the new receiver if it's already registered
+            // go through all the target patterns/names and update the map with the new receiver
+            // if it's already registered
             // if it was a new registration, not an update, we keep that name to send to Redis
             // we do this so that we save on data transfer bandwidth
 
@@ -312,7 +314,8 @@ extension RedisPubSubHandler {
         let pendingSubscriptions: [(String, EventLoopPromise<Int>)] = targets.map {
             (self.prefixKey($0, with: keyPrefix), self.eventLoop.makePromise())
         }
-        // add the subscription change handler to the appropriate queue for each individual subscription target
+        // add the subscription change handler to the appropriate queue
+        // for each individual subscription target
         for (key, value) in pendingSubscriptions {
             self[keyPath: pendingQueue].updateValue(value, forKey: key)
         }
@@ -324,19 +327,23 @@ extension RedisPubSubHandler {
                 on: self.eventLoop
             )
             .flatMapThrowing { (results) -> Int in
+                /*
+                    if we have no success cases, we will still
+                    have at least one response that we can rely on the 'get'
+                    method to throw the error for us, rather than unwrapping it
+                    ourselves
+                */
+
+                let latestSubscriptionCount = results
+                    .lazy
+                    .reversed()
+                    .compactMap({ try? $0.get() })
+                    .first
+
                 // trust the last success response as the most current count
-                guard
-                    let latestSubscriptionCount = results
-                        .lazy
-                        // reverse to save time-complexity,
-                        // as we just need the last (first) successful value
-                        .reversed()
-                        .compactMap({ try? $0.get() })
-                        .first
-                    // if we have no success cases, we will still have at least
-                    // one response that we can rely on the 'get' method to
-                    // throw the error for us, rather than unwrapping it ourselves
-                else { return try results.first!.get() }
+                guard let latestSubscriptionCount else {
+                    return try results.first!.get()
+                }
 
                 return latestSubscriptionCount
             }
@@ -396,7 +403,8 @@ extension RedisPubSubHandler: ChannelInboundHandler {
         // if it is, we handle it here
 
         // Redis defines the format as [messageKeyword: String, channelName: String, message: RESPValue]
-        // unless the messageType is 'pmessage', in which case it's [messageKeyword, pattern: String, channelName, message]
+        // unless the messageType is 'pmessage', in which case it's [messageKeyword, pattern: String,
+        // channelName, message]
 
         // these guards extract some of the basic details of a pubsub message
         guard
@@ -428,7 +436,8 @@ extension RedisPubSubHandler: ChannelInboundHandler {
         case "pmessage":
             self.handleMessage(
                 message,
-                from: .init(array[2].string!),  // the channel name is stored as the 3rd element in the array in 'pmessage' streams
+                from: .init(array[2].string!),
+                // the channel name is stored as the 3rd element in the array in 'pmessage' streams
                 withSubscriptionKey: channelOrPattern,
                 keyPrefix: kSubscriptionKeyPrefixPattern
             )
