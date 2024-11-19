@@ -46,7 +46,7 @@ on:
 
 jobs:
   unit-tests:
-    name: Unit tests
+    name: Linux (${{ matrix.swift.swift_version }})
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
