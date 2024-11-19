@@ -1,0 +1,100 @@
+name: Unit tests
+
+on:
+  workflow_call:
+    inputs:
+      linux_5_9_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 5.9 Swift version matrix job. Defaults to true."
+        default: true
+      linux_5_9_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux 5.9 Swift version matrix job."
+        default: ""
+      linux_5_10_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 5.10 Swift version matrix job. Defaults to true."
+        default: true
+      linux_5_10_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux 5.10 Swift version matrix job."
+        default: ""
+      linux_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux 6.0 Swift version matrix job. Defaults to true."
+        default: true
+      linux_6_0_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux 6.0 Swift version matrix job."
+        default: ""
+      linux_nightly_6_0_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux nightly 6.0 Swift version matrix job. Defaults to true."
+        default: true
+      linux_nightly_6_0_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux nightly 6.0 Swift version matrix job."
+        default: ""
+      linux_nightly_main_enabled:
+        type: boolean
+        description: "Boolean to enable the Linux nightly main Swift version matrix job. Defaults to true."
+        default: true
+      linux_nightly_main_arguments_override:
+        type: string
+        description: "The arguments passed to swift test in the Linux nightly main Swift version matrix job."
+        default: ""
+
+jobs:
+  unit-tests:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # We are specifying only the major and minor of the docker images to automatically pick up the latest patch release
+        swift:
+          - image: "swift:5.9-jammy"
+            swift_version: "5.9"
+            enabled: ${{ inputs.linux_5_9_enabled }}
+          - image: "swift:5.10-jammy"
+            swift_version: "5.10"
+            enabled: ${{ inputs.linux_5_10_enabled }}
+          - image: "swift:6.0-jammy"
+            swift_version: "6.0"
+            enabled: ${{ inputs.linux_6_0_enabled }}
+          - image: "swiftlang/swift:nightly-6.0-jammy"
+            swift_version: "nightly-6.0"
+            enabled: ${{ inputs.linux_nightly_6_0_enabled }}
+          - image: "swiftlang/swift:nightly-main-jammy"
+            swift_version: "nightly-main"
+            enabled: ${{ inputs.linux_nightly_main_enabled }}
+    steps:
+      - name: Checkout repository
+        if: ${{ matrix.swift.enabled }}
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          submodules: true
+      - name: Mark the workspace as safe
+        if: ${{ matrix.swift.enabled }}
+        # https://github.com/actions/checkout/issues/766
+        run: git config --global --add safe.directory ${GITHUB_WORKSPACE}
+      - name: Run matrix job
+        if: ${{ matrix.swift.enabled }}
+        env:
+          SWIFT_VERSION: ${{ matrix.swift.swift_version }}
+          COMMAND: "swift test"
+          COMMAND_OVERRIDE_5_9: "swift test ${{ inputs.linux_5_9_arguments_override }}"
+          COMMAND_OVERRIDE_5_10: "swift test ${{ inputs.linux_5_10_arguments_override }}"
+          COMMAND_OVERRIDE_6_0: "swift test ${{ inputs.linux_6_0_arguments_override }}"
+          COMMAND_OVERRIDE_NIGHTLY_6_0: "swift test ${{ inputs.linux_nightly_6_0_arguments_override }}"
+          COMMAND_OVERRIDE_NIGHTLY_MAIN: "swift test ${{ inputs.linux_nightly_main_arguments_override }}"
+          REDIS_URL: redis
+        run: |
+          apt-get -qq update && apt-get -qq -y install curl
+          curl -s https://raw.githubusercontent.com/apple/swift-nio/main/scripts/check-matrix-job.sh | bash
+    container:
+      image: ${{ matrix.swift.image }}
+    services:
+      redis:
+        image: redis:7
