@@ -51,6 +51,11 @@ docker run -d -p 6379:6379 --name redis redis:5
 
 Otherwise, install Redis directly on your machine from [Redis.io](https://redis.io/download).
   
+### Run CI checks locally
+
+You can run the GitHub Actions workflows locally using
+[act](https://github.com/nektos/act). For detailed steps on how to do this please see [https://github.com/swiftlang/github-workflows?tab=readme-ov-file#running-workflows-locally](https://github.com/swiftlang/github-workflows?tab=readme-ov-file#running-workflows-locally).
+
 ### Submitting a Pull Request
   
 A great PR that is likely to be merged quickly is:
