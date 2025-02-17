@@ -28,7 +28,8 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         do {
             var dataset: [(Int, Double)] = []
             for index in 1...10 {
-                dataset.append((index, Double(index)))
+                // make sure value is different from score so we can test we are getting the correct values
+                dataset.append((index + 100, Double(index)))
             }
 
             _ = try connection.zadd(dataset, to: SortedSetCommandsTests.testKey).wait()
@@ -110,9 +111,9 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
 
     func test_zrank() throws {
         let futures = [
-            connection.zrank(of: 1, in: key),
-            connection.zrank(of: 2, in: key),
-            connection.zrank(of: 3, in: key),
+            connection.zrank(of: 101, in: key),
+            connection.zrank(of: 102, in: key),
+            connection.zrank(of: 103, in: key),
         ]
         let scores = try EventLoopFuture<Int?>.whenAllSucceed(futures, on: connection.eventLoop).wait()
         XCTAssertEqual(scores, [0, 1, 2])
@@ -120,9 +121,9 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
 
     func test_zrevrank() throws {
         let futures = [
-            connection.zrevrank(of: 1, in: key),
-            connection.zrevrank(of: 2, in: key),
-            connection.zrevrank(of: 3, in: key),
+            connection.zrevrank(of: 101, in: key),
+            connection.zrevrank(of: 102, in: key),
+            connection.zrevrank(of: 103, in: key),
         ]
         let scores = try EventLoopFuture<Int?>.whenAllSucceed(futures, on: connection.eventLoop).wait()
         XCTAssertEqual(scores, [9, 8, 7])
@@ -235,21 +236,21 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zincrby() throws {
-        var score = try connection.zincrby(3_00_1398.328923, element: 1, in: key).wait()
+        var score = try connection.zincrby(3_00_1398.328923, element: 101, in: key).wait()
         XCTAssertEqual(score, 3_001_399.328923)
 
-        score = try connection.zincrby(-201_309.1397318, element: 1, in: key).wait()
+        score = try connection.zincrby(-201_309.1397318, element: 101, in: key).wait()
         XCTAssertEqual(score, 2_800_090.1891912)
 
-        score = try connection.zincrby(20, element: 1, in: key).wait()
+        score = try connection.zincrby(20, element: 101, in: key).wait()
         XCTAssertEqual(score, 2_800_110.1891912)
     }
 
     func test_zunionstore() throws {
         let testKey = RedisKey(#function + #file)
 
-        _ = try connection.zadd([(1, 1), (2, 2)], to: #function).wait()
-        _ = try connection.zadd([(3, 3), (4, 4)], to: #file).wait()
+        _ = try connection.zadd([(101, 1), (102, 2)], to: #function).wait()
+        _ = try connection.zadd([(103, 3), (104, 4)], to: #file).wait()
 
         let unionCount = try connection.zunionstore(
             as: testKey,
@@ -258,14 +259,14 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
             aggregateMethod: .max
         ).wait()
         XCTAssertEqual(unionCount, 10)
-        let rank = try connection.zrank(of: 10, in: testKey).wait()
+        let rank = try connection.zrank(of: 110, in: testKey).wait()
         XCTAssertEqual(rank, 9)
-        let score = try connection.zscore(of: 10, in: testKey).wait()
+        let score = try connection.zscore(of: 110, in: testKey).wait()
         XCTAssertEqual(score, 30)
     }
 
     func test_zinterstore() throws {
-        _ = try connection.zadd([(3, 3), (10, 10), (11, 11)], to: #function).wait()
+        _ = try connection.zadd([(103, 3), (110, 10), (111, 11)], to: #function).wait()
 
         let unionCount = try connection.zinterstore(
             as: #file,
@@ -274,9 +275,9 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
             aggregateMethod: .min
         ).wait()
         XCTAssertEqual(unionCount, 2)
-        let rank = try connection.zrank(of: 10, in: #file).wait()
+        let rank = try connection.zrank(of: 110, in: #file).wait()
         XCTAssertEqual(rank, 1)
-        let score = try connection.zscore(of: 10, in: #file).wait()
+        let score = try connection.zscore(of: 110, in: #file).wait()
         XCTAssertEqual(score, 20.0)
     }
 
@@ -302,9 +303,9 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (value, _) in Int(fromRESP: value) }
 
-        XCTAssertEqual(values[0], 2)
-        XCTAssertEqual(values[1], 3)
-        XCTAssertEqual(values[2], 4)
+        XCTAssertEqual(values[0], 102)
+        XCTAssertEqual(values[1], 103)
+        XCTAssertEqual(values[2], 104)
     }
 
     func test_zrevrange() throws {
@@ -330,9 +331,9 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
         let values = try RedisConnection._mapSortedSetResponse(elements, scoreIsFirst: false)
             .map { (value, _) in Int(fromRESP: value) }
 
-        XCTAssertEqual(values[0], 9)
-        XCTAssertEqual(values[1], 8)
-        XCTAssertEqual(values[2], 7)
+        XCTAssertEqual(values[0], 109)
+        XCTAssertEqual(values[1], 108)
+        XCTAssertEqual(values[2], 107)
     }
 
     func test_zrangebyscore() throws {
@@ -459,14 +460,14 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
     }
 
     func test_zrem() throws {
-        var count = try connection.zrem(1, from: key).wait()
+        var count = try connection.zrem(101, from: key).wait()
         XCTAssertEqual(count, 1)
         count = try connection.zrem([1], from: key).wait()
         XCTAssertEqual(count, 0)
 
-        count = try connection.zrem(2, 3, 4, 5, from: key).wait()
+        count = try connection.zrem(102, 103, 104, 105, from: key).wait()
         XCTAssertEqual(count, 4)
-        count = try connection.zrem([5, 6, 7], from: key).wait()
+        count = try connection.zrem([105, 106, 107], from: key).wait()
         XCTAssertEqual(count, 2)
     }
 
