@@ -20,7 +20,7 @@ This library is primarily developed for Redis v5, but is backwards compatible to
 ## Installing
 
 To install **RediStack**, just add the package as a dependency in your **Package.swift**.
-
+foo
 ```swift
 dependencies: [
     .package(url: "https://github.com/swift-server/RediStack.git", from: "1.4.1")
