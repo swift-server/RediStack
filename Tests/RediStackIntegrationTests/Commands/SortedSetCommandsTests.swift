@@ -555,6 +555,10 @@ extension SortedSetCommandsTests {
 
         XCTAssertEqual(elements.count, 5)
         XCTAssertEqual(elements, elements.sorted(by: <))
+        
+        // test when score is not first
+        let value = try self.connection.zpopmin(from: #function, scoreIsFirst: false).wait()
+        XCTAssertEqual(value?.1, 1)
     }
 
     func test_zrevrange_realworld() throws {
