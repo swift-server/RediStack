@@ -560,6 +560,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
     ///     - count: The max number of elements to pop from the set.
+    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmin(from key: RedisKey, max count: Int, scoreIsFirst: Bool = false) -> EventLoopFuture<[(RESPValue, Double)]> {
         _zpop(command: "ZPOPMIN", count, key, scoreIsFirst: scoreIsFirst)
@@ -568,7 +569,9 @@ extension RedisClient {
     /// Removes the element from a sorted set with the lowest score.
     ///
     /// See [https://redis.io/commands/zpopmin](https://redis.io/commands/zpopmin)
-    /// - Parameter key: The key identifying the sorted set in Redis.
+    /// - Parameters:
+    ///     - key: The key identifying the sorted set in Redis.
+    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmin(from key: RedisKey, scoreIsFirst: Bool = false) -> EventLoopFuture<(RESPValue, Double)?> {
         _zpop(command: "ZPOPMIN", nil, key, scoreIsFirst: scoreIsFirst)
@@ -581,6 +584,7 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
     ///     - count: The max number of elements to pop from the set.
+    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
     public func zpopmax(from key: RedisKey, max count: Int, scoreIsFirst: Bool = false) -> EventLoopFuture<[(RESPValue, Double)]> {
         _zpop(command: "ZPOPMAX", count, key, scoreIsFirst: scoreIsFirst)
@@ -589,7 +593,9 @@ extension RedisClient {
     /// Removes the element from a sorted set with the highest score.
     ///
     /// See [https://redis.io/commands/zpopmax](https://redis.io/commands/zpopmax)
-    /// - Parameter key: The key identifying the sorted set in Redis.
+    /// - Parameters:
+    ///     - key: The key identifying the sorted set in Redis.
+    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
     public func zpopmax(from key: RedisKey, scoreIsFirst: Bool = false) -> EventLoopFuture<(RESPValue, Double)?> {
         _zpop(command: "ZPOPMAX", nil, key, scoreIsFirst: scoreIsFirst)
