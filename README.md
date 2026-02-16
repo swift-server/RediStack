@@ -3,7 +3,6 @@
 [![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
 [![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
 [![MIT License](http://img.shields.io/badge/license-Apache-brightgreen.svg)][Apache License]
-[![Swift 5.6](http://img.shields.io/badge/swift-5.6-brightgreen.svg)][Swift 5.6]
 
 **RediStack** (pronounced like "ready stack") is a _non-blocking_ Swift client for [Redis](https://redis.io) built on top of [SwiftNIO](https://github.com/apple/swift-nio).
 
@@ -23,7 +22,7 @@ To install **RediStack**, just add the package as a dependency in your **Package
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/swift-server/RediStack.git", from: "1.4.1")
+    .package(url: "https://github.com/swift-server/RediStack.git", from: "1.6.2")
 ]
 ```
 
