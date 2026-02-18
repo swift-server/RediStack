@@ -60,7 +60,7 @@ jobs:
     steps:
       - name: Checkout repository
         if: ${{ matrix.swift.enabled }}
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           persist-credentials: false
           submodules: true
