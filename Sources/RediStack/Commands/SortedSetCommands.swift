@@ -611,7 +611,7 @@ extension RedisClient {
 
         return send(command: command, with: args)
             .tryConverting(to: [RESPValue].self)
-            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
+            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: false) }
     }
 }
 
@@ -746,11 +746,11 @@ extension RedisClient {
                 assert(response.count == 3, "Unexpected response size returned!")
                 guard
                     let key = response[0].string,
-                    let score = Double(fromRESP: response[1])
+                    let score = Double(fromRESP: response[2])
                 else {
                     throw RedisClientError.assertionFailure(message: "Unexpected structure in response: \(response)")
                 }
-                return (key, score, response[2])
+                return (key, score, response[1])
             }
     }
 }
