@@ -1,4 +1,4 @@
-// swift-tools-version:5.6
+// swift-tools-version:6.0
 //===----------------------------------------------------------------------===//
 //
 // This source file is part of the RediStack open source project
@@ -91,5 +91,8 @@ let package = Package(
                 .product(name: "NIO", package: "swift-nio"),
             ]
         ),
+    ],
+    swiftLanguageModes: [
+        .v5
     ]
 )

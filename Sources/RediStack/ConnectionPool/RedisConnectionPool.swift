@@ -381,7 +381,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
     }
 
     private func subscribe(
-        using operation: @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) ->
+        using operation:
+            @escaping (RedisConnection, @escaping RedisSubscriptionChangeHandler, Logger) ->
             EventLoopFuture<Void>,
         onUnsubscribe unsubscribeHandler: RedisSubscriptionChangeHandler?,
         context: Logger?
@@ -439,7 +440,8 @@ extension RedisConnectionPool: RedisClientWithUserContext {
 
     @usableFromInline
     internal func forwardOperationToConnection<T>(
-        _ operation: @escaping (RedisConnection, @escaping (RedisConnection, Logger) -> Void, Logger) ->
+        _ operation:
+            @escaping (RedisConnection, @escaping (RedisConnection, Logger) -> Void, Logger) ->
             EventLoopFuture<T>,
         preferredConnection: RedisConnection?,
         context: Logger?

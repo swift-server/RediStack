@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2022 Apple Inc. and the RediStack project authors
+// Copyright (c) 2019-2026 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -560,21 +560,18 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
     ///     - count: The max number of elements to pop from the set.
-    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
-    public func zpopmin(from key: RedisKey, max count: Int, scoreIsFirst: Bool = false) -> EventLoopFuture<[(RESPValue, Double)]> {
-        _zpop(command: "ZPOPMIN", count, key, scoreIsFirst: scoreIsFirst)
+    public func zpopmin(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
+        _zpop(command: "ZPOPMIN", count, key)
     }
 
     /// Removes the element from a sorted set with the lowest score.
     ///
     /// See [https://redis.io/commands/zpopmin](https://redis.io/commands/zpopmin)
-    /// - Parameters:
-    ///     - key: The key identifying the sorted set in Redis.
-    ///     - scoreIsFirst: Indicates whether the score is in the first position.
+    /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
-    public func zpopmin(from key: RedisKey, scoreIsFirst: Bool = false) -> EventLoopFuture<(RESPValue, Double)?> {
-        _zpop(command: "ZPOPMIN", nil, key, scoreIsFirst: scoreIsFirst)
+    public func zpopmin(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
+        _zpop(command: "ZPOPMIN", nil, key)
             .map { $0.count > 0 ? $0[0] : nil }
     }
 
@@ -584,29 +581,25 @@ extension RedisClient {
     /// - Parameters:
     ///     - key: The key identifying the sorted set in Redis.
     ///     - count: The max number of elements to pop from the set.
-    ///     - scoreIsFirst: Indicates whether the score is in the first position.
     /// - Returns: A list of elements popped from the sorted set with their associated score.
-    public func zpopmax(from key: RedisKey, max count: Int, scoreIsFirst: Bool = false) -> EventLoopFuture<[(RESPValue, Double)]> {
-        _zpop(command: "ZPOPMAX", count, key, scoreIsFirst: scoreIsFirst)
+    public func zpopmax(from key: RedisKey, max count: Int) -> EventLoopFuture<[(RESPValue, Double)]> {
+        _zpop(command: "ZPOPMAX", count, key)
     }
 
     /// Removes the element from a sorted set with the highest score.
     ///
     /// See [https://redis.io/commands/zpopmax](https://redis.io/commands/zpopmax)
-    /// - Parameters:
-    ///     - key: The key identifying the sorted set in Redis.
-    ///     - scoreIsFirst: Indicates whether the score is in the first position.
+    /// - Parameter key: The key identifying the sorted set in Redis.
     /// - Returns: The element and its associated score that was popped from the sorted set, or `nil` if set was empty.
-    public func zpopmax(from key: RedisKey, scoreIsFirst: Bool = false) -> EventLoopFuture<(RESPValue, Double)?> {
-        _zpop(command: "ZPOPMAX", nil, key, scoreIsFirst: scoreIsFirst)
+    public func zpopmax(from key: RedisKey) -> EventLoopFuture<(RESPValue, Double)?> {
+        _zpop(command: "ZPOPMAX", nil, key)
             .map { $0.count > 0 ? $0[0] : nil }
     }
 
     func _zpop(
         command: String,
         _ count: Int?,
-        _ key: RedisKey,
-        scoreIsFirst: Bool
+        _ key: RedisKey
     ) -> EventLoopFuture<[(RESPValue, Double)]> {
         var args: [RESPValue] = [.init(from: key)]
 
@@ -618,7 +611,7 @@ extension RedisClient {
 
         return send(command: command, with: args)
             .tryConverting(to: [RESPValue].self)
-            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: scoreIsFirst) }
+            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: false) }
     }
 }
 
