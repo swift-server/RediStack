@@ -1,4 +1,6 @@
-# RediStack
+# RediStack - ⚠️ Deprecated
+
+# Use [Valkey-Swift](https://github.com/valkey-io/valkey-swift) from now on
 
 [![SSWG Sandbox Incubating Badge](https://img.shields.io/badge/sswg-sandbox-lightgrey.svg)][SSWG Incubation]
 [![Documentation](http://img.shields.io/badge/read_the-docs-2196f3.svg)][Documentation]
