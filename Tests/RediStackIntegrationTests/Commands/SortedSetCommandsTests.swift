@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2022 Apple Inc. and the RediStack project authors
+// Copyright (c) 2019-2026 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -232,6 +232,36 @@ final class SortedSetCommandsTests: RediStackIntegrationTestCase {
 
         let result = XCTWaiter.wait(for: [expectation], timeout: 1)
         XCTAssertEqual(result, .timedOut)
+    }
+
+    func test_zpopmin_nonNumericMembers() throws {
+        _ = try connection.zadd([("lowest", -2.5), ("middle", 0.25), ("highest", 9.75)], to: #function).wait()
+
+        let first = try XCTUnwrap(connection.zpopmin(from: #function).wait())
+        XCTAssertEqual(first.0.string, "lowest")
+        XCTAssertEqual(first.1, -2.5)
+
+        let remaining = try connection.zpopmin(from: #function, max: 3).wait()
+        XCTAssertEqual(remaining.map { $0.0.string }, ["middle", "highest"])
+        XCTAssertEqual(remaining.map { $0.1 }, [0.25, 9.75])
+
+        XCTAssertNil(try connection.zpopmin(from: #function).wait())
+        XCTAssertTrue(try connection.zpopmin(from: #function, max: 3).wait().isEmpty)
+    }
+
+    func test_zpopmax_nonNumericMembers() throws {
+        _ = try connection.zadd([("lowest", -2.5), ("middle", 0.25), ("highest", 9.75)], to: #function).wait()
+
+        let first = try XCTUnwrap(connection.zpopmax(from: #function).wait())
+        XCTAssertEqual(first.0.string, "highest")
+        XCTAssertEqual(first.1, 9.75)
+
+        let remaining = try connection.zpopmax(from: #function, max: 3).wait()
+        XCTAssertEqual(remaining.map { $0.0.string }, ["middle", "lowest"])
+        XCTAssertEqual(remaining.map { $0.1 }, [0.25, -2.5])
+
+        XCTAssertNil(try connection.zpopmax(from: #function).wait())
+        XCTAssertTrue(try connection.zpopmax(from: #function, max: 3).wait().isEmpty)
     }
 
     func test_zincrby() throws {

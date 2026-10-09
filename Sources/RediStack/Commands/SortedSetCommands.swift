@@ -2,7 +2,7 @@
 //
 // This source file is part of the RediStack open source project
 //
-// Copyright (c) 2019-2022 Apple Inc. and the RediStack project authors
+// Copyright (c) 2019-2026 Apple Inc. and the RediStack project authors
 // Licensed under Apache License v2.0
 //
 // See LICENSE.txt for license information
@@ -611,7 +611,7 @@ extension RedisClient {
 
         return send(command: command, with: args)
             .tryConverting(to: [RESPValue].self)
-            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: true) }
+            .flatMapThrowing { try Self._mapSortedSetResponse($0, scoreIsFirst: false) }
     }
 }
 
